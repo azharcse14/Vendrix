@@ -1,8 +1,8 @@
 // Command api: Vendrix er Go API (binary shop-api, 13.4). Subcommand: serve (default), migrate,
-// credentials set, version.
+// shop create, credentials set, version.
 //
 // Feature doc: docs/features/server.md (serve), docs/features/migration.md (migrate),
-// docs/features/credentials.md (credentials)
+// docs/features/credentials.md (credentials), docs/features/shop.md (shop create)
 package main
 
 import (
@@ -50,11 +50,13 @@ func run(ctx context.Context, args []string, lookup func(string) (string, bool),
 		return runMigrate(ctx, lookup, log)
 	case "credentials":
 		return runCredentials(ctx, args[1:], lookup, in, log)
+	case "shop":
+		return runShopCreate(ctx, args[1:], lookup, out, log)
 	case "version":
 		_, err := fmt.Fprintln(out, version())
 		return err
 	}
-	return fmt.Errorf("ochena command %q: serve, migrate, credentials ba version", cmd)
+	return fmt.Errorf("ochena command %q: serve, migrate, shop, credentials ba version", cmd)
 }
 
 func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog.Logger) error {
@@ -150,6 +152,46 @@ func runCredentials(ctx context.Context, args []string, lookup func(string) (str
 	}
 	log.Info("credential save", "shop", *slug, "provider", *provider)
 	return nil
+}
+
+// runShopCreate (3.8, v1.10): `shop create --slug --prefix --domain --name-bn [--name-en] --owner-email
+// --owner-name [--preset organic]`. Owner er temporary password shudhu out e ekbar, log e na.
+func runShopCreate(ctx context.Context, args []string, lookup func(string) (string, bool), out io.Writer, log *slog.Logger) error {
+	usage := errors.New("shop create --slug <slug> --prefix <SB> --domain <domain> --name-bn <naam> [--name-en <name>] --owner-email <email> --owner-name <naam> [--preset organic]")
+	if len(args) == 0 || args[0] != "create" {
+		return usage
+	}
+	var p shop.Params
+	fs := flag.NewFlagSet("shop create", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.StringVar(&p.Slug, "slug", "", "")
+	fs.StringVar(&p.Prefix, "prefix", "", "")
+	fs.StringVar(&p.Domain, "domain", "", "")
+	fs.StringVar(&p.NameBn, "name-bn", "", "")
+	fs.StringVar(&p.NameEn, "name-en", "", "")
+	fs.StringVar(&p.OwnerEmail, "owner-email", "", "")
+	fs.StringVar(&p.OwnerName, "owner-name", "", "")
+	fs.StringVar(&p.Preset, "preset", "organic", "")
+	if err := fs.Parse(args[1:]); err != nil || fs.NArg() > 0 || p.Slug == "" || p.Prefix == "" || p.Domain == "" ||
+		p.NameBn == "" || p.OwnerEmail == "" || p.OwnerName == "" {
+		return usage
+	}
+	cfg, err := config.Load(lookup, config.Shop)
+	if err != nil {
+		return err
+	}
+	database, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	id, password, err := shop.Create(ctx, database, p)
+	if err != nil {
+		return err
+	}
+	log.Info("shop create", "shop_id", id, "slug", p.Slug, "domain", p.Domain)
+	_, err = fmt.Fprintf(out, "Owner %s er temporary password (ekbar-i dekhano hocche; prothom login e bodlate hobe): %s\n", p.OwnerEmail, password)
+	return err
 }
 
 // version: build er git commit (go build VCS info), na thakle "dev".

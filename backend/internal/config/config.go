@@ -21,6 +21,7 @@ const (
 	Serve       Command = "serve"
 	Migrate     Command = "migrate"
 	Credentials Command = "credentials"
+	Shop        Command = "shop"
 )
 
 // MinSecretLen: secret er kom-poksha dairgho (okkhor). `openssl rand -base64 32` 44 okkhor dey.
@@ -92,16 +93,18 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 		if err := postgresURL(c.MigrateDatabaseURL); err != nil {
 			bad("MIGRATE_DATABASE_URL: %v", err)
 		}
-	case Credentials:
+	case Credentials, Shop:
 		c.DatabaseURL = get("DATABASE_URL")
 		if err := postgresURL(c.DatabaseURL); err != nil {
 			bad("DATABASE_URL: %v", err)
 		}
-		k, err := base64.StdEncoding.DecodeString(get("CREDENTIALS_KEY"))
-		if err != nil || len(k) != 32 {
-			bad("CREDENTIALS_KEY base64 e 32 byte dao (openssl rand -base64 32)")
+		if cmd == Credentials {
+			k, err := base64.StdEncoding.DecodeString(get("CREDENTIALS_KEY"))
+			if err != nil || len(k) != 32 {
+				bad("CREDENTIALS_KEY base64 e 32 byte dao (openssl rand -base64 32)")
+			}
+			c.CredentialsKey = k
 		}
-		c.CredentialsKey = k
 	default:
 		bad("ochena command %q", cmd)
 	}

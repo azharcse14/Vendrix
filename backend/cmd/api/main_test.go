@@ -135,6 +135,15 @@ func TestRun(t *testing.T) {
 			t.Errorf("%q: argument er error chai, pelam %v", args, err)
 		}
 	}
+	for _, args := range [][]string{{"shop"}, {"shop", "delete"}, {"shop", "create", "--slug", "x"}, {"shop", "create", "--nai"}} {
+		if err := run(ctx, args, noEnv, nil, &out); err == nil || strings.Contains(err.Error(), "APP_ENV") {
+			t.Errorf("%q: argument er error chai, pelam %v", args, err)
+		}
+	}
+	full := []string{"shop", "create", "--slug", "x", "--prefix", "XX", "--domain", "x.com", "--name-bn", "ক", "--owner-email", "a@x.com", "--owner-name", "A"}
+	if err := run(ctx, full, noEnv, nil, &out); err == nil || !strings.Contains(err.Error(), "DATABASE_URL") {
+		t.Errorf("env chhara shop create: %v", err)
+	}
 	args := []string{"credentials", "set", "--shop", "x", "--provider", "sms"}
 	if err := run(ctx, args, noEnv, strings.NewReader("{}"), &out); err == nil || !strings.Contains(err.Error(), "CREDENTIALS_KEY") {
 		t.Errorf("env chhara credentials: %v", err)

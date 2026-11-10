@@ -13,13 +13,13 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 er code shesh (step 1–5, review fix, report); baki shudhu push er por CI green (step 6). M1 cholche: plan approve (design v1.10), step 1–3 shesh (404/405 JSON, paging, error message bn/en, `X-Shop-Host` resolve, staff context ar role, public rate limit, password hash). Local Postgres host port **5433**.
+- M0 er code shesh (step 1–5, review fix, report); baki shudhu push er por CI green (step 6). M1 cholche: plan approve (design v1.10), step 1–3 shesh (404/405 JSON, paging, error message bn/en, `X-Shop-Host` resolve, staff context ar role, public rate limit, password hash, `shop create`). Local Postgres host port **5433**.
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M1 step 7, `shop create`** ([M1](milestones/M1.md) step 7, 3.8 v1.10, 9.2, 9.4): `shop.DefaultSettings`, `shop.Create` (ek transaction), `cmd/api` e `shop create`; `TestDefaultSettings`, `TestCreateShopIntegration` age. M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
+2. **M1 step 8, public settings** ([M1](milestones/M1.md) step 8, 7.2 whitelist v1.10, 9.2): `GET /api/settings` (published er whitelist), `GET /api/settings/version`; `TestPublicSettings`, `TestSettingsIsolationIntegration` age. Local e `sobujbazar.localhost` shop ache (`shop create` diye). M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
 
 ## User er kache proshno
 
@@ -52,6 +52,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M1 step 7: `shop.DefaultSettings`, `shop.Create`, `shop-api shop create`; local e sobujbazar.localhost banano.
 - 10 November 2026: M1 step 6: `internal/auth` password hash (pbkdf2, 8.3).
 - 10 November 2026: M1 step 5: `httpx.RateLimit` (7.8, `shop_id:ip`, minute e 120).
 - 10 November 2026: M1 step 4: `httpx.Staff`, `RequireStaff` (fail-closed 401), `RequireRole` (403).
