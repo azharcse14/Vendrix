@@ -15,7 +15,7 @@ Public API er protiti request kon shop er, sheta `X-Shop-Host` header (customer 
 
 Router e public route e jog M1 er router step e (`cmd/api/router.go`).
 
-Public settings (`Handlers.Settings`, `handler.go`): `httpx.ShopFrom` er shop → `publishedSettings` (`store.go`) → `PublicSettings` (whitelist: `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`). `GET /api/settings/version` shudhu version.
+Public settings (`Handlers.Settings`, `handler.go`): `httpx.ShopFrom` er shop → `publishedSettings` (`store.go`) → `PublicSettings` (whitelist: `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`). `GET /api/settings/version` shudhu version. `GET /api/translations?locale=bn|en` (`Handlers.Translations`) shop er `translations` override `{key: value}` dey; default lekha app/website er file e (9.8).
 
 Shop khola (`runShopCreate` → `shop.Create`): flag check; `DefaultSettings` (preset theke theme, 9.2 er shob block); temporary password `rand.Text()` ar `auth.HashPassword`; tarpor `db.InTx` e `shops`, `shop_domains` (primary), house vendor, `shop_settings` (draft = published), `shop_counters` (`order_number` 0), owner `staff`. Password shudhu stdout e ekbar.
 
@@ -31,9 +31,9 @@ Ei kram e poro:
 | `backend/internal/shop/resolve.go` → `NewResolver`, `Resolve` | Domain → shop, cache |
 | `backend/internal/shop/settings.go` → `DefaultSettings`, `presets` | Notun shop er settings (9.2, 9.4) |
 | `backend/internal/shop/create.go` → `Create`, `Params` | Shop khola (3.8) |
-| `backend/internal/shop/handler.go` → `NewHandlers`, `Settings`, `SettingsVersion` | Public settings route |
+| `backend/internal/shop/handler.go` → `NewHandlers`, `Settings`, `SettingsVersion`, `Translations` | Public settings route |
 | `backend/internal/shop/settings.go` → `PublicSettings`, `publicKeys` | Whitelist (7.2) |
-| `backend/internal/shop/store.go` → `publishedSettings` | SQL |
+| `backend/internal/shop/store.go` → `publishedSettings`, `translations` | SQL |
 | `backend/cmd/api/main.go` → `runShopCreate` | CLI |
 | `backend/internal/auth/password.go` → `HashPassword`, `CheckPassword` | Owner staff er password hash (`shop create`) |
 
@@ -48,11 +48,12 @@ Ei kram e poro:
 | `shop create` er flag check | `runShopCreate` | `TestRun` |
 | Public settings shudhu whitelist; risk, OTP, SMS cap, inventory, commission ar notun block jay na (7.2, 9.2, v1.10) | `PublicSettings` | `TestPublicSettings` |
 | Protiti host e nijer shop er published settings ar version; draft na (Rule 3, 7.2) | `Handlers.Settings`, `SettingsVersion` | `TestSettingsIsolationIntegration` |
+| Translation override shudhu oi shop ar locale er; `locale` bn/en chhara `400` (7.2, 9.8) | `Handlers.Translations` | `TestTranslationsIntegration` |
 | Password: pbkdf2-sha256, 600000, 16 byte salt, format `pbkdf2-sha256$600000$<salt>$<hash>`, constant-time tulona, bhul format e false (8.3) | `HashPassword`, `CheckPassword` | `TestPasswordHash` |
 
 ## Data
 
-`shop_domains` (`domain` lowercase primary key, `shop_id`, `is_primary`), `shops` (`slug`, `mode`, `status`, `timezone`); shop khola e `vendors`, `shop_settings`, `shop_counters`, `staff` o; `001_init.sql`.
+`shop_domains` (`domain` lowercase primary key, `shop_id`, `is_primary`), `shops` (`slug`, `mode`, `status`, `timezone`); `shop_settings` (`published`, `version`); `translations` (`shop_id`, `locale`, `key`, `value`); shop khola e `vendors`, `shop_settings`, `shop_counters`, `staff` o; `001_init.sql`.
 
 ## Bhul hole ki hoy
 

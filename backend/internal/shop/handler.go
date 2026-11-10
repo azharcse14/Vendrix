@@ -56,3 +56,19 @@ func (h *Handlers) fail(w http.ResponseWriter, r *http.Request, err error) {
 	h.log.ErrorContext(r.Context(), "shop handler", "request_id", httpx.RequestIDFrom(r.Context()), "err", err)
 	httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
 }
+
+// Translations: GET /api/translations?locale=bn|en, default file er upore shop er override (7.2, 9.8).
+func (h *Handlers) Translations(w http.ResponseWriter, r *http.Request) {
+	locale := r.URL.Query().Get("locale")
+	if locale != "bn" && locale != "en" {
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed", Fields: map[string]string{"locale": "invalid"}})
+		return
+	}
+	s, _ := httpx.ShopFrom(r.Context())
+	t, err := translations(r.Context(), h.db, s.ID, locale)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, t)
+}
