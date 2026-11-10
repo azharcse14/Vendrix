@@ -1,0 +1,58 @@
+package shop
+
+import (
+	"database/sql"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"vendrix/backend/internal/httpx"
+)
+
+// Handlers: shop er public route (7.2); ShopFromHost er pore boshe.
+type Handlers struct {
+	db  *sql.DB
+	log *slog.Logger
+}
+
+func NewHandlers(d *sql.DB, log *slog.Logger) *Handlers { return &Handlers{db: d, log: log} }
+
+// Settings: GET /api/settings, published er public ongsho (v1.10 whitelist).
+func (h *Handlers) Settings(w http.ResponseWriter, r *http.Request) {
+	published, _, ok := h.settings(w, r)
+	if !ok {
+		return
+	}
+	pub, err := PublicSettings(published)
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, pub)
+}
+
+// SettingsVersion: GET /api/settings/version (Jaspr er cache check).
+func (h *Handlers) SettingsVersion(w http.ResponseWriter, r *http.Request) {
+	if _, version, ok := h.settings(w, r); ok {
+		httpx.WriteJSON(w, http.StatusOK, map[string]int{"version": version})
+	}
+}
+
+func (h *Handlers) settings(w http.ResponseWriter, r *http.Request) ([]byte, int, bool) {
+	s, _ := httpx.ShopFrom(r.Context())
+	published, version, err := publishedSettings(r.Context(), h.db, s.ID)
+	if errors.Is(err, sql.ErrNoRows) {
+		httpx.WriteError(w, r, http.StatusNotFound, httpx.ErrorBody{Code: "shop_not_found"})
+		return nil, 0, false
+	}
+	if err != nil {
+		h.fail(w, r, err)
+		return nil, 0, false
+	}
+	return published, version, true
+}
+
+func (h *Handlers) fail(w http.ResponseWriter, r *http.Request, err error) {
+	h.log.ErrorContext(r.Context(), "shop handler", "request_id", httpx.RequestIDFrom(r.Context()), "err", err)
+	httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
+}

@@ -53,3 +53,41 @@ func DefaultSettings(presetName string, name map[string]string) ([]byte, error) 
 		"integrations": map[string]any{"facebook_pixel_id": nil, "ga4_id": nil},
 	})
 }
+
+// publicKeys (7.2, v1.10): published settings er je ongsho public; notun block ba key default e private.
+var publicKeys = map[string][]string{
+	"branding": nil, "theme": nil, "locales": nil, "features": nil, "homepage": nil, "seo": nil, "integrations": nil,
+	"checkout":    {"payment_methods", "return_window_days"},
+	"marketplace": {"show_vendor_name"},
+}
+
+// PublicSettings: published JSON theke shudhu publicKeys (nil = puro block).
+func PublicSettings(published []byte) (map[string]any, error) {
+	var all map[string]json.RawMessage
+	if err := json.Unmarshal(published, &all); err != nil {
+		return nil, err
+	}
+	out := map[string]any{}
+	for block, keys := range publicKeys {
+		raw, ok := all[block]
+		if !ok {
+			continue
+		}
+		if keys == nil {
+			out[block] = raw
+			continue
+		}
+		var inner map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &inner); err != nil {
+			return nil, fmt.Errorf("%s: %w", block, err)
+		}
+		pick := map[string]json.RawMessage{}
+		for _, k := range keys {
+			if v, ok := inner[k]; ok {
+				pick[k] = v
+			}
+		}
+		out[block] = pick
+	}
+	return out, nil
+}
