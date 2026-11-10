@@ -206,3 +206,58 @@ func TestVendorScopeIntegration(t *testing.T) {
 		t.Errorf("shop b list: %v", l)
 	}
 }
+
+// TestAdminVariantIntegration (7.7, 8.12, v1.10, v1.11): dam check, compare_at_price > price, sku ek vendor e
+// unique (409 sku_taken), stock field na, vendor product theke; onno vendor/shop 404; audit.
+func TestAdminVariantIntegration(t *testing.T) {
+	f := newFixture(t)
+	a, b := f.owner(t, "a"), f.owner(t, "b")
+	p := idOf(f.admin(t, a, "POST", "/api/admin/products", `{"slug":"chal","name":{"bn":"চাল"}}`, 201))
+	v := f.admin(t, a, "POST", "/api/admin/products/"+p+"/variants",
+		`{"sku":"CHAL-5","price":42000,"compare_at_price":45000,"options":{"weight":{"bn":"৫ কেজি","en":"5 kg"}},"nominal_weight_g":5000}`, 201)
+	if v["vendor_id"] != float64(f.ids["a.vendor"]) || v["stock"] != float64(0) || v["price"] != float64(42000) {
+		t.Errorf("create: %v", v)
+	}
+	for body, want := range map[string]string{
+		`{"sku":"CHAL-5","price":1}`: "sku_taken",
+		`{"sku":"X","price":-1}`:     "validation_failed price=invalid",
+		`{"sku":"X"}`:                "validation_failed price=invalid",
+		`{"price":1}`:                "validation_failed sku=invalid",
+		`{"sku":"X","price":100,"compare_at_price":100}`:     "validation_failed compare_at_price=invalid",
+		`{"sku":"X","price":100,"stock":5}`:                  "validation_failed body=invalid",
+		`{"sku":"X","price":100,"price_x":1}`:                "validation_failed body=invalid",
+		`{"sku":"X","price":100,"options":{"w":{"en":"x"}}}`: "validation_failed options=invalid",
+		`{"sku":"X","price":100,"nominal_weight_g":0}`:       "validation_failed nominal_weight_g=invalid",
+		`{"sku":"X","price":100,"cost_price":-5}`:            "validation_failed cost_price=invalid",
+	} {
+		status := 400
+		if want == "sku_taken" {
+			status = 409
+		}
+		if got := errCode(f.admin(t, a, "POST", "/api/admin/products/"+p+"/variants", body, status)); got != want {
+			t.Errorf("%s: %s, chai %s", body, got, want)
+		}
+	}
+	up := f.admin(t, a, "PATCH", "/api/admin/variants/"+idOf(v), `{"price":40000,"compare_at_price":null,"is_active":false}`, 200)
+	if up["price"] != float64(40000) || up["compare_at_price"] != nil || up["is_active"] != false || up["sku"] != "CHAL-5" {
+		t.Errorf("patch: %v", up)
+	}
+	if got := errCode(f.admin(t, a, "PATCH", "/api/admin/variants/"+idOf(v), `{"stock":9}`, 400)); got != "validation_failed body=invalid" {
+		t.Errorf("stock patch: %s", got)
+	}
+	f.admin(t, b, "POST", "/api/admin/products/"+p+"/variants", `{"sku":"B","price":1}`, 404)
+	f.admin(t, b, "PATCH", "/api/admin/variants/"+idOf(v), `{"price":1}`, 404)
+	x := f.id(t, `INSERT INTO vendors (shop_id, slug, name) VALUES ($1, 'x', '{"bn":"x"}') RETURNING id`, f.ids["a"])
+	vx := httpx.Staff{ID: f.id(t, `INSERT INTO staff (shop_id, vendor_id, email, name, password_hash, role)
+		VALUES ($1, $2, 'x@a.com', 'X', 'h', 'vendor_owner') RETURNING id`, f.ids["a"], x), ShopID: f.ids["a"], VendorID: &x, Role: "vendor_owner"}
+	f.admin(t, vx, "POST", "/api/admin/products/"+p+"/variants", `{"sku":"X","price":1}`, 404)
+	f.admin(t, vx, "PATCH", "/api/admin/variants/"+idOf(v), `{"price":1}`, 404)
+	px := idOf(f.admin(t, vx, "POST", "/api/admin/products", `{"slug":"x-chal","name":{"bn":"x"}}`, 201))
+	if vv := f.admin(t, vx, "POST", "/api/admin/products/"+px+"/variants", `{"sku":"CHAL-5","price":1}`, 201); vv["vendor_id"] != float64(x) {
+		t.Errorf("onno vendor e ek sku cholbe: %v", vv)
+	}
+	var n int
+	if err := f.d.QueryRow(`SELECT count(*) FROM audit_logs WHERE shop_id = $1 AND entity_type = 'variant'`, a.ShopID).Scan(&n); err != nil || n != 3 {
+		t.Errorf("audit: %d (chai 2 create + 1 update) %v", n, err)
+	}
+}

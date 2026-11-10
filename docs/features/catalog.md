@@ -16,7 +16,8 @@ Website/app shop er category tree, product list (filter, sort, paging, search) a
 6. Admin route (`Handlers.Routes`): `httpx.RequireStaff` → `httpx.RequireRole` (category: owner, admin; 11.2). Shop staff er `ShopID` theke, host theke na. Lekhar kaj `write` e: `db.InTx`, kaj, `audit.Log`; response `to_jsonb(row) - 'shop_id'`.
 7. Category (`CreateCategory`, `UpdateCategory`, `DeleteCategory`): `categoryInput.check` (slug, `name.bn`); PATCH e shudhu je key ache (`opt` diye `null` = muche dao); parent bodlale `lockCategoryParents` (shop er category `FOR UPDATE`) → `makesCycle`. Delete e FK error → `409 category_not_empty`.
 8. Product (`AdminProducts`, `AdminProduct`, `CreateProduct`, `UpdateProduct`; owner, admin, vendor_owner): `vendorScope` vendor staff er query te `vendor_id` (Rule 13), onno vendor/shop er id `404`. Create e `vendor_id` na dile shop staff e house vendor, vendor staff e nijer; onno vendor `404`. PATCH e `vendor_id` na (`400 read_only`), `updated_at = now()`; hard delete nai, `is_active` (6.1). `unit`/`variable_weight` er mil DB CHECK dhore.
-9. DB error `writeErr` e: unique → `409 slug_taken`; FK/CHECK → `400 validation_failed` (`constraintField` field dey); nai → `404`.
+9. Variant (`CreateVariant`, `UpdateVariant`): `variantInput.check` (`sku`, `price` poisha ≥ 0, `options` er lekha); `stock` field nai (ochena field `400`; stock M7 er batch/adjust e, 8.12). `createVariant` `shop_id` ar `vendor_id` product theke ney (Rule 13).
+10. DB error `writeErr` e: unique `sku` → `409 sku_taken`, baki unique → `409 slug_taken`; FK/CHECK → `400 validation_failed` (`constraintField` field dey); nai → `404`.
 
 ## Code er map
 
@@ -26,8 +27,8 @@ Ei kram e poro:
 |---|---|
 | `backend/internal/catalog/handler.go` → `NewHandlers`, `Categories`, `Products`, `Product`, `tree`, `rating`, `seoIn` | Public HTTP |
 | `backend/internal/catalog/admin.go` → `Routes`, `write`, `writeErr`, `constraintField`, `AdminCategories`, `CreateCategory`, `UpdateCategory`, `DeleteCategory` | Admin HTTP, audit, DB error → 7.1 |
-| `backend/internal/catalog/admin_product.go` → `vendorScope`, `productInput.check`, `AdminProducts`, `AdminProduct`, `CreateProduct`, `UpdateProduct` | Admin product HTTP |
-| `backend/internal/catalog/store_admin.go` → `createCategory`, `updateCategory`, `deleteCategory`, `lockCategoryParents`, `adminProducts`, `adminProduct`, `createProduct`, `updateProduct` | Admin SQL |
+| `backend/internal/catalog/admin_product.go` → `vendorScope`, `productInput.check`, `AdminProducts`, `AdminProduct`, `CreateProduct`, `UpdateProduct`, `variantInput.check`, `CreateVariant`, `UpdateVariant` | Admin product ar variant HTTP |
+| `backend/internal/catalog/store_admin.go` → `createCategory`, `updateCategory`, `deleteCategory`, `lockCategoryParents`, `adminProducts`, `adminProduct`, `createProduct`, `updateProduct`, `createVariant`, `updateVariant` | Admin SQL |
 | `backend/internal/catalog/service.go` → `Text`, `In`, `searchTerm`, `validSlug`, `makesCycle` | Niyom |
 | `backend/internal/catalog/store.go` → `categories`, `listProducts`, `productBySlug` | SQL |
 
@@ -43,6 +44,7 @@ Ei kram e poro:
 | Protiti host e shudhu nijer shop er category ar product (Rule 3) | protiti query te `shop_id` | `TestShopIsolationIntegration` |
 | Onno shop er category, vendor, parent ba product e reference → DB error (14.2 test 13) | `001_init.sql` er composite FK | `TestTenantForeignKeyIntegration` |
 | Admin product: house vendor default, slug/naam/JSON check, `variable_weight` hole `kg`, onno shop er category/vendor `400` (500 na), PATCH `updated_at`, audit (7.7, 6.1, 14.2 test 13) | `CreateProduct`, `UpdateProduct`, `writeErr` | `TestAdminProductIntegration` |
+| Admin variant: `price` ≥ 0, `compare_at_price > price`, `sku` ek vendor e unique (`409 sku_taken`), `stock` field na, vendor product theke; onno vendor/shop `404`; audit (7.7, 8.12, v1.10, v1.11) | `CreateVariant`, `UpdateVariant`, `createVariant` | `TestAdminVariantIntegration` |
 | Vendor staff shudhu nijer vendor er product dekhe, bodlay, banay; onno shop er staff `404` (Rule 3, 13) | `vendorScope`, `CreateProduct` | `TestVendorScopeIntegration` |
 | Category cycle atkano (7.7) | `makesCycle` | `TestCategoryCycle` |
 | Admin category: staff na thakle `401`, vendor role `403`; slug/naam check, `409 slug_taken`, onno shop er parent `400`, cycle `400`, onno shop er category `404`, khali na hole `409 category_not_empty`; protiti kaj audit e (7.7, 11.2, v1.10) | `Routes`, `CreateCategory`, `UpdateCategory`, `DeleteCategory` | `TestAdminCategoryIntegration` |

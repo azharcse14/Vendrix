@@ -142,3 +142,78 @@ func (h *Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return updateProduct(r.Context(), tx, st.ShopID, id, vendorScope(st), in)
 	})
 }
+
+// variantInput (7.7, v1.10): stock nai (8.12 er batch/adjust e, M7), tai `stock` dile ochena field e 400.
+type variantInput struct {
+	SKU            *string         `json:"sku"`
+	Options        map[string]Text `json:"options"`
+	Price          *int64          `json:"price"`
+	CompareAtPrice opt[int64]      `json:"compare_at_price"`
+	CostPrice      opt[int64]      `json:"cost_price"`
+	NominalWeightG opt[int64]      `json:"nominal_weight_g"`
+	IsActive       *bool           `json:"is_active"`
+	SortOrder      *int            `json:"sort_order"`
+}
+
+// check: dam poisha ≥ 0; compare_at_price > price ar baki DB CHECK dhore.
+func (in variantInput) check(create bool) error {
+	for _, t := range in.Options {
+		if !t.valid() {
+			return badField("options", "invalid")
+		}
+	}
+	switch {
+	case (create || in.SKU != nil) && (in.SKU == nil || *in.SKU == "" || len(*in.SKU) > 64):
+		return badField("sku", "invalid")
+	case (create || in.Price != nil) && (in.Price == nil || *in.Price < 0):
+		return badField("price", "invalid")
+	}
+	return nil
+}
+
+// optionsArg: nil = bodlabe na.
+func optionsArg(o map[string]Text) any {
+	if o == nil {
+		return nil
+	}
+	b, _ := json.Marshal(o)
+	return string(b)
+}
+
+// CreateVariant: POST /api/admin/products/{id}/variants; vendor product theke (Rule 13), onno vendor/shop 404.
+func (h *Handlers) CreateVariant(w http.ResponseWriter, r *http.Request) {
+	productID, ok := pathID(r)
+	if !ok {
+		h.writeErr(w, r, errNotFound)
+		return
+	}
+	var in variantInput
+	if !decode(w, r, &in) {
+		return
+	}
+	h.write(w, r, http.StatusCreated, "variant.create", func(tx *sql.Tx, st httpx.Staff) (int64, json.RawMessage, json.RawMessage, error) {
+		if err := in.check(true); err != nil {
+			return 0, nil, nil, err
+		}
+		return createVariant(r.Context(), tx, st.ShopID, productID, vendorScope(st), in)
+	})
+}
+
+// UpdateVariant: PATCH /api/admin/variants/{id}.
+func (h *Handlers) UpdateVariant(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(r)
+	if !ok {
+		h.writeErr(w, r, errNotFound)
+		return
+	}
+	var in variantInput
+	if !decode(w, r, &in) {
+		return
+	}
+	h.write(w, r, http.StatusOK, "variant.update", func(tx *sql.Tx, st httpx.Staff) (int64, json.RawMessage, json.RawMessage, error) {
+		if err := in.check(false); err != nil {
+			return 0, nil, nil, err
+		}
+		return updateVariant(r.Context(), tx, st.ShopID, id, vendorScope(st), in)
+	})
+}

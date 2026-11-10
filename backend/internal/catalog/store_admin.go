@@ -132,3 +132,37 @@ func updateProduct(ctx context.Context, tx *sql.Tx, shopID, id int64, vendor any
 		in.VariableWeight, rawArg(in.Attributes), in.SearchKeywords, rawArg(in.SEO), in.IsActive).Scan(&after)
 	return id, before, after, err
 }
+
+// createVariant: shop_id ar vendor_id product theke; product nai ba scope er baire → sql.ErrNoRows.
+func createVariant(ctx context.Context, tx *sql.Tx, shopID, productID int64, vendor any, in variantInput) (id int64, before, after json.RawMessage, err error) {
+	sort := 0
+	if in.SortOrder != nil {
+		sort = *in.SortOrder
+	}
+	err = tx.QueryRowContext(ctx, `INSERT INTO product_variants (shop_id, product_id, vendor_id, sku, options, price,
+		compare_at_price, cost_price, nominal_weight_g, is_active, sort_order)
+		SELECT p.shop_id, p.id, p.vendor_id, $4, coalesce($5::jsonb, '{}'), $6, $7, $8, $9, coalesce($10, true), $11
+		FROM products p WHERE p.shop_id = $1 AND p.id = $2 AND ($3::bigint IS NULL OR p.vendor_id = $3)
+		RETURNING id, to_jsonb(product_variants.*) - 'shop_id'`,
+		shopID, productID, vendor, *in.SKU, optionsArg(in.Options), *in.Price, in.CompareAtPrice.V, in.CostPrice.V,
+		in.NominalWeightG.V, in.IsActive, sort).Scan(&id, &after)
+	return id, nil, after, err
+}
+
+func updateVariant(ctx context.Context, tx *sql.Tx, shopID, id int64, vendor any, in variantInput) (int64, json.RawMessage, json.RawMessage, error) {
+	var before, after json.RawMessage
+	if err := tx.QueryRowContext(ctx, `SELECT to_jsonb(v) - 'shop_id' FROM product_variants v
+		WHERE shop_id = $1 AND id = $2 AND ($3::bigint IS NULL OR vendor_id = $3) FOR UPDATE`, shopID, id, vendor).Scan(&before); err != nil {
+		return id, nil, nil, err
+	}
+	err := tx.QueryRowContext(ctx, `UPDATE product_variants SET sku = coalesce($3, sku), options = coalesce($4::jsonb, options),
+		price = coalesce($5, price),
+		compare_at_price = CASE WHEN $6 THEN $7::bigint ELSE compare_at_price END,
+		cost_price = CASE WHEN $8 THEN $9::bigint ELSE cost_price END,
+		nominal_weight_g = CASE WHEN $10 THEN $11::int ELSE nominal_weight_g END,
+		is_active = coalesce($12, is_active), sort_order = coalesce($13, sort_order)
+		WHERE shop_id = $1 AND id = $2 RETURNING to_jsonb(product_variants.*) - 'shop_id'`,
+		shopID, id, in.SKU, optionsArg(in.Options), in.Price, in.CompareAtPrice.Set, in.CompareAtPrice.V,
+		in.CostPrice.Set, in.CostPrice.V, in.NominalWeightG.Set, in.NominalWeightG.V, in.IsActive, in.SortOrder).Scan(&after)
+	return id, before, after, err
+}

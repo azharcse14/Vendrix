@@ -35,6 +35,8 @@ func (h *Handlers) Routes(mux *http.ServeMux, public httpx.Middleware) {
 	mux.Handle("POST /api/admin/products", admin(h.CreateProduct, prod...))
 	mux.Handle("GET /api/admin/products/{id}", admin(h.AdminProduct, prod...))
 	mux.Handle("PATCH /api/admin/products/{id}", admin(h.UpdateProduct, prod...))
+	mux.Handle("POST /api/admin/products/{id}/variants", admin(h.CreateVariant, prod...))
+	mux.Handle("PATCH /api/admin/variants/{id}", admin(h.UpdateVariant, prod...))
 }
 
 // apiErr: handler er jana error (status ar 7.1 body).
@@ -59,6 +61,8 @@ func (h *Handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.As(err, &ae):
 	case errors.Is(err, sql.ErrNoRows):
 		ae = errNotFound
+	case errors.As(err, &pg) && pg.Code == "23505" && strings.Contains(pg.ConstraintName, "sku"):
+		ae = apiErr{http.StatusConflict, httpx.ErrorBody{Code: "sku_taken"}}
 	case errors.As(err, &pg) && pg.Code == "23505":
 		ae = apiErr{http.StatusConflict, httpx.ErrorBody{Code: "slug_taken"}}
 	case errors.As(err, &pg) && (pg.Code == "23503" || pg.Code == "23514"):
@@ -72,9 +76,11 @@ func (h *Handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 
 // constraintField: constraint er naam theke field (onno shop er category/vendor/parent → oi field).
 func constraintField(c string) string {
-	for _, f := range []string{"parent_id", "category_id", "product_id", "vendor_id", "variable_weight", "unit", "compare_at", "price"} {
-		if strings.Contains(c, f) {
-			return f
+	for _, f := range [][2]string{{"parent_id", "parent_id"}, {"category_id", "category_id"}, {"product_id", "product_id"},
+		{"vendor_id", "vendor_id"}, {"variable_weight", "variable_weight"}, {"unit", "unit"}, {"compare_at", "compare_at_price"},
+		{"cost_price", "cost_price"}, {"nominal_weight", "nominal_weight_g"}, {"price", "price"}} {
+		if strings.Contains(c, f[0]) {
+			return f[1]
 		}
 	}
 	return "body"
