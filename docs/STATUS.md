@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M3 step 6** ([M3](milestones/M3.md)): step 5 shesh (`SettingsCache`, global `settingsCache`). Ekhon theme, font, layout (9.3, 9.6, 10.5; 10.10 item 6): `<head>` e `cssVariables(deriveTokens(...))` (settings theke), font self-host `website/web/fonts/` (OFL), header, bottom nav (Cart/Account lukano), footer, 404/closed(503)/error page, `/en` route, `<html lang>`; `scripts/check-rules.sh` e `website/lib` Bangla okkhor check.
+2. **M3 step 6** ([M3](milestones/M3.md)), adhek: hoyeche `services/theme.dart` (`themeCss`: `:root` + `@font-face`), `web/fonts/` (6 font, Fontsource 5.3.0, OFL), shared `PublicSettings` getter (font, radius, branding, announcement) ar notun lekha key (`nav.*`, `search.*`, `page.*`, `footer.*`, `lang.switch`). Baki: `Site` InheritedComponent (locale, settings, Translator), render handler (`/en` route, `en` na thakle 404, `shop_suspended` 503 + `Retry-After`, error 503), header/bottom nav (Category → `/#categories`, 10.1 e route nai)/footer, 404/closed/error page, Tailwind typography (9.6) ar `font-body` fallback, `check-rules.sh` e Bangla okkhor check, feature doc.
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M3 step 6 er ardhek: theme CSS, self-host font, shared settings getter ar UI key.
 - 10 November 2026: M3 step 5: website settings cache (host onujayi, 30 second background version check, API down e purono, suspended e bad), test 11/11.
 - 10 November 2026: M3 step 4: BFF skeleton (`services/bff.dart`: CSRF Origin/`Sec-Fetch-Site`, cookie → token, Referer theke bhasha, form `303`, `no-store`), test 14/14.
 - 10 November 2026: M3 step 3: `Cache-Control` middleware (14.2 test 24 pass), website server shudhu `127.0.0.1` e (`serveApp` + `shelf_io`).
