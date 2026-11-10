@@ -79,6 +79,8 @@ const (
 	batchSize     = 10
 	pollInterval  = 2 * time.Second
 	sweepInterval = 5 * time.Minute
+	// handlerTimeout: ek job er shima; lock er 5 minute er onek kom.
+	handlerTimeout = time.Minute
 )
 
 // Worker: ek goroutine e kaj nay ar chalay. Onek process e chalaleo ek kaj ek jon nay (SKIP LOCKED).
@@ -166,7 +168,19 @@ func (w *Worker) RunOnce(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	for _, c := range todo {
-		if err := w.finish(c.Job, c.lockedAt, c.attempts, w.call(ctx, c.Job)); err != nil {
+		// batch er ager job dhire cholle 5 minute por onno worker eta nite pare; nile bad, na hole SMS duibar
+		err := w.db.QueryRowContext(ctx, `UPDATE jobs SET locked_at = now() WHERE id = $1 AND locked_at = $2
+			RETURNING locked_at`, c.ID, c.lockedAt).Scan(&c.lockedAt)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return len(todo), err
+		}
+		hctx, cancel := context.WithTimeout(ctx, handlerTimeout)
+		jobErr := w.call(hctx, c.Job)
+		cancel()
+		if err := w.finish(c.Job, c.lockedAt, c.attempts, jobErr); err != nil {
 			return len(todo), err
 		}
 	}

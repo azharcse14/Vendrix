@@ -157,3 +157,38 @@ func TestScheduleSweep(t *testing.T) {
 		t.Errorf("keys = %q, want %q", got, want)
 	}
 }
+
+// TestBatchStolenLockIntegration (8.17): batch er porer job er lock onno worker nile purono worker oita
+// chalay na (SMS duibar na); handler er ctx e deadline thake.
+func TestBatchStolenLockIntegration(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	ran := 0
+	var deadline time.Duration
+	// duita job ek batch e; je age chole se onnotar lock "onno worker" er hate dey (handler dhire cholchilo)
+	steal := func(other string) Handler {
+		return func(ctx context.Context, j Job) error {
+			ran++
+			if dl, ok := ctx.Deadline(); ok {
+				deadline = time.Until(dl)
+			}
+			_, err := d.ExecContext(ctx, `UPDATE jobs SET locked_at = now() + interval '1 second' WHERE kind = $1`, other)
+			return err
+		}
+	}
+	w := NewWorker(d, slog.New(slog.DiscardHandler), map[string]Handler{"t.a": steal("t.b"), "t.b": steal("t.a")})
+	for _, n := range []New{{Kind: "t.a"}, {Kind: "t.b"}} {
+		if err := Enqueue(ctx, d, n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := w.RunOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if ran != 1 {
+		t.Errorf("%d ta job cholche, chai 1 (churi kora lock er job cholbe na)", ran)
+	}
+	if deadline <= 0 || deadline > handlerTimeout {
+		t.Errorf("handler er deadline %v, chai 0 < x <= %v", deadline, handlerTimeout)
+	}
+}
