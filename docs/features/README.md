@@ -17,6 +17,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
 | API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2 | M2 | cholche |
+| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3 | cholche (skeleton, config, API header) |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora M4 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
@@ -56,7 +57,14 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `packages/shared/lib/api` | `ApiClient`, `ApiError`, repository | [api-client.md](api-client.md) |
 | `packages/shared/lib/models` | API er model (`LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
 
-`website` (M3), `admin` (M7) er map oi milestone e ekhane jog hobe.
+## Code map (website)
+
+| Folder | Ki | Doc |
+|---|---|---|
+| `website/lib/services` | Env, URL theke bhasha, request theke `ApiClient` | [website.md](website.md) |
+| `website/lib` (`main.*.dart`, `app.dart`, `pages/`) | Entry, route, page | [website.md](website.md) |
+
+`admin` (M7) er map oi milestone e ekhane jog hobe.
 
 ## Shobdo
 
