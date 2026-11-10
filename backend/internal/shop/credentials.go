@@ -1,7 +1,7 @@
-// Package shop: shop er data. Ekhon shop_credentials (SMS, payment, courier er secret): AES-GCM e encrypt
-// kore save (2.2, 12.2); API theke kokhono ferot na.
+// Package shop: shop er data: X-Shop-Host theke shop chena (3.2, Resolver), shop_credentials (SMS, payment,
+// courier er secret) AES-GCM e encrypt kore save (2.2, 12.2; API theke kokhono ferot na).
 //
-// Feature doc: docs/features/credentials.md
+// Feature doc: docs/features/shop.md, docs/features/credentials.md
 package shop
 
 import (
