@@ -65,7 +65,7 @@ func Recover(log *slog.Logger) Middleware {
 				}
 				log.ErrorContext(r.Context(), "panic", "request_id", RequestIDFrom(r.Context()),
 					"panic", fmt.Sprint(v), "stack", string(debug.Stack()))
-				WriteError(w, http.StatusInternalServerError, ErrorBody{Code: "internal", Message: "Server e shomossha hoyeche"})
+				WriteError(w, r, http.StatusInternalServerError, ErrorBody{Code: "internal"})
 			}()
 			next.ServeHTTP(w, r)
 		})
@@ -87,8 +87,11 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// WriteError: {"error": {...}} (7.1).
-func WriteError(w http.ResponseWriter, status int, e ErrorBody) {
+// WriteError: {"error": {...}} (7.1). Message khali hole code ar Accept-Language theke (v1.10).
+func WriteError(w http.ResponseWriter, r *http.Request, status int, e ErrorBody) {
+	if e.Message == "" {
+		e.Message = message(r, e.Code)
+	}
 	WriteJSON(w, status, map[string]ErrorBody{"error": e})
 }
 

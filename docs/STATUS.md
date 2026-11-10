@@ -13,13 +13,13 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 step 1–5 shesh: pgx, local e migrate + `/healthz`, runner integration test, job worker + notify, `credentials set` CLI (`internal/shop`). Local Postgres host port **5433**. Porer: CI (step 6).
+- M0 er code shesh (step 1–5, review fix, report); baki shudhu push er por CI green (step 6). M1 cholche: plan approve (design v1.10), step 1–2 shesh (404/405 JSON, paging, error message bn/en). Local Postgres host port **5433**.
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M1 step 2, error message er bhasha** ([M1](milestones/M1.md), v1.10): `httpx` e code → `{bn, en}` map, `Accept-Language` (default `bn`); `TestErrorMessageLocale` age, tarpor code. M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
+2. **M1 step 3, shop resolve** ([M1](milestones/M1.md) step 3, 3.2, v1.10 `closed` → 404): age fail kora test (`TestShopFromHost`, `TestResolverIntegration`) alada commit, tarpor `httpx.ShopFromHost` ar `shop.Resolver` (60 second cache). M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
 
 ## User er kache proshno
 
@@ -52,6 +52,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M1 step 2: error message `{bn, en}` map (`httpx/message.go`), `WriteError(w, r, ...)`.
 - 10 November 2026: M1 step 1: `httpx.JSONErrors` (404/405 JSON), `Page`, `NewPaged`.
 - 10 November 2026: M1 plan approve (user 12 ta recommendation niyeche); design v1.10 (3.2, 3.8, 7.1, 7.2, 7.7, 9.2, 15).
 - 10 November 2026: M0 review (design + security): batch e churi kora lock er job bad, handler 1 minute timeout, shutdown e baki job ferot, `run_at` DB er `now()`, concurrency test, env.example `local-only` secret local chhara reject (design v1.9); `jobs` cleanup 16.1 e.

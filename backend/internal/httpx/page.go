@@ -19,9 +19,9 @@ func JSONErrors(mux *http.ServeMux) http.Handler {
 		switch cw.status {
 		case http.StatusMethodNotAllowed:
 			w.Header().Set("Allow", cw.header.Get("Allow"))
-			WriteError(w, cw.status, ErrorBody{Code: "method_not_allowed", Message: "Ei method chole na"})
+			WriteError(w, r, cw.status, ErrorBody{Code: "method_not_allowed"})
 		case http.StatusNotFound:
-			WriteError(w, cw.status, ErrorBody{Code: "not_found", Message: "Pawa jayni"})
+			WriteError(w, r, cw.status, ErrorBody{Code: "not_found"})
 		default: // redirect (trailing slash ba path clean)
 			for k, v := range cw.header {
 				w.Header()[k] = v
@@ -69,7 +69,7 @@ func Page(w http.ResponseWriter, r *http.Request) (page, limit int, ok bool) {
 	page = num("page", 1, int(^uint(0)>>1))
 	limit = num("limit", defaultLimit, maxLimit)
 	if len(fields) > 0 {
-		WriteError(w, http.StatusBadRequest, ErrorBody{Code: "validation_failed", Message: "page ba limit bhul", Fields: fields})
+		WriteError(w, r, http.StatusBadRequest, ErrorBody{Code: "validation_failed", Fields: fields})
 		return 0, 0, false
 	}
 	return page, limit, true

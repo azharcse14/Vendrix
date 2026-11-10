@@ -177,7 +177,7 @@ func TestDecodeJSON(t *testing.T) {
 
 func TestWriteError(t *testing.T) {
 	rec := httptest.NewRecorder()
-	WriteError(rec, http.StatusConflict, ErrorBody{Code: "out_of_stock", Message: "x", Details: map[string]any{"variant_id": 12}})
+	WriteError(rec, httptest.NewRequest("GET", "/", nil), http.StatusConflict, ErrorBody{Code: "out_of_stock", Message: "x", Details: map[string]any{"variant_id": 12}})
 	want := `{"error":{"code":"out_of_stock","message":"x","details":{"variant_id":12}}}`
 	if rec.Code != http.StatusConflict || rec.Header().Get("Content-Type") != "application/json; charset=utf-8" ||
 		strings.TrimSpace(rec.Body.String()) != want {

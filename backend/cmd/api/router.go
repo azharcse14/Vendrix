@@ -49,7 +49,7 @@ func healthz(p pinger) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 		if err := p.PingContext(ctx); err != nil {
-			httpx.WriteError(w, http.StatusServiceUnavailable, httpx.ErrorBody{Code: "db_unavailable", Message: "Database e jete parchi na"})
+			httpx.WriteError(w, r, http.StatusServiceUnavailable, httpx.ErrorBody{Code: "db_unavailable"})
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
