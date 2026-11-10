@@ -37,7 +37,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 |---|---|---|---|
 | M0 | Project setup | cholche (10 November 2026 theke) | [M0](milestones/M0.md) |
 | M1 | Shop, vendor, settings, catalog API | shesh (10 November 2026) | [M1](milestones/M1.md) |
-| M2 | Shared Dart package | baki | |
+| M2 | Shared Dart package | cholche (10 November 2026 theke) | [M2](milestones/M2.md) |
 | M3 | Website catalog | baki | |
 | M4 | Login | baki | |
 | M5 | Cart ar wishlist | baki | |

@@ -1,0 +1,14 @@
+name: shared
+description: Vendrix er website, admin ar app er shared pure Dart code (4.3).
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  http: ^1.6.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0

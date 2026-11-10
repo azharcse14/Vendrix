@@ -34,6 +34,7 @@ dart_part() { # $1 = folder, $2 = dart | flutter (4.6)
   echo "== $dir ($tool)"
   (
     cd "$dir"
+    "$tool" pub get >/dev/null
     dart format --output=none --set-exit-if-changed .
     "$tool" analyze
     if [ -d test ]; then "$tool" test; fi

@@ -39,6 +39,17 @@ jobs:
         working-directory: backend
         run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
 
+  dart:
+    name: Dart (packages/shared: format, analyze, test)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: "3.13.7"
+      - name: quick-check (Dart)
+        run: QUICK_ALL=1 QUICK_PARTS=dart bash scripts/quick-check.sh
+
   database:
     name: Database (001_init + constraint test, Go DB test)
     runs-on: ubuntu-24.04
