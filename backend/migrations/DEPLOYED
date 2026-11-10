@@ -1,0 +1,5 @@
+# Production e deploy hoya migration: `sha256sum 00N_naam.sql` er output, ek line e ek ta.
+# Deploy script (13.6) migration chalanor por line jog kore. Ekhane naam thakle:
+#   - scripts/hooks/guard-files.sh Claude Code e oi file er Edit/Write atkay
+#   - scripts/check-rules.sh (CI) hash mile kina dekhe, tai je bhabei bodlak dhora pore
+# Deploy er por migration bodlano nishiddho (6.1): notun 00N_*.sql banao.

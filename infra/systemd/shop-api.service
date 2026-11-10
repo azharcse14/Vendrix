@@ -1,0 +1,25 @@
+# /etc/systemd/system/shop-api.service
+[Unit]
+Description=Shop Go API
+After=network-online.target postgresql.service
+Wants=network-online.target
+# v1.5: barbar fail holeo restart chere dey na (default 10 second e 5 bar er por thame)
+StartLimitIntervalSec=0
+
+[Service]
+User=shop
+EnvironmentFile=/etc/shop/api.env
+ExecStart=/srv/api/shop-api
+Restart=always
+# v1.5: DB restart er shomoy druto crash loop na
+RestartSec=2
+KillSignal=SIGTERM
+# graceful shutdown er context 25 second, TimeoutStopSec er kom
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

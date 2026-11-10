@@ -1,0 +1,21 @@
+# Local Postgres 16 (13.1): C.UTF-8 (Bangla search, 2.1), shop_owner (migration) ar shop_app (API) role,
+# shop database (postgres/init.sql). Chalao: make db-up; bondho: make db-down. Shudhu local er jonno.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8 --encoding=UTF8"
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:

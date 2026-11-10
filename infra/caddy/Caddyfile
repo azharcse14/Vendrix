@@ -1,0 +1,44 @@
+# Vendrix er Caddy (design 13.3). CF_IP_RANGES env e Cloudflare er IPv4/IPv6 range (space diye).
+# Shop er nijer domain (jemon sobujbazar.com) tomarshop.com er block er moto; www Caddy 301 diye apex e pathay.
+{
+  servers {
+    trusted_proxies static {$CF_IP_RANGES}   # Cloudflare er IPv4/IPv6 range (13.5)
+    client_ip_headers CF-Connecting-IP
+  }
+}
+(origin_tls) {
+  tls /etc/caddy/origin.pem /etc/caddy/origin.key   # Cloudflare origin certificate
+}
+(app_proxy) {
+  header_up X-Real-IP {client_ip}    # Cloudflare theke ashle CF-Connecting-IP, na hole connection er IP
+  header_up -X-Client-IP             # client nije boshate parbe na (3.2)
+  header_up -X-Internal-Auth
+}
+www.tomarshop.com {
+  import origin_tls
+  redir https://tomarshop.com{uri} permanent
+}
+tomarshop.com {                       # shop er nijer domain (jemon sobujbazar.com) holeo ekoi
+  import origin_tls
+  reverse_proxy 127.0.0.1:8081 {      # Jaspr server
+    import app_proxy
+  }
+}
+api.tomarshop.com {
+  import origin_tls
+  reverse_proxy 127.0.0.1:8080 {      # Go API
+    import app_proxy
+  }
+}
+admin.tomarshop.com {
+  import origin_tls
+  header {
+    Content-Security-Policy "frame-ancestors 'none'"
+    X-Content-Type-Options nosniff
+  }
+  @app path / /index.html /flutter_bootstrap.js /main.dart.js
+  header @app Cache-Control "no-cache"   # deploy er por purono JS na
+  root * /srv/admin                   # flutter build web er output
+  try_files {path} /index.html
+  file_server
+}

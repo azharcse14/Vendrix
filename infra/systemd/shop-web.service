@@ -1,0 +1,26 @@
+# /etc/systemd/system/shop-web.service (13.4): build/jaspr er output /srv/web e (app ar web/ pashapashi)
+[Unit]
+Description=Shop Jaspr website (SSR, BFF)
+After=network-online.target shop-api.service
+Wants=network-online.target
+# v1.5: barbar fail holeo restart chere dey na (default 10 second e 5 bar er por thame)
+StartLimitIntervalSec=0
+
+[Service]
+User=shop
+EnvironmentFile=/etc/shop/web.env
+WorkingDirectory=/srv/web
+ExecStart=/srv/web/app
+Restart=always
+# v1.5: DB restart er shomoy druto crash loop na
+RestartSec=2
+KillSignal=SIGTERM
+# graceful shutdown er context 25 second, TimeoutStopSec er kom
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

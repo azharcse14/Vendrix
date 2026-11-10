@@ -1,0 +1,23 @@
+# Secret: kokhono Git e na (12.2). Udahoron backend/env.example (dot chhara, tai ignore hoy na)
+.env
+.env.*
+*.env
+# Claude Code: nijer jinish
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/worktrees/
+# Build output
+backend/bin/
+backend/shop-api
+website/build/
+admin/build/
+app/build/
+# Dart/Flutter (4.6)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+# Editor ar OS
+.idea/
+*.iml
+.DS_Store

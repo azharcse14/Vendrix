@@ -1,0 +1,93 @@
+{
+  "env": {
+    "GOTOOLCHAIN": "go1.27.3"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(make quick-check)",
+      "Bash(make check)",
+      "Bash(make db-test)",
+      "Bash(make rules)",
+      "Bash(make db-up)",
+      "Bash(make db-down)",
+      "Bash(make migrate)",
+      "Bash(make run)",
+      "Bash(bash scripts/quick-check.sh)",
+      "Bash(bash scripts/check.sh)",
+      "Bash(bash scripts/check-rules.sh)",
+      "Bash(bash scripts/db-test.sh)",
+      "Bash(go test *)",
+      "Bash(go vet *)",
+      "Bash(go build *)",
+      "Bash(go list *)",
+      "Bash(go doc *)",
+      "Bash(go mod tidy)",
+      "Bash(gofmt -l *)",
+      "Bash(gofmt -w *)",
+      "Bash(dart analyze *)",
+      "Bash(dart test *)",
+      "Bash(dart format *)",
+      "Bash(dart pub get)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)",
+      "Bash(flutter pub get)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git switch *)",
+      "WebFetch(domain:docs.jaspr.site)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:docs.flutter.dev)",
+      "WebFetch(domain:pkg.go.dev)",
+      "WebFetch(domain:go.dev)",
+      "WebFetch(domain:developer.sslcommerz.com)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/*.env)",
+      "Bash(git push)",
+      "Bash(git push *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks/session-start.sh\"", "timeout": 30 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks/guard-files.sh\"" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks/format.sh\"", "timeout": 60 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/hooks/stop-check.sh\"", "timeout": 300 }
+        ]
+      }
+    ]
+  }
+}
