@@ -13,13 +13,13 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 er code shesh; baki shudhu push er por CI green (step 6). **M1 shesh** (design v1.11): shop resolve, settings, `shop create`, catalog public/admin, search, audit, router; review fix; report [M1](milestones/M1.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
+- M0 er code shesh; baki shudhu push er por CI green (step 6). M1 shesh (design v1.11). **M2 cholche** (design v1.12): step 0–9 shesh: `packages/shared` (taka/tarikh format, phone, theme token/contrast, translator, `LocalizedText`, M1 er model, `ApiClient`/`ApiError`, repository), CI Dart job; local API te Dart script diye dekha. Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M2 step 1** ([M2](milestones/M2.md)): plan approve (design v1.12); `packages/shared` skeleton (`pubspec.yaml`, `analysis_options.yaml`, `lib/shared.dart`), `dart pub get`/`analyze`, CI Dart job; tarpor step 2 (taka format test age).
+2. **M2 step 10** ([M2](milestones/M2.md)): `make check` ar design-reviewer er finding thik koro; acceptance er proman ar Report; tarpor M2 shesh, porer kaj M3 (Jaspr website) er plan (`milestone` skill; age `website/` e `jaspr install-skills --agent claude-code`).
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M2 step 1–9: `packages/shared` er shob part, CI Dart job, local API te dekha.
 - 10 November 2026: M2 plan approve (shob recommendation), design v1.12.
 - 10 November 2026: M2 plan likha (9 ta open question), approve er opekkhay.
 - 10 November 2026: M1 step 20: `make check` green, design/security review fix, acceptance ☑, report; M1 shesh.
