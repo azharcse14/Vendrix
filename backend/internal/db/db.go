@@ -13,8 +13,7 @@ import (
 	"time"
 )
 
-// DriverName: pgx/v5/stdlib er database/sql driver. M0: internal/db/driver.go e
-// `import _ "github.com/jackc/pgx/v5/stdlib"` (docs/milestones/M0.md); tar age Open spashto error dey.
+// DriverName: pgx/v5/stdlib er database/sql driver (driver.go e register).
 const DriverName = "pgx"
 
 // ErrNoDriver: pgx driver register hoyni.

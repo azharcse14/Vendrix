@@ -10,7 +10,7 @@ Design: 2.2, 4.2, 12.2, 13.4, 13.5 · Milestone: M0 · Code: `backend/cmd/api`, 
 
 1. `main` (`cmd/api/main.go`): SIGINT ba SIGTERM e bondho hoy emon context banay, tarpor `run`.
 2. `run`: command bachai (`serve`, `migrate`, `version`); log JSON e stdout e.
-3. `runServe`: `config.Load(lookup, config.Serve)` → `db.Open` (pgx driver lage, M0 step 1) → `newHandler` → `net.Listen(ADDR)` → `serve`.
+3. `runServe`: `config.Load(lookup, config.Serve)` → `db.Open` (pgx) → `newHandler` → `net.Listen(ADDR)` → `serve`.
 4. `newHandler` (`router.go`): route (`GET /healthz`), CrossOriginProtection e `ADMIN_ORIGINS`, middleware er kram ([http-foundation.md](http-foundation.md)).
 5. `serve` (`server.go`): `newServer` er timeout (4.2) e chalay; ctx bondho hole `Shutdown` (25 second, systemd er 30 second er kom).
 6. `healthz`: database e 2 second er moddhe ping; thik hole `{"status":"ok"}`, na hole `503 db_unavailable`.
@@ -48,7 +48,7 @@ Nai (`healthz` shudhu ping kore).
 
 - Env bhul: shob bhul ek error e, process exit 1; systemd `Restart=always` abar cheshta kore, karon log e.
 - Database nai: `serve` start-i hoy na (`database e jete parchi na`); chalu obosthay database gele `/healthz` 503, uptime monitor alert dey (13.8).
-- pgx driver register hoyni (M0 step 1 er age): `db.ErrNoDriver`.
+- pgx driver register hoyni (`driver.go` er import nai): `db.ErrNoDriver`.
 
 ## Bodlanor age mone rakho
 

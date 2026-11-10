@@ -8,7 +8,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 
 | Feature | Doc | Design | Milestone | Obostha |
 |---|---|---|---|---|
-| Server, config, healthz | [server.md](server.md) | 2.2, 4.2, 13.5 | M0 | cholche (pgx driver baki) |
+| Server, config, healthz | [server.md](server.md) | 2.2, 4.2, 13.5 | M0 | cholche |
 | HTTP er bhitti: client IP, log, error | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 12.2 | M0, M1 | chalu |
 | Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | cholche (integration test baki) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |

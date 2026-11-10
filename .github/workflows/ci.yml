@@ -25,8 +25,8 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27.3"
-          # go.sum ashe pgx er shathe (M0); tokhon cache: true ar cache-dependency-path: backend/go.sum
-          cache: false
+          cache: true
+          cache-dependency-path: backend/go.sum
       - name: quick-check (gofmt, vet, test, docsync, rule check)
         run: QUICK_ALL=1 QUICK_PARTS=go bash scripts/quick-check.sh
       - name: race
