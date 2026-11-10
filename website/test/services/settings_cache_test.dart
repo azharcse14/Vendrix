@@ -11,6 +11,7 @@ void main() {
   late Map<String, int> version; // host → published version
   late List<String> calls; // "host path?locale"
   late bool down;
+  late int? status; // API er bhul (jemon 423, 429)
   late SettingsCache cache;
   late List<Object> logged;
 
@@ -20,6 +21,10 @@ void main() {
       MockClient((req) async {
         calls.add('$host ${req.url.path}${req.url.hasQuery ? '?${req.url.query}' : ''}');
         if (down) throw http.ClientException('down');
+        if (status case final st?) {
+          final code = st == 423 ? 'shop_suspended' : 'rate_limited';
+          return http.Response('{"error":{"code":"$code","message":""}}', st);
+        }
         final v = version[host];
         if (v == null) {
           return http.Response('{"error":{"code":"shop_not_found","message":""}}', 404);
@@ -43,6 +48,7 @@ void main() {
     version = {'a.shop': 1, 'b.shop': 7};
     calls = [];
     down = false;
+    status = null;
     logged = [];
     cache = SettingsCache(repoFor, now: () => now, log: logged.add);
   });
@@ -151,6 +157,21 @@ void main() {
       await cache.get('a.shop');
       await settle();
       await expectLater(cache.get('a.shop'), throwsA(isA<ApiError>()));
+    });
+
+    test('refresh e 429: purono rakhe ar log; 423 shop_suspended: bad', () async {
+      await cache.get('a.shop');
+      status = 429;
+      now = now.add(const Duration(seconds: 31));
+      await cache.get('a.shop');
+      await settle();
+      expect(logged, hasLength(1));
+      expect((await cache.get('a.shop')).version, 1);
+      status = 423;
+      now = now.add(const Duration(seconds: 31));
+      await cache.get('a.shop');
+      await settle();
+      await expectLater(cache.get('a.shop'), throwsA(isA<ApiError>().having((e) => e.code, 'code', 'shop_suspended')));
     });
   });
 }

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:shared/shared.dart';
 
 import 'config.dart';
+import 'settings_cache.dart';
 
 /// Shob request e ek HTTP client (connection reuse).
 final httpClient = http.Client();
@@ -19,3 +22,9 @@ Map<String, String> apiHeaders(Map<String, String> request, Config cfg) {
 /// Protiti page request e notun [ApiClient] (10.2); bhasha URL theke ([locale]), browser er header na.
 ApiClient apiFor(Map<String, String> request, String locale, Config cfg, http.Client client) =>
     ApiClient(cfg.apiBaseUrl, client, locale: locale, headers: apiHeaders(request, cfg));
+
+/// Process er settings cache (3.5); background refresh e customer er IP nai, API connection IP ney.
+final settingsCache = SettingsCache(
+  (host) => SettingsRepository(ApiClient(config.apiBaseUrl, httpClient, headers: {'X-Shop-Host': host})),
+  log: (e) => stderr.writeln('settings refresh: $e'),
+);

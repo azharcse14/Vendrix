@@ -5,7 +5,7 @@ Design: 10.1–10.5, 10.9, 10.10, 3.2, 13.5 · Milestone: M3 · Code: `website/`
 ## Ki kore
 
 Customer er website: Jaspr server mode e protiti page server e render hoy (SSR), dokan chena jay `Host` theke. Bangla root e, English `/en/...` e. Browser kokhono Go API te jay na; page er data Jaspr server API theke ane.
-M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control` ar BFF skeleton; page, SEO porer step e ([M3](../milestones/M3.md)).
+M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, BFF skeleton ar settings cache; page, SEO porer step e ([M3](../milestones/M3.md)).
 
 ## Kivabe kaj kore
 
@@ -15,7 +15,8 @@ M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control` ar
 4. CSS: Tailwind v3.4.19 standalone CLI (`scripts/tailwind.sh`, version ar sha256 pin, binary `website/.dart_tool` e) `tailwind.css` → `web/styles.css`; `tailwind.config.js` e rong, radius, font shudhu CSS variable (9.3). `jaspr_tailwind` Dart 3.13 e resolve hoy na (v1.14).
 5. Cache (10.3): `cacheControl()` (`lib/services/cache_control.dart`): BFF `/_/...` → `no-store`; `__Host-sid`, `__Host-cart`, `preview` cookie ba response e `Set-Cookie` → `private, no-store` (page er nijer header o bodle); baki page nije `Cache-Control` dile seta, na dile 2xx e `public, max-age=60`, onno status e `no-store`.
 6. BFF (10.9): `bff(config, httpClient, bffRoutes)` (`lib/services/bff.dart`) shudhu `/_/...` dhore, baki page e jay. POST/PATCH/DELETE e CSRF check: `Origin` thakle tar host:port = `Host`, na thakle `Sec-Fetch-Site: same-origin`, na hole `403 forbidden`. `bffRoutes` (`BffRoute`: method, path regex → Go API path) e na mille `404 not_found`; M3 e list khali, prothom route M4 e. Forward: `apiHeaders` (shop, IP), cookie `__Host-sid` → `Authorization: Bearer`, `__Host-cart` → `X-Cart-Key`, `Idempotency-Key`, bhasha nijer page er `Referer` path theke (`localeOf`; nai ba onno host hole `bn`); browser er cookie ar `Accept-Language` jay na. Go API er status, body ar `content-type` hubohu. JS chhara form (`x-www-form-urlencoded`) JSON hoye jay, uttor `303`: 2xx e `Referer` er page e, error e oi page e `?error=<code>` (onno host er Referer hole `/`). API e na pele `502 network_error`, 15 second e `504 timeout`. Shob uttor `no-store`.
-7. Local: `make web` (`scripts/web.sh`): `website/.env` load, Tailwind `--watch`, `jaspr serve` (port `pubspec.yaml` er `jaspr.port` 8081).
+7. Settings cache (3.5, 10.10 item 4): `settingsCache.get(host)` (`lib/services/settings_cache.dart` → `SettingsCache`, global `lib/services/api.dart` e) `ShopSettings` (settings, version, `translations` bn/en) dey. Prothom bar `version`, `settings`, duita `translations` (ek host e ekshathe ekta load). 30 second por prothom request purono data dey ar background e `version` check (host e ekta); bodlale shob abar. API down ba `429`: purono rakhe, log, 30 second por abar. `shop_not_found`/`shop_suspended`: cache theke bad, porer request error. Faka cache e bhul `get` theke `ApiError` (error page); ochena host cache hoy na.
+8. Local: `make web` (`scripts/web.sh`): `website/.env` load, Tailwind `--watch`, `jaspr serve` (port `pubspec.yaml` er `jaspr.port` 8081).
 
 ## Code er map
 
@@ -29,6 +30,7 @@ Ei kram e poro:
 | `website/lib/services/config.dart` → `Config.fromEnv`, `config` | Env (13.5) |
 | `website/lib/services/locale.dart` → `localeOf` | URL theke bhasha |
 | `website/lib/services/cache_control.dart` → `cacheControl` | `Cache-Control` middleware |
+| `website/lib/services/settings_cache.dart` → `SettingsCache`, `ShopSettings`; `api.dart` → `settingsCache` | Host onujayi settings ar translation cache |
 | `website/lib/services/bff.dart` → `bff`, `BffRoute`, `bffRoutes`, `parseCookies` | BFF: CSRF, forward, form `303` |
 | `website/lib/services/api.dart` → `apiHeaders`, `apiFor`, `httpClient` | Request theke `ApiClient` |
 | `website/tailwind.config.js`, `scripts/tailwind.sh` | Tailwind token ar build |
@@ -42,6 +44,7 @@ Ei kram e poro:
 | Shop `Host` theke; `X-Client-IP` + `X-Internal-Auth` shudhu Caddy er `X-Real-IP` thakle; `Accept-Language` URL theke (3.2, 10.3) | `apiHeaders`, `apiFor` | `website/test/services/api_test.dart` → `group('API header (3.2, 10.3)')` |
 | Personal cookie (`__Host-sid`, `__Host-cart`, `preview`) ba `Set-Cookie` → `private, no-store`; cookie chhara public page `public, max-age=60`; BFF `no-store`; non-2xx `no-store` (10.3, 14.2 test 24) | `cacheControl` | `website/test/server/cache_control_test.dart` → `group('Cache-Control (10.3, 14.2 test 24)')` |
 | BFF: Origin nai/onno/`null`/onno port ba `Sec-Fetch-Site` cross-site → `403`, API te jay na; header forward; Go API er status/error hubohu; ochena route `404`; form `303`; `no-store` (10.9) | `bff` | `website/test/bff/bff_test.dart` → `group('BFF (10.9)')` |
+| Settings cache: 30 second er moddhe API te na; por version check, na bodlale shudhu version; bodlale background e notun; ekshathe ekta; host onujayi; API down/429 e purono + log; faka cache e error; ochena host cache na; shop nai/suspended e bad (3.5, 10.10) | `SettingsCache` | `website/test/services/settings_cache_test.dart` → `group('Settings cache (3.5)')` |
 | Env nai ba bhul hole server uthe na (13.5) | `Config.fromEnv` | `website/test/services/api_test.dart` → `group('Config (13.5)')` |
 
 ## Data
@@ -62,5 +65,8 @@ Nai (website database dhore na; shob Go API theke).
 - Jaspr update hole `jaspr install-skills --agent claude-code` abar ar `*.options.dart` (`dart run build_runner build`).
 
 ## Proshno-uttor
+
+- **Admin publish korle website e kokhon?** Max ~30 second + ek request: TTL er por prothom request purono dey ar refresh shuru kore, porer request notun pay (3.5: 1 minute er moddhe).
+- **Translation override save (M8) e version bare na hole?** Purono lekha porer publish porjonto; tai M8 e override save e `version` barabe (3.5 item 6).
 
 - **Browser er bhasha keno dekhi na?** Ekoi URL e alada HTML hole Cloudflare cache bhul bhashar page dite pare (10.3); bhasha bodlano shudhu link diye.
