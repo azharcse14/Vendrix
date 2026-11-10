@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M1 step 1, httpx 404/405 JSON ar paging** ([M1](milestones/M1.md), plan approve, design v1.10): `TestNotFoundJSON`, `TestMethodNotAllowedJSON`, `TestPage` age, tarpor code; `milestone` skill er kram. M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
+2. **M1 step 2, error message er bhasha** ([M1](milestones/M1.md), v1.10): `httpx` e code → `{bn, en}` map, `Accept-Language` (default `bn`); `TestErrorMessageLocale` age, tarpor code. M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
 
 ## User er kache proshno
 
@@ -35,7 +35,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | # | Naam | Obostha | Plan |
 |---|---|---|---|
 | M0 | Project setup | cholche (10 November 2026 theke) | [M0](milestones/M0.md) |
-| M1 | Shop, vendor, settings, catalog API | plan approve (10 November 2026) | [M1](milestones/M1.md) |
+| M1 | Shop, vendor, settings, catalog API | cholche (10 November 2026 theke) | [M1](milestones/M1.md) |
 | M2 | Shared Dart package | baki | |
 | M3 | Website catalog | baki | |
 | M4 | Login | baki | |
@@ -52,6 +52,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M1 step 1: `httpx.JSONErrors` (404/405 JSON), `Page`, `NewPaged`.
 - 10 November 2026: M1 plan approve (user 12 ta recommendation niyeche); design v1.10 (3.2, 3.8, 7.1, 7.2, 7.7, 9.2, 15).
 - 10 November 2026: M0 review (design + security): batch e churi kora lock er job bad, handler 1 minute timeout, shutdown e baki job ferot, `run_at` DB er `now()`, concurrency test, env.example `local-only` secret local chhara reject (design v1.9); `jobs` cleanup 16.1 e.
 - 10 November 2026: M0 step 6 (local ongsho): CI `database` job e Go DB test, `check.sh` e DB shoho race, PG env default 5433; `make check` green (83/83), govulncheck, staticcheck clean.

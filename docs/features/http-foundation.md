@@ -29,7 +29,8 @@ Ei kram e poro:
 | `backend/internal/httpx/clientip.go` → `ClientIP`, `IP`, `resolveIP`, `parseIP` | Client IP (3.2) |
 | `backend/internal/httpx/log.go` → `Log`, `statusWriter` | Request log |
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
-| `backend/internal/httpx/httpx_test.go` | Test |
+| `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
+| `backend/internal/httpx/httpx_test.go`, `page_test.go` | Test |
 
 ## Niyom ar tar test
 
@@ -42,6 +43,8 @@ Ei kram e poro:
 | Ochena field, duita JSON, 1 MB er beshi → error (7.1) | `DecodeJSON` | `TestDecodeJSON` |
 | Error format (7.1) | `WriteError` | `TestWriteError` |
 | Middleware er kram | `Chain` | `TestChainOrder` |
+| Ochena path `404 not_found`, bhul method `405 method_not_allowed` JSON e, `Allow` header shoho (7.1) | `JSONErrors` | `TestNotFoundJSON`, `TestMethodNotAllowedJSON`, `TestRouterBuild` |
+| Paging `page`/`limit` (default 24, max 100), bhul e `400 validation_failed`; response `{"items","page","limit","total"}`, items `[]` (7.1) | `Page`, `NewPaged` | `TestPage` |
 | Client er pathano request id mane na | `RequestID` | `TestRequestID` |
 
 ## Data
@@ -51,7 +54,8 @@ Nai. `IP(ctx)` pore `orders.ip`, `sessions.ip`, rate limit e jabe (M4, M6).
 ## Bhul hole ki hoy
 
 - `JASPR_INTERNAL_SECRET` website ar API te alada hole website er shob request `127.0.0.1` hoye rate limit e atke (14.2 test 18).
-- ServeMux er nijer 404 ar 405 ekhono plain text; 7.1 er JSON e ana M1 er kaj.
+- `page` ba `limit` bhul: `400 validation_failed`, `fields` e `page`/`limit`.
+- Trailing slash ba path clean er redirect ServeMux er motoi thake (JSON na).
 
 ## Bodlanor age mone rakho
 

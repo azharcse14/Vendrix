@@ -20,7 +20,8 @@ type pinger interface {
 // public route e shop resolver (M1), admin route e staff session (M4). ServeMux pattern conflict e panic
 // kore, tai TestRouterBuild protibar puro router banay (12.2 Server 7).
 //
-// Middleware er kram (bairer theke): request id → client IP → log → recover → CORS → CrossOriginProtection.
+// Middleware er kram (bairer theke): request id → client IP → log → recover → CORS → CrossOriginProtection
+// → JSONErrors (route na mille 404/405 JSON, 7.1).
 // Log recover er bairer, tai panic er 500 o log e ashe.
 func newHandler(cfg config.Config, log *slog.Logger, database pinger) (http.Handler, error) {
 	mux := http.NewServeMux()
@@ -32,7 +33,7 @@ func newHandler(cfg config.Config, log *slog.Logger, database pinger) (http.Hand
 			return nil, fmt.Errorf("ADMIN_ORIGINS %q: %w", o, err)
 		}
 	}
-	return httpx.Chain(mux,
+	return httpx.Chain(httpx.JSONErrors(mux),
 		httpx.RequestID,
 		httpx.ClientIP(cfg.JasprInternalSecret),
 		httpx.Log(log, mux),

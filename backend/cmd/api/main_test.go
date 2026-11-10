@@ -47,6 +47,11 @@ func TestRouterBuild(t *testing.T) {
 	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "db_unavailable") {
 		t.Errorf("database bondho: %d %s", rec.Code, rec.Body.String())
 	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/nai", nil))
+	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), `"code":"not_found"`) {
+		t.Errorf("ochena path JSON na: %d %s", rec.Code, rec.Body.String())
+	}
 	if _, err := newHandler(config.Config{AdminOrigins: []string{"not a url"}}, quiet(), fakeDB{}); err == nil {
 		t.Error("bhul ADMIN_ORIGINS e error ashe ni")
 	}
