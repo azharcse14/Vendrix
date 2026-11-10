@@ -31,7 +31,8 @@ Ei kram e poro:
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
 | `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
 | `backend/internal/httpx/message.go` → `messages`, `lang`, `message` | Error message er bhasha |
-| `backend/internal/httpx/httpx_test.go`, `page_test.go`, `message_test.go` | Test |
+| `backend/internal/httpx/staff.go` → `Staff`, `WithStaff`, `StaffFrom`, `RequireStaff`, `RequireRole` | Admin er staff ar role |
+| `backend/internal/httpx/httpx_test.go`, `page_test.go`, `message_test.go`, `staff_test.go` | Test |
 
 ## Niyom ar tar test
 
@@ -46,6 +47,7 @@ Ei kram e poro:
 | `message` `Accept-Language` onujayi (`bn` default, ochena bhasha/code e-o faka na), caller er message thakle sheta (7.1, v1.10) | `WriteError`, `message`, `lang` | `TestErrorMessageLocale` |
 | Middleware er kram | `Chain` | `TestChainOrder` |
 | Ochena path `404 not_found`, bhul method `405 method_not_allowed` JSON e, `Allow` header shoho (7.1) | `JSONErrors` | `TestNotFoundJSON`, `TestMethodNotAllowedJSON`, `TestRouterBuild` |
+| Admin route e staff na thakle `401 unauthenticated` (fail-closed, login M4 e; v1.10), role na mille `403 forbidden` (11.2); vendor staff er `VendorID` context e (Rule 13) | `RequireStaff`, `RequireRole` | `TestRequireStaff`, `TestRequireRole` |
 | Paging `page`/`limit` (default 24, max 100), bhul e `400 validation_failed`; response `{"items","page","limit","total"}`, items `[]` (7.1) | `Page`, `NewPaged` | `TestPage` |
 | Client er pathano request id mane na | `RequestID` | `TestRequestID` |
 
@@ -64,6 +66,7 @@ Nai. `IP(ctx)` pore `orders.ip`, `sessions.ip`, rate limit e jabe (M4, M6).
 - `statusWriter` er `Unwrap` muchbe na: upload er deadline `http.ResponseController` diye (2.2).
 - Log e notun field dile personal data (phone, thikana, IP, token) na (12.2).
 - Rate limit (7.8) ei package e ashbe (M1, M4); key `shop_id:ip`.
+- Staff context ekhon shudhu test boshay (`WithStaff`); M4 er session middleware oi `Staff`-i bhorbe. Admin handler `StaffFrom` er `ShopID` (ar `VendorID`) diye query filter kore, request body theke na (3.2).
 - Notun error code: `message.go` er `messages` e bn ar en duitai (test dhore); `WriteError` e `r` lage, `Message` faka rakho.
 
 ## Proshno-uttor

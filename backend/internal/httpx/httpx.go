@@ -33,6 +33,7 @@ const (
 	requestIDKey ctxKey = iota
 	clientIPKey
 	shopKey
+	staffKey
 )
 
 // RequestID: protiti request e notun random id, X-Request-Id response header ar log e. Client er pathano
