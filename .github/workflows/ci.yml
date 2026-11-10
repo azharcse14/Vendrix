@@ -40,7 +40,7 @@ jobs:
         run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
 
   database:
-    name: Database (001_init + constraint test)
+    name: Database (001_init + constraint test, Go DB test)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -66,6 +66,17 @@ jobs:
         run: command -v psql >/dev/null || (sudo apt-get update && sudo apt-get install -y postgresql-client)
       - name: db-test
         run: bash scripts/db-test.sh
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.3"
+          cache: true
+          cache-dependency-path: backend/go.sum
+      # asol Postgres e Go test (jobs, shop, migrate); db-test er por, karon shop_app role oikhane banay
+      - name: go test (database)
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+        run: go test -count=1 ./...
 
   # M2, M3, M7: packages/shared, website ba admin e pubspec.yaml ashle ekhane Dart job jog koro (4.6):
   # Dart/Flutter setup (version pin kora), tarpor `QUICK_ALL=1 QUICK_PARTS=dart bash scripts/quick-check.sh`.
