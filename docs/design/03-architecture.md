@@ -110,6 +110,7 @@ Website er success page kokhono payment "paid" korbe na. Backend IPN ba success 
 3. "Publish" e draft `published` e copy hoy, `version` ek barhe, `settings_history` e purono ta jay.
 4. Jaspr server protiti 30–60 second e `GET /api/settings/version` check kore. Version bodlale `GET /api/settings` theke notun settings ane.
 5. Fole publish er 1 minute er moddhe shob customer notun design dekhe.
+6. v1.13: Jaspr er cache host onujayi, translation shoho, background refresh, API down e purono (10.10). Translation override save (M8) e o `version` barbe, na hole porer publish porjonto purono lekha.
 
 ### 3.6 Background job
 

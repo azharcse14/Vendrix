@@ -56,6 +56,7 @@ Error er format shob jaygay ekoi:
 | GET | `/api/settings` | Published settings er public onsho. v1.10: whitelist (9.2): `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`; baki jay na |
 | GET | `/api/settings/version` | Shudhu version number (Jaspr cache check) |
 | GET | `/api/settings/preview?token=` | Draft settings (signed preview token, 30 min) |
+| GET | `/api/policies/{kind}` | v1.13: shop er policy lekha (`terms`, `return`, `refund`, `delivery`, `privacy`), published settings er `policies` block theke `{"bn","en"}` resolve kore (ochena kind `404`) |
 | GET | `/api/translations?locale=bn` | Admin override gulo (default file er upore) |
 | GET | `/api/categories` | Category tree |
 | GET | `/api/products` | List: `category`, `q`, `min_price`, `max_price`, `in_stock`, `vendor` (marketplace), `sort` (`newest`, `price_asc`, `price_desc`, `popular`), `page`, `limit`. v1.10: `q` thakle ar `sort` na dile relevance (6.4); search o 7.1 er moto paged; `popular` = `review_count DESC, rating_sum DESC` |

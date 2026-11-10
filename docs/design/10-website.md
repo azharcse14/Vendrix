@@ -158,3 +158,16 @@ Niyom:
 4. JS chhara form POST e `303` redirect (POST-redirect-GET), error hole form abar dekhay.
 5. Jaspr kono dam, stock, discount hishab kore na (Rule 1), shudhu forward kore.
 6. Response e `Cache-Control: no-store`.
+
+### 10.10 M3 er decision (v1.13)
+
+1. **Setup**: `jaspr ^0.23.5`, `jaspr_router` (`/en` prefix), `jaspr_tailwind` + Tailwind **v3.4.x standalone CLI** (Node chhara; version ar sha256 `scripts/` e pin, script download kore); `tailwind.config.js` 9.3 er hubohu; dev e `jaspr_test`. `jaspr install-skills --agent claude-code` er file commit hoy (Jaspr update e abar).
+2. **Admin er lekha** (product description, policy): plain text, shob escape; khali line `<p>`, newline `<br>`; link na (12.2).
+3. **Chobi**: website env `IMAGE_BASE_URL` (platform er) ar `IMAGE_RESIZE=cloudflare|none`; `srcset` = `<base>/cdn-cgi/image/width=W,format=auto/<key>` (`none` e `<base>/<key>`); chobi na thakle `tint` placeholder (13.5).
+4. **Settings cache** (3.5): host onujayi `{settings, version, translations[bn,en], checkedAt}`; 30 second por prothom request background e version check (request atkay na, ekbar e ekta); version bodlale settings ar duita translation abar; API down hole purono cache ar log; cache faka hole error page; ochena host cache na.
+5. **BFF** M3 e shudhu skeleton (Origin check, cookie → header, forward, `303`, `no-store`) ar test; prothom asol route M4 e (`/_/auth/otp/*`).
+6. **Cart/Account**: page M4/M5 er age link lukano (layout ekoi); product page er sticky bar e dam ar variant, "Cart e add" button M5 e.
+7. **Security header** Jaspr middleware e (12.2): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, CSP `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' <IMAGE_BASE_URL> data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. Turnstile/payment domain M4/M10 e; HSTS M12 e (Cloudflare/Caddy).
+8. **Test**: logic (cache, BFF, SEO, locale, header) `package:test`; page `jaspr_test` (title, OG, `srcset`, lekha); 360/1280 ar Lighthouse manual, Report e; Playwright M12 e. CI er Dart job e `jaspr build` ar `main.client.dart.js` er size log e.
+9. **Facebook debugger** M3 e `cloudflared` quick tunnel diye (install na thakle M12 e staging e).
+10. **Choto niyom**: `locales.enabled` e `en` na thakle `/en/*` `404`, hreflang shudhu `bn` ar `x-default`; suspended shop ba API 5xx/network e page `503` (`Retry-After: 3600` suspended e), `no-store`; root `/` `lang` cookie dekhe redirect kore na; client JS `?v=<git sha>`; featured product protiti slug e alada detail call (max 12), na pele bad.

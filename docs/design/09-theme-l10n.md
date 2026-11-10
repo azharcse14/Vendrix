@@ -54,11 +54,14 @@ Theme shop er. Marketplace e vendor er shudhu logo ar description (`vendors.prof
     "featured_product_slugs": []
   },
   "seo": { "title": { "bn": "...", "en": "..." }, "description": { "bn": "...", "en": "..." }, "og_image_key": null, "noindex": true },
-  "integrations": { "facebook_pixel_id": null, "ga4_id": null }
+  "integrations": { "facebook_pixel_id": null, "ga4_id": null },
+  "policies": { "terms": { "bn": "...", "en": "" }, "return": {}, "refund": {}, "delivery": {}, "privacy": {} }
 }
 ```
 
 `PUT /api/admin/settings/draft` e backend validate korbe: rong `#RRGGBB`, font allowed list theke, `radius` 0 theke 24, `features` jana list theke, `locales.enabled` e `bn` thakbei, taka integer poisha, banner `link` shudhu `/` diye shuru (kintu `//` na: protocol-relative URL onno site e jay; v1.5: `\`, tab, newline ba onno control character o na, karon browser `/\evil.com` ke `//evil.com` dhore; string na dekhe URL parse kore host khali kina dekho) ba `https://`, social link `https://` (`javascript:` na), logo PNG/JPEG (SVG ar WebP na, 2.2), `marketplace.delivery_charge_mode` `per_order` ba `per_vendor` (single mode e `marketplace` block use hoy na). Public `GET /api/settings` e `checkout.risk` er moto vitorer setting jabe na; v1.10: whitelist (7.2 er list), notun setting default e private. `seo.noindex` limited launch e `true` (14.4).
+
+v1.13: `policies` block (policy page er plain text, 10.10) public whitelist e na; `GET /api/policies/{kind}` alada (settings payload choto rakhte); notun shop e Bangla placeholder, admin editor M8 e.
 
 ### 9.3 Design token
 

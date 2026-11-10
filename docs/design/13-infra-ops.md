@@ -121,6 +121,7 @@ Jaspr er jonno ekoi rokom `shop-web.service` (ekoi `RestartSec`, `StartLimitInte
 | `TOTP_KEY` | v1.5: staff TOTP secret er AES-GCM key (32 byte, base64), AAD = `shop_id:staff_id:key_version` (8.3). Rotation: notun key notun version e (`staff.totp_key_version`), purono row pore re-encrypt |
 | `RECOVERY_SECRET` | v1.5: staff recovery code er HMAC (32 byte random, 8.3). Rotate korle shob staff ke notun code dite hobe |
 | `ALERT_EMAIL`, `ALERT_WEBHOOK_URL` | Admin alert |
+| `IMAGE_BASE_URL`, `IMAGE_RESIZE` | v1.13, website (Jaspr): chobir base URL ar `cloudflare` ba `none` (local) (10.10) |
 | Website: `API_BASE_URL` | Jaspr server, `http://127.0.0.1:8080` (Cloudflare diye na). Shop ashe `Host` theke; local e `localhost` ke `shop_domains` e ekta row hishebe rakho |
 
 v1.9: `backend/env.example` er secret e `local-only` thake; `APP_ENV` local na hole config ei value nile start hoy na (copy kora example secret production e na). Shop-specific secret (SSLCommerz, SMS, courier) database er `shop_credentials` e, env e na. Database banao: `createdb -E UTF8 --locale=C.UTF-8 -T template0 -O shop_owner shop`. CI ar local e-o `shop_app` role banao (`CREATE ROLE shop_app LOGIN`), na hole `001_init_test` er privilege test kichu dekhe na. v1.8: local e `make db-up` (`infra/docker-compose.yml`; `infra/postgres/init.sql` `shop_owner`, `shop_app` ar `shop` database banay), tarpor `cp backend/env.example backend/.env`, `make migrate`, `make run`.

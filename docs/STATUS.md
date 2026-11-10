@@ -19,11 +19,10 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M3 plan approve** ([M3](milestones/M3.md)): plan likha; 13 ta open question er uttor user er kache. Uttor pele step 0 (design-change v1.13), tarpor step 1 (`jaspr install-skills --agent claude-code`, skeleton).
+2. **M3 step 1** ([M3](milestones/M3.md)): plan approve (design v1.13, 10.10); `website/` e `jaspr install-skills --agent claude-code`, Jaspr skeleton; tarpor plan er porer step.
 
 ## User er kache proshno
 
-- **M3 er age (ekhon)**: [M3](milestones/M3.md) er 13 ta open question (Jaspr/Tailwind setup, policy page er lekha, description format, chobi URL, settings cache, BFF route, cart button, CSP, test, CI build, install-skills commit, Facebook debugger tunnel, choto behavior).
 - **M4 er age**: OTP SMS er code `jobs.payload` e plain text thake; AES-GCM naki job chhara pathano (16.1).
 - **M4 er age**: `jobs` er purono row: `jobs.cleanup` (30 din) naki done hole payload khali (16.1).
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
@@ -39,7 +38,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | M0 | Project setup | cholche (10 November 2026 theke) | [M0](milestones/M0.md) |
 | M1 | Shop, vendor, settings, catalog API | shesh (10 November 2026) | [M1](milestones/M1.md) |
 | M2 | Shared Dart package | shesh (10 November 2026) | [M2](milestones/M2.md) |
-| M3 | Website catalog | baki | |
+| M3 | Website catalog | cholche (10 November 2026 theke) | [M3](milestones/M3.md) |
 | M4 | Login | baki | |
 | M5 | Cart ar wishlist | baki | |
 | M6 | Checkout (COD) | baki | |
@@ -54,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M3 plan approve (shob recommendation), design v1.13.
 - 10 November 2026: M3 plan likha (13 ta open question), approve er opekkhay.
 - 10 November 2026: M2 step 10: `make check` green, design review fix, acceptance ☑, report; M2 shesh.
 - 10 November 2026: M2 step 1–9: `packages/shared` er shob part, CI Dart job, local API te dekha.
