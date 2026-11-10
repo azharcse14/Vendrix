@@ -49,7 +49,7 @@ Protiti request kon shop er (ar vendor staff hole kon vendor er), sheta Go API t
 Niyom:
 
 1. Jaspr server customer er `Host` header ta-i `X-Shop-Host` e pathay, nije slug khoje na. Domain theke shop er map Go API e (`shop_domains`, memory cache 60 second).
-2. `shops.status = 'suspended'` hole public API `423 shop_suspended`, website "dokan ekhon bondho" page dekhay. Admin login cholbe, jate owner data dekhte pare.
+2. `shops.status = 'suspended'` hole public API `423 shop_suspended`, website "dokan ekhon bondho" page dekhay. Admin login cholbe, jate owner data dekhte pare. v1.10: `closed` hole public API `404 shop_not_found` (closed shop e admin login cholbe kina M4 er age).
 3. Staff row e `vendor_id` thakle (vendor staff) session e `vendor_id` boshe, ar admin API er protiti query te `vendor_id` filter (Rule 13). Shop er staff (`vendor_id` NULL) shob vendor dekhe.
 4. Ek manush duita shop e kaj korle duita alada staff row, alada login. Ek login e onek shop lagle pore `accounts` + `memberships` migration (16.1).
 5. **Client IP**: Cloudflare er IP range shudhu Caddy dekhe: `trusted_proxies` e Cloudflare range ar `client_ip_headers CF-Connecting-IP`, tarpor Jaspr ar Go API duijon-er kache `X-Real-IP` header e asol IP; client er pathano `X-Client-IP` ar `X-Internal-Auth` Caddy muche dey (13.3). Shob connection Caddy theke ashe (127.0.0.1), tai app nije Cloudflare range dekhe kichu bujhte pare na. Jaspr `X-Real-IP` niye API te `X-Client-IP` e pathay, shathe `X-Internal-Auth: <JASPR_INTERNAL_SECRET>`. Go API: loopback + thik secret hole `X-Client-IP`; loopback (Caddy) hole `X-Real-IP`; na hole connection er IP. Rate limit, `orders.ip`, `sessions.ip`, `many_orders` flag ei IP diye. Na korle website, admin ar app er shob request ek IP hoye jay, ar 7.8 er limit e puro site atke jay.
@@ -138,7 +138,7 @@ Single store e admin UI te fulfillment alada dekhabe na: order page e ekta statu
 
 ### 3.8 Notun shop khola
 
-Ekta command (MVP te CLI, Phase 3 e platform admin): `shop-api shop create --slug sobujbazar --prefix SB --domain sobujbazar.com --owner-email ...`. Ek transaction e:
+Ekta command (MVP te CLI, Phase 3 e platform admin): `shop-api shop create --slug sobujbazar --prefix SB --domain sobujbazar.com --owner-email ...`. v1.10: shathe `--name-bn` (lagbe), `--name-en`, `--owner-name` (lagbe), `--preset` (default `organic`, 9.4); house vendor er slug ar naam shop er, `branding.name` = shop er naam; temporary password `crypto/rand` diye, stdout e ekbar (log e na). Ek transaction e:
 
 1. `shops` (`mode = 'single'`), `shop_domains` (primary).
 2. House vendor (`vendors`, `is_house = true`).

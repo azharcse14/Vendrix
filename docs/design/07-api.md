@@ -34,16 +34,16 @@ Error er format shob jaygay ekoi:
 }
 ```
 
-`message` `Accept-Language` onujayi. Client `code` diye logic korbe, `message` shudhu dekhabe.
+`message` `Accept-Language` onujayi. Client `code` diye logic korbe, `message` shudhu dekhabe. v1.10: `httpx` e code → `{"bn","en"}` (Bangla okkhore ar English) map; ochena code ba bhasha e `bn`.
 
 | HTTP | Kokhon | Code er udahoron |
 |---|---|---|
 | 400 | Input bhul | `validation_failed`, `invalid_phone`, `missing_idempotency_key`, `turnstile_failed`, `otp_invalid`, `otp_too_many_attempts` |
 | 401 | Login nai ba token bhul | `unauthenticated`, `session_expired` |
 | 403 | Onumoti nai | `forbidden`, `phone_blocked` |
-| 404 | Pawa jayni | `not_found`, `shop_not_found` |
+| 404 | Pawa jayni | `not_found`, `shop_not_found` (v1.10: `closed` shop o) |
 | 423 | Shop bondho | `shop_suspended` |
-| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required` |
+| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty` |
 | 422 | Ekoi `Idempotency-Key` e alada body | `idempotency_key_reused` |
 | 429 | Beshi request | `rate_limited` (`Retry-After` header shoho) |
 | 500 | Server er bhul | `internal` (details log e, client e na) |
@@ -53,12 +53,12 @@ Error er format shob jaygay ekoi:
 | Method | Path | Kaj |
 |---|---|---|
 | GET | `/healthz` | Server ar database thik ache kina |
-| GET | `/api/settings` | Published settings (theme, naam, bhasha, checkout setting er public onsho) |
+| GET | `/api/settings` | Published settings er public onsho. v1.10: whitelist (9.2): `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`; baki jay na |
 | GET | `/api/settings/version` | Shudhu version number (Jaspr cache check) |
 | GET | `/api/settings/preview?token=` | Draft settings (signed preview token, 30 min) |
 | GET | `/api/translations?locale=bn` | Admin override gulo (default file er upore) |
 | GET | `/api/categories` | Category tree |
-| GET | `/api/products` | List: `category`, `q`, `min_price`, `max_price`, `in_stock`, `vendor` (marketplace), `sort` (`newest`, `price_asc`, `price_desc`, `popular`), `page`, `limit` |
+| GET | `/api/products` | List: `category`, `q`, `min_price`, `max_price`, `in_stock`, `vendor` (marketplace), `sort` (`newest`, `price_asc`, `price_desc`, `popular`), `page`, `limit`. v1.10: `q` thakle ar `sort` na dile relevance (6.4); search o 7.1 er moto paged; `popular` = `review_count DESC, rating_sum DESC` |
 | GET | `/api/products/{slug}` | Product, variant, chobi, rating, attributes |
 | GET | `/api/products/{slug}/reviews` | Review list (lukano na) |
 | GET | `/api/vendors/{slug}` | Vendor er profile ar product (shudhu marketplace mode e; single e `404`) |
@@ -134,6 +134,8 @@ Error er format shob jaygay ekoi:
 | POST | `/api/webhooks/{carrier}/{shop}` | Phase 2: courier status (signature/secret check). Shop URL theke (3.2). `DisallowUnknownFields` na |
 
 ### 7.7 Admin API (`/api/admin`, staff login lagbe)
+
+v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff context na thakle shob shomoy `401 unauthenticated`). Product ar category er `slug` admin dey (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 80; PATCH e bodlano jay, redirect na; duplicate `409 slug_taken`). `DELETE /categories/{id}` shudhu khali hole (product ba child thakle `409 category_not_empty`; lukate `is_active = false`). Product create e `vendor_id` optional: shop staff na dile house vendor, vendor staff er session er vendor, onno vendor `404` (Rule 13). Variant create/PATCH e stock na (shuru 0; stock 8.12 er batch/adjust e, M7).
 
 | Bhag | Endpoint |
 |---|---|

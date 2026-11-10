@@ -58,7 +58,7 @@ Theme shop er. Marketplace e vendor er shudhu logo ar description (`vendors.prof
 }
 ```
 
-`PUT /api/admin/settings/draft` e backend validate korbe: rong `#RRGGBB`, font allowed list theke, `radius` 0 theke 24, `features` jana list theke, `locales.enabled` e `bn` thakbei, taka integer poisha, banner `link` shudhu `/` diye shuru (kintu `//` na: protocol-relative URL onno site e jay; v1.5: `\`, tab, newline ba onno control character o na, karon browser `/\evil.com` ke `//evil.com` dhore; string na dekhe URL parse kore host khali kina dekho) ba `https://`, social link `https://` (`javascript:` na), logo PNG/JPEG (SVG ar WebP na, 2.2), `marketplace.delivery_charge_mode` `per_order` ba `per_vendor` (single mode e `marketplace` block use hoy na). Public `GET /api/settings` e `checkout.risk` er moto vitorer setting jabe na. `seo.noindex` limited launch e `true` (14.4).
+`PUT /api/admin/settings/draft` e backend validate korbe: rong `#RRGGBB`, font allowed list theke, `radius` 0 theke 24, `features` jana list theke, `locales.enabled` e `bn` thakbei, taka integer poisha, banner `link` shudhu `/` diye shuru (kintu `//` na: protocol-relative URL onno site e jay; v1.5: `\`, tab, newline ba onno control character o na, karon browser `/\evil.com` ke `//evil.com` dhore; string na dekhe URL parse kore host khali kina dekho) ba `https://`, social link `https://` (`javascript:` na), logo PNG/JPEG (SVG ar WebP na, 2.2), `marketplace.delivery_charge_mode` `per_order` ba `per_vendor` (single mode e `marketplace` block use hoy na). Public `GET /api/settings` e `checkout.risk` er moto vitorer setting jabe na; v1.10: whitelist (7.2 er list), notun setting default e private. `seo.noindex` limited launch e `true` (14.4).
 
 ### 9.3 Design token
 
