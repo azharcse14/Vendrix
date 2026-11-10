@@ -1,5 +1,5 @@
 # Asol kaj scripts/ e (Windows/Git Bash e make na thakle sorasori chalao).
-.PHONY: quick-check check db-test rules db-up db-down migrate run
+.PHONY: quick-check check db-test rules db-up db-down migrate run web
 quick-check:
 	@bash scripts/quick-check.sh
 check:
@@ -18,3 +18,6 @@ migrate:
 	@bash scripts/dev.sh migrate
 run:
 	@bash scripts/dev.sh serve
+# Website (Jaspr + Tailwind): website/.env lage (cp website/env.example website/.env)
+web:
+	@bash scripts/web.sh

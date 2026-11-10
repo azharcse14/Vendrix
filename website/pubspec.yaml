@@ -1,0 +1,26 @@
+name: website
+description: Vendrix customer website (Jaspr server mode, Section 10).
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  http: ^1.6.0
+  jaspr: ^0.23.5
+  jaspr_router: ^0.9.0
+  shared:
+    path: ../packages/shared
+
+dev_dependencies:
+  build_runner: ^2.15.1
+  build_web_compilers: ^4.8.5
+  jaspr_builder: ^0.23.5
+  jaspr_test: ^0.23.0
+  lints: ^6.0.0
+  test: ^1.26.0
+
+jaspr:
+  mode: server
+  port: 8081

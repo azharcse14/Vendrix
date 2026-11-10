@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M3 step 1** ([M3](milestones/M3.md)): plan approve (design v1.13, 10.10); `website/` e `jaspr install-skills --agent claude-code`, Jaspr skeleton; tarpor plan er porer step.
+2. **M3 step 2** ([M3](milestones/M3.md)): step 1 shesh (`website/` Jaspr skeleton, `make web`, Tailwind `scripts/tailwind.sh`). Ekhon `services/config.dart`, `services/api.dart` (Host → `X-Shop-Host`, URL theke `Accept-Language`, `X-Real-IP` → `X-Client-IP` + `X-Internal-Auth`), test age (`locale_route_test.dart`).
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M3 step 1: `website/` Jaspr 0.23.5 skeleton, `install-skills`, Tailwind v3.4.19 standalone (`scripts/tailwind.sh`, `jaspr_tailwind` Dart 3.13 e chole na, design v1.14), `make web`.
 - 10 November 2026: M3 plan approve (shob recommendation), design v1.13.
 - 10 November 2026: M3 plan likha (13 ta open question), approve er opekkhay.
 - 10 November 2026: M2 step 10: `make check` green, design review fix, acceptance ☑, report; M2 shesh.

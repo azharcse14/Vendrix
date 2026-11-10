@@ -161,7 +161,7 @@ Niyom:
 
 ### 10.10 M3 er decision (v1.13)
 
-1. **Setup**: `jaspr ^0.23.5`, `jaspr_router` (`/en` prefix), `jaspr_tailwind` + Tailwind **v3.4.x standalone CLI** (Node chhara; version ar sha256 `scripts/` e pin, script download kore); `tailwind.config.js` 9.3 er hubohu; dev e `jaspr_test`. `jaspr install-skills --agent claude-code` er file commit hoy (Jaspr update e abar).
+1. **Setup**: `jaspr ^0.23.5`, `jaspr_router` (`/en` prefix), Tailwind **v3.4.x standalone CLI** (Node chhara; version ar sha256 `scripts/tailwind.sh` e pin, script download kore; v1.14: `jaspr_tailwind` Dart 3.13 e resolve hoy na (`build_modules` er SDK shima), tai builder chhara CLI shorasori `tailwind.css` → `web/styles.css`); `tailwind.config.js` 9.3 er hubohu; dev e `jaspr_test`. `jaspr install-skills --agent claude-code` er file commit hoy (Jaspr update e abar).
 2. **Admin er lekha** (product description, policy): plain text, shob escape; khali line `<p>`, newline `<br>`; link na (12.2).
 3. **Chobi**: website env `IMAGE_BASE_URL` (platform er) ar `IMAGE_RESIZE=cloudflare|none`; `srcset` = `<base>/cdn-cgi/image/width=W,format=auto/<key>` (`none` e `<base>/<key>`); chobi na thakle `tint` placeholder (13.5).
 4. **Settings cache** (3.5): host onujayi `{settings, version, translations[bn,en], checkedAt}`; 30 second por prothom request background e version check (request atkay na, ekbar e ekta); version bodlale settings ar duita translation abar; API down hole purono cache ar log; cache faka hole error page; ochena host cache na.
