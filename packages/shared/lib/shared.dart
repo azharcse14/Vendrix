@@ -4,5 +4,7 @@ library;
 
 export 'src/format/date.dart';
 export 'src/format/money.dart';
+export 'src/l10n/translator.dart';
+export 'src/models/localized_text.dart';
 export 'src/theme/tokens.dart';
 export 'src/validation/phone.dart';

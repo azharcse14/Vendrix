@@ -14,7 +14,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche |
 | Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche |
 | Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant) |
-| Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh) |
+| Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora M4 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |
@@ -49,6 +49,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Folder | Ki | Doc |
 |---|---|---|
 | `packages/shared/lib/src/format` | Taka ar tarikh format | [l10n.md](l10n.md) |
+| `packages/shared/lib/src/l10n` | Translator, default lekha | [l10n.md](l10n.md) |
 | `packages/shared/lib/src/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
 | `packages/shared/lib/src/theme` | Token derive, contrast | [theme.md](theme.md) |
 
