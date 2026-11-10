@@ -67,3 +67,68 @@ func deleteCategory(ctx context.Context, tx *sql.Tx, shopID, id int64) (before j
 		shopID, id).Scan(&before)
 	return before, err
 }
+
+// adminProducts: shop er product (vendor != nil hole shudhu oi vendor er), notun age.
+// ponytail: total count(*) OVER () theke (listProducts er moto).
+func adminProducts(ctx context.Context, d *sql.DB, shopID int64, vendor any, limit, offset int) ([]json.RawMessage, int64, error) {
+	rows, err := d.QueryContext(ctx, `SELECT to_jsonb(p) - 'shop_id' - 'search_text', count(*) OVER () FROM products p
+		WHERE p.shop_id = $1 AND ($2::bigint IS NULL OR p.vendor_id = $2) ORDER BY p.created_at DESC, p.id DESC LIMIT $3 OFFSET $4`,
+		shopID, vendor, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []json.RawMessage
+	var total int64
+	for rows.Next() {
+		var p json.RawMessage
+		if err := rows.Scan(&p, &total); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, p)
+	}
+	return out, total, rows.Err()
+}
+
+func adminProduct(ctx context.Context, d *sql.DB, shopID, id int64, vendor any) (json.RawMessage, error) {
+	var p json.RawMessage
+	err := d.QueryRowContext(ctx, `SELECT (to_jsonb(p) - 'shop_id' - 'search_text') || jsonb_build_object(
+		'variants', coalesce((SELECT jsonb_agg(to_jsonb(v) - 'shop_id' ORDER BY v.sort_order, v.id) FROM product_variants v
+		  WHERE v.shop_id = p.shop_id AND v.product_id = p.id), '[]'),
+		'images', coalesce((SELECT jsonb_agg(to_jsonb(i) - 'shop_id' ORDER BY i.sort_order, i.id) FROM product_images i
+		  WHERE i.shop_id = p.shop_id AND i.product_id = p.id), '[]'))
+		FROM products p WHERE p.shop_id = $1 AND p.id = $2 AND ($3::bigint IS NULL OR p.vendor_id = $3)`,
+		shopID, id, vendor).Scan(&p)
+	return p, err
+}
+
+// createProduct: vendor_id nil hole house vendor.
+func createProduct(ctx context.Context, tx *sql.Tx, shopID int64, in productInput) (id int64, before, after json.RawMessage, err error) {
+	err = tx.QueryRowContext(ctx, `INSERT INTO products (shop_id, vendor_id, category_id, slug, name, description, unit,
+		variable_weight, attributes, search_keywords, seo, is_active)
+		VALUES ($1, coalesce($2::bigint, (SELECT id FROM vendors WHERE shop_id = $1 AND is_house)), $3, $4, $5,
+		  coalesce($6::jsonb, '{}'), coalesce($7, 'piece'), coalesce($8, false), coalesce($9::jsonb, '{}'),
+		  coalesce($10, ''), coalesce($11::jsonb, '{}'), coalesce($12, true))
+		RETURNING id, to_jsonb(products.*) - 'shop_id' - 'search_text'`,
+		shopID, in.VendorID, in.CategoryID.V, *in.Slug, in.Name, textArg(in.Description), in.Unit, in.VariableWeight,
+		rawArg(in.Attributes), in.SearchKeywords, rawArg(in.SEO), in.IsActive).Scan(&id, &after)
+	return id, nil, after, err
+}
+
+func updateProduct(ctx context.Context, tx *sql.Tx, shopID, id int64, vendor any, in productInput) (int64, json.RawMessage, json.RawMessage, error) {
+	var before, after json.RawMessage
+	if err := tx.QueryRowContext(ctx, `SELECT to_jsonb(p) - 'shop_id' - 'search_text' FROM products p
+		WHERE shop_id = $1 AND id = $2 AND ($3::bigint IS NULL OR vendor_id = $3) FOR UPDATE`, shopID, id, vendor).Scan(&before); err != nil {
+		return id, nil, nil, err
+	}
+	err := tx.QueryRowContext(ctx, `UPDATE products SET
+		category_id = CASE WHEN $3 THEN $4::bigint ELSE category_id END, slug = coalesce($5, slug),
+		name = coalesce($6::jsonb, name), description = coalesce($7::jsonb, description), unit = coalesce($8, unit),
+		variable_weight = coalesce($9, variable_weight), attributes = coalesce($10::jsonb, attributes),
+		search_keywords = coalesce($11, search_keywords), seo = coalesce($12::jsonb, seo),
+		is_active = coalesce($13, is_active), updated_at = now()
+		WHERE shop_id = $1 AND id = $2 RETURNING to_jsonb(products.*) - 'shop_id' - 'search_text'`,
+		shopID, id, in.CategoryID.Set, in.CategoryID.V, in.Slug, textArg(in.Name), textArg(in.Description), in.Unit,
+		in.VariableWeight, rawArg(in.Attributes), in.SearchKeywords, rawArg(in.SEO), in.IsActive).Scan(&after)
+	return id, before, after, err
+}

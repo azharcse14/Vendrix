@@ -30,6 +30,11 @@ func (h *Handlers) Routes(mux *http.ServeMux, public httpx.Middleware) {
 	mux.Handle("POST /api/admin/categories", admin(h.CreateCategory, cat...))
 	mux.Handle("PATCH /api/admin/categories/{id}", admin(h.UpdateCategory, cat...))
 	mux.Handle("DELETE /api/admin/categories/{id}", admin(h.DeleteCategory, cat...))
+	prod := []string{"owner", "admin", "vendor_owner"}
+	mux.Handle("GET /api/admin/products", admin(h.AdminProducts, prod...))
+	mux.Handle("POST /api/admin/products", admin(h.CreateProduct, prod...))
+	mux.Handle("GET /api/admin/products/{id}", admin(h.AdminProduct, prod...))
+	mux.Handle("PATCH /api/admin/products/{id}", admin(h.UpdateProduct, prod...))
 }
 
 // apiErr: handler er jana error (status ar 7.1 body).
@@ -67,7 +72,7 @@ func (h *Handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 
 // constraintField: constraint er naam theke field (onno shop er category/vendor/parent → oi field).
 func constraintField(c string) string {
-	for _, f := range []string{"parent_id", "category_id", "product_id", "vendor_id", "variable_weight", "compare_at", "price"} {
+	for _, f := range []string{"parent_id", "category_id", "product_id", "vendor_id", "variable_weight", "unit", "compare_at", "price"} {
 		if strings.Contains(c, f) {
 			return f
 		}

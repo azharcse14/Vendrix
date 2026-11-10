@@ -18,13 +18,16 @@ func (t Text) In(locale string) string {
 }
 
 // valid: bn lagbe; shudhu bn/en key.
-func (t Text) valid() bool {
+func (t Text) valid() bool { return t.keysOK() && strings.TrimSpace(t["bn"]) != "" }
+
+// keysOK: shudhu bn/en key (description er moto lekha, bn khali hote pare).
+func (t Text) keysOK() bool {
 	for k := range t {
 		if k != "bn" && k != "en" {
 			return false
 		}
 	}
-	return strings.TrimSpace(t["bn"]) != ""
+	return true
 }
 
 var slugRe = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)

@@ -109,3 +109,100 @@ func TestAdminCategoryIntegration(t *testing.T) {
 		t.Errorf("audit: %d (chai 3 create + 1 update + 1 delete) %v", n, err)
 	}
 }
+
+func s64(n int64) string { return strconv.FormatInt(n, 10) }
+
+// TestAdminProductIntegration (7.7, 6.1, v1.10): create (house vendor), validation, variable_weight → kg,
+// onno shop er category/vendor 400 (14.2 test 13), PATCH (updated_at, is_active), audit.
+func TestAdminProductIntegration(t *testing.T) {
+	f := newFixture(t)
+	a := f.owner(t, "a")
+	f.category(t, "a", "chal", "", "চাল", true)
+	f.category(t, "b", "b-cat", "", "বি", true)
+
+	p := f.admin(t, a, "POST", "/api/admin/products", `{"slug":"lal-chal","name":{"bn":"লাল চাল"},"category_id":`+
+		s64(f.ids["chal"])+`,"unit":"kg","variable_weight":true,"attributes":{"origin":"Dinajpur"},"search_keywords":"lal chal"}`, 201)
+	if p["vendor_id"] != float64(f.ids["a.vendor"]) || p["unit"] != "kg" || p["is_active"] != true || p["search_text"] != nil {
+		t.Errorf("create: %v", p)
+	}
+	for body, want := range map[string]string{
+		`{"slug":"lal-chal","name":{"bn":"x"}}`:                                     "slug_taken",
+		`{"slug":"x","name":{"bn":"x"},"variable_weight":true}`:                     "validation_failed variable_weight=invalid",
+		`{"slug":"x","name":{"bn":"x"},"unit":"box"}`:                               "validation_failed unit=invalid",
+		`{"slug":"x","name":{"bn":"x"},"attributes":[1]}`:                           "validation_failed attributes=invalid",
+		`{"slug":"x","name":{"bn":"x"},"description":{"fr":"x"}}`:                   "validation_failed description=invalid",
+		`{"slug":"x","name":{"bn":"x"},"category_id":` + s64(f.ids["b-cat"]) + `}`:  "validation_failed category_id=invalid",
+		`{"slug":"x","name":{"bn":"x"},"vendor_id":` + s64(f.ids["b.vendor"]) + `}`: "validation_failed vendor_id=invalid",
+		`{"slug":"x"}`: "validation_failed name=invalid",
+	} {
+		status := 400
+		if want == "slug_taken" {
+			status = 409
+		}
+		if got := errCode(f.admin(t, a, "POST", "/api/admin/products", body, status)); got != want {
+			t.Errorf("%s: %s, chai %s", body, got, want)
+		}
+	}
+	id := idOf(p)
+	up := f.admin(t, a, "PATCH", "/api/admin/products/"+id, `{"is_active":false,"category_id":null,"name":{"bn":"লাল চাল","en":"Red Rice"}}`, 200)
+	if up["is_active"] != false || up["category_id"] != nil || up["updated_at"] == p["updated_at"] || up["slug"] != "lal-chal" {
+		t.Errorf("patch: %v", up)
+	}
+	for body, want := range map[string]string{
+		`{"unit":"piece"}`: "validation_failed variable_weight=invalid",
+		`{"vendor_id":1}`:  "validation_failed vendor_id=read_only",
+		`{"category_id":` + s64(f.ids["b-cat"]) + `}`: "validation_failed category_id=invalid",
+	} {
+		if got := errCode(f.admin(t, a, "PATCH", "/api/admin/products/"+id, body, 400)); got != want {
+			t.Errorf("patch %s: %s", body, got)
+		}
+	}
+	got := f.admin(t, a, "GET", "/api/admin/products/"+id, "", 200)
+	if got["variants"] == nil || got["images"] == nil || got["name"].(map[string]any)["en"] != "Red Rice" {
+		t.Errorf("get: %v", got)
+	}
+	var n int
+	if err := f.d.QueryRow(`SELECT count(*) FROM audit_logs WHERE shop_id = $1 AND entity_type = 'product' AND entity_id = $2`,
+		a.ShopID, int64(p["id"].(float64))).Scan(&n); err != nil || n != 2 {
+		t.Errorf("audit: %d %v", n, err)
+	}
+}
+
+// TestVendorScopeIntegration (Rule 13, 14.2 test 14 er prostuti): vendor X er staff vendor Y er product
+// dekhe na (list e nai, GET/PATCH 404), Y er naam e create 404; category route 403. Shop B er staff A er
+// product 404 (Rule 3).
+func TestVendorScopeIntegration(t *testing.T) {
+	f := newFixture(t)
+	a, b := f.owner(t, "a"), f.owner(t, "b")
+	x := f.id(t, `INSERT INTO vendors (shop_id, slug, name) VALUES ($1, 'x', '{"bn":"x"}') RETURNING id`, f.ids["a"])
+	y := f.id(t, `INSERT INTO vendors (shop_id, slug, name) VALUES ($1, 'y', '{"bn":"y"}') RETURNING id`, f.ids["a"])
+	vx := httpx.Staff{ID: f.id(t, `INSERT INTO staff (shop_id, vendor_id, email, name, password_hash, role)
+		VALUES ($1, $2, 'x@a.com', 'X', 'h', 'vendor_owner') RETURNING id`, f.ids["a"], x), ShopID: f.ids["a"], VendorID: &x, Role: "vendor_owner"}
+
+	px := f.admin(t, vx, "POST", "/api/admin/products", `{"slug":"x-chal","name":{"bn":"x"}}`, 201)
+	if px["vendor_id"] != float64(x) {
+		t.Errorf("vendor staff er product: %v", px)
+	}
+	py := f.admin(t, a, "POST", "/api/admin/products", `{"slug":"y-chal","name":{"bn":"y"},"vendor_id":`+s64(y)+`}`, 201)
+	f.admin(t, vx, "POST", "/api/admin/products", `{"slug":"z","name":{"bn":"z"},"vendor_id":`+s64(y)+`}`, 404)
+	f.admin(t, vx, "GET", "/api/admin/products/"+idOf(py), "", 404)
+	f.admin(t, vx, "PATCH", "/api/admin/products/"+idOf(py), `{"is_active":false}`, 404)
+	f.admin(t, vx, "GET", "/api/admin/products/"+idOf(px), "", 200)
+	f.admin(t, vx, "POST", "/api/admin/categories", `{"slug":"c","name":{"bn":"c"}}`, 403)
+
+	l := f.admin(t, vx, "GET", "/api/admin/products?vendor_id="+s64(y), "", 200)
+	if items := l["items"].([]any); len(items) != 1 || items[0].(map[string]any)["slug"] != "x-chal" {
+		t.Errorf("vendor x er list: %v", l)
+	}
+	if l := f.admin(t, a, "GET", "/api/admin/products?vendor_id="+s64(y), "", 200); l["total"] != float64(1) {
+		t.Errorf("owner ?vendor_id: %v", l)
+	}
+	if l := f.admin(t, a, "GET", "/api/admin/products", "", 200); l["total"] != float64(2) {
+		t.Errorf("owner list: %v", l)
+	}
+	f.admin(t, b, "GET", "/api/admin/products/"+idOf(px), "", 404)
+	f.admin(t, b, "PATCH", "/api/admin/products/"+idOf(px), `{"is_active":false}`, 404)
+	if l := f.admin(t, b, "GET", "/api/admin/products", "", 200); l["total"] != float64(0) {
+		t.Errorf("shop b list: %v", l)
+	}
+}
