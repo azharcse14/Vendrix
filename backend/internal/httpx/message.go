@@ -16,6 +16,7 @@ var messages = map[string][2]string{
 	"shop_suspended":     {"দোকান এখন বন্ধ", "This shop is closed for now"},
 	"slug_taken":         {"এই লিংক আগেই ব্যবহার হয়েছে", "This link is already used"},
 	"category_not_empty": {"এই ক্যাটাগরিতে পণ্য বা উপ-ক্যাটাগরি আছে", "This category is not empty"},
+	"sku_taken":          {"এই SKU আগেই ব্যবহার হয়েছে", "This SKU is already used"},
 	"rate_limited":       {"অনেক বেশি অনুরোধ, একটু পরে চেষ্টা করুন", "Too many requests, try again later"},
 	"db_unavailable":     {"সার্ভারে সমস্যা, একটু পরে চেষ্টা করুন", "Service unavailable, try again later"},
 	"internal":           {"সার্ভারে সমস্যা হয়েছে", "Something went wrong"},
