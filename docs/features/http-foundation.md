@@ -30,7 +30,7 @@ Ei kram e poro:
 | `backend/internal/httpx/log.go` → `Log`, `statusWriter` | Request log |
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
 | `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
-| `backend/internal/httpx/message.go` → `messages`, `lang`, `message` | Error message er bhasha |
+| `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha; `Locale` public lekha er bhasha (catalog) |
 | `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow` | Public rate limit |
 | `backend/internal/httpx/staff.go` → `Staff`, `WithStaff`, `StaffFrom`, `RequireStaff`, `RequireRole` | Admin er staff ar role |
 | `backend/internal/httpx/httpx_test.go`, `page_test.go`, `message_test.go`, `staff_test.go`, `ratelimit_test.go` | Test |
