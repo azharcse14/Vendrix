@@ -67,7 +67,7 @@ Ei kram e poro:
 - `total` `count(*) OVER ()` theke, tai shesh page er porer page e `total` 0 (`listProducts` er `ponytail:` comment).
 - Stock er sonkhya public e jay na, shudhu `in_stock`.
 - `search_text` e notun field lagle migration (generated column), ar `TestSearchIntegration` e case.
-- Router e route jog M1 er router step e (`cmd/api/router.go`).
+- Router (`cmd/api/router.go` → `newHandler`) `Routes(mux, public)` dake; notun route `Routes` e, `TestRouterBuild` conflict dhore.
 
 ## Proshno-uttor
 

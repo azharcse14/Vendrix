@@ -11,8 +11,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Server, config, healthz | [server.md](server.md) | 2.2, 4.2, 13.5 | M0 | cholche |
 | HTTP er bhitti: client IP, log, error | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 12.2 | M0, M1 | chalu |
 | Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | chalu |
-| Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche (router e jog baki) |
-| Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche (public read; admin ar router baki) |
+| Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche |
+| Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche |
 | Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant) |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora M4 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |

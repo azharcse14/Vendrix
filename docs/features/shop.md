@@ -13,7 +13,7 @@ Public API er protiti request kon shop er, sheta `X-Shop-Host` header (customer 
 3. Middleware: na pele ba `closed` → `404 shop_not_found`; `suspended` → `423 shop_suspended`; resolver er error → log ar `500 internal`; na hole `httpx.Shop` context e.
 4. Handler `httpx.ShopFrom(ctx)` theke `ID` niye protiti query te `shop_id = $n`.
 
-Router e public route e jog M1 er router step e (`cmd/api/router.go`).
+Router (`cmd/api/router.go` → `newHandler`): `/api/settings`, `/api/settings/version`, `/api/translations` public middleware (`ShopFromHost` → `RateLimit`) er pore.
 
 Public settings (`Handlers.Settings`, `handler.go`): `httpx.ShopFrom` er shop → `publishedSettings` (`store.go`) → `PublicSettings` (whitelist: `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`). `GET /api/settings/version` shudhu version. `GET /api/translations?locale=bn|en` (`Handlers.Translations`) shop er `translations` override `{key: value}` dey; default lekha app/website er file e (9.8).
 

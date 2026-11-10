@@ -27,9 +27,10 @@ func testConfig() config.Config {
 		JasprInternalSecret: "0123456789abcdef0123456789abcdef"}
 }
 
-// TestRouterBuild (M0, 12.2 Server 7): puro router panic chhara bane; /healthz database er obostha dekhay.
+// TestRouterBuild (M0, M1, 12.2 Server 7): puro router panic chhara bane; /healthz database er obostha dekhay;
+// admin route staff chhara 401, public route shop chhara 404 (v1.10).
 func TestRouterBuild(t *testing.T) {
-	h, err := newHandler(testConfig(), quiet(), fakeDB{})
+	h, err := newHandler(testConfig(), quiet(), nil, fakeDB{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +39,7 @@ func TestRouterBuild(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"status":"ok"`) || rec.Header().Get("X-Request-Id") == "" {
 		t.Errorf("healthz: %d %s", rec.Code, rec.Body.String())
 	}
-	down, err := newHandler(testConfig(), quiet(), fakeDB{err: errors.New("down")})
+	down, err := newHandler(testConfig(), quiet(), nil, fakeDB{err: errors.New("down")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,14 +53,28 @@ func TestRouterBuild(t *testing.T) {
 	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), `"code":"not_found"`) {
 		t.Errorf("ochena path JSON na: %d %s", rec.Code, rec.Body.String())
 	}
-	if _, err := newHandler(config.Config{AdminOrigins: []string{"not a url"}}, quiet(), fakeDB{}); err == nil {
+	for _, p := range []string{"/api/admin/categories", "/api/admin/products", "/api/admin/products/1"} {
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "unauthenticated") {
+			t.Errorf("%s staff chhara: %d %s", p, rec.Code, rec.Body.String())
+		}
+	}
+	for _, p := range []string{"/api/settings", "/api/categories", "/api/products", "/api/products/x", "/api/translations"} {
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "shop_not_found") {
+			t.Errorf("%s X-Shop-Host chhara: %d %s", p, rec.Code, rec.Body.String())
+		}
+	}
+	if _, err := newHandler(config.Config{AdminOrigins: []string{"not a url"}}, quiet(), nil, fakeDB{}); err == nil {
 		t.Error("bhul ADMIN_ORIGINS e error ashe ni")
 	}
 }
 
 // TestCrossOrigin (12.2 Server 3): onno site er browser theke POST 403; admin origin CrossOriginProtection paar hoy.
 func TestCrossOrigin(t *testing.T) {
-	h, err := newHandler(testConfig(), quiet(), fakeDB{})
+	h, err := newHandler(testConfig(), quiet(), nil, fakeDB{})
 	if err != nil {
 		t.Fatal(err)
 	}

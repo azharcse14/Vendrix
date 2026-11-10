@@ -69,7 +69,7 @@ func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog
 		return err
 	}
 	defer database.Close()
-	h, err := newHandler(cfg, log, database)
+	h, err := newHandler(cfg, log, database, database)
 	if err != nil {
 		return err
 	}

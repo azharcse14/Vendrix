@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/httpx"
+	"vendrix/backend/internal/shop"
 )
 
 // pinger: *sql.DB (test e fake).
@@ -17,15 +20,25 @@ type pinger interface {
 }
 
 // newHandler: shob route ekhane (4.2). Notun route: method shoho pattern ("GET /api/products/{slug}");
-// public route e shop resolver (M1), admin route e staff session (M4). ServeMux pattern conflict e panic
+// public route e public middleware (ShopFromHost → RateLimit 120/minute, 3.2, 7.8); admin route
+// RequireStaff → RequireRole (staff session M4 e, tar age fail-closed 401, v1.10). health = healthz er ping
+// (test e fake). ServeMux pattern conflict e panic
 // kore, tai TestRouterBuild protibar puro router banay (12.2 Server 7).
 //
 // Middleware er kram (bairer theke): request id → client IP → log → recover → CORS → CrossOriginProtection
 // → JSONErrors (route na mille 404/405 JSON, 7.1).
 // Log recover er bairer, tai panic er 500 o log e ashe.
-func newHandler(cfg config.Config, log *slog.Logger, database pinger) (http.Handler, error) {
+func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (http.Handler, error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", healthz(database))
+	mux.HandleFunc("GET /healthz", healthz(health))
+
+	shopMW, limit := httpx.ShopFromHost(log, shop.NewResolver(d).Resolve), httpx.RateLimit(120, time.Minute)
+	public := func(h http.Handler) http.Handler { return shopMW(limit(h)) }
+	sh := shop.NewHandlers(d, log)
+	mux.Handle("GET /api/settings", public(http.HandlerFunc(sh.Settings)))
+	mux.Handle("GET /api/settings/version", public(http.HandlerFunc(sh.SettingsVersion)))
+	mux.Handle("GET /api/translations", public(http.HandlerFunc(sh.Translations)))
+	catalog.NewHandlers(d, log).Routes(mux, public)
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
