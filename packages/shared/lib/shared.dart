@@ -4,4 +4,5 @@ library;
 
 export 'src/format/date.dart';
 export 'src/format/money.dart';
+export 'src/theme/tokens.dart';
 export 'src/validation/phone.dart';
