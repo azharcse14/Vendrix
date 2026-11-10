@@ -3,6 +3,7 @@ package catalog
 import (
 	"database/sql"
 	"encoding/json"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -114,12 +115,11 @@ func (h *Handlers) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		if err := in.check(true); err != nil {
 			return 0, nil, nil, err
 		}
-		if st.VendorID != nil {
-			if in.VendorID != nil && *in.VendorID != *st.VendorID {
-				return 0, nil, nil, errNotFound
-			}
-			in.VendorID = st.VendorID
+		v, err := productVendor(st.VendorID, in.VendorID)
+		if err != nil {
+			return 0, nil, nil, err
 		}
+		in.VendorID = v
 		return createProduct(r.Context(), tx, st.ShopID, in)
 	})
 }
@@ -167,6 +167,10 @@ func (in variantInput) check(create bool) error {
 		return badField("sku", "invalid")
 	case (create || in.Price != nil) && (in.Price == nil || *in.Price < 0):
 		return badField("price", "invalid")
+	case !int32OK(in.SortOrder):
+		return badField("sort_order", "invalid")
+	case in.NominalWeightG.V != nil && *in.NominalWeightG.V > math.MaxInt32:
+		return badField("nominal_weight_g", "invalid")
 	}
 	return nil
 }

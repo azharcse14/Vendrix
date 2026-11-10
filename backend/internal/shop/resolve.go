@@ -14,7 +14,8 @@ import (
 const cacheTTL = 60 * time.Second
 
 // Resolver: shop_domains theke shop (httpx.ShopFromHost er ResolveShop). Shudhu pawa domain cache hoy,
-// tai ochena X-Shop-Host diye memory bharano jay na; tar shima rate limit.
+// tai ochena X-Shop-Host diye memory bharano jay na. Ochena host e protibar DB lookup, rate limit er age
+// (key e shop lage); shima 16.1 er proshno.
 type Resolver struct {
 	db    *sql.DB
 	now   func() time.Time

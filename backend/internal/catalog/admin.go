@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -53,7 +54,8 @@ func badField(field, reason string) apiErr {
 
 var errNotFound = apiErr{http.StatusNotFound, httpx.ErrorBody{Code: "not_found"}}
 
-// writeErr: apiErr, nai (404), ar DB constraint (unique 409, FK/CHECK 400) er error; baki 500.
+// writeErr: apiErr, nai (404), ar catalog er DB constraint (unique 409, FK/CHECK 400) → 7.1; baki 500.
+// ponytail: pgconn er code ekhane (7.1 e map), store e alada error type na.
 func (h *Handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	var ae apiErr
 	var pg *pgconn.PgError
@@ -63,15 +65,26 @@ func (h *Handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		ae = errNotFound
 	case errors.As(err, &pg) && pg.Code == "23505" && strings.Contains(pg.ConstraintName, "sku"):
 		ae = apiErr{http.StatusConflict, httpx.ErrorBody{Code: "sku_taken"}}
-	case errors.As(err, &pg) && pg.Code == "23505":
+	case errors.As(err, &pg) && pg.Code == "23505" && strings.Contains(pg.ConstraintName, "slug"):
 		ae = apiErr{http.StatusConflict, httpx.ErrorBody{Code: "slug_taken"}}
-	case errors.As(err, &pg) && (pg.Code == "23503" || pg.Code == "23514"):
+	case errors.As(err, &pg) && (pg.Code == "23503" || pg.Code == "23514") && catalogConstraint(pg.ConstraintName):
 		ae = badField(constraintField(pg.ConstraintName), "invalid")
 	default:
 		h.fail(w, r, err)
 		return
 	}
 	httpx.WriteError(w, r, ae.status, ae.body)
+}
+
+// catalogConstraint: shudhu catalog table er constraint client er bhul; baki (jemon audit_logs er staff FK =
+// session er bug) 500 ar log e.
+func catalogConstraint(c string) bool {
+	for _, t := range []string{"categories_", "products_", "product_variants_"} {
+		if strings.HasPrefix(c, t) {
+			return true
+		}
+	}
+	return false
 }
 
 // constraintField: constraint er naam theke field (onno shop er category/vendor/parent → oi field).
@@ -173,9 +186,14 @@ func (in categoryInput) check(create bool) error {
 		return badField("slug", "invalid")
 	case (create || in.Name != nil) && !in.Name.valid():
 		return badField("name", "invalid")
+	case !int32OK(in.SortOrder):
+		return badField("sort_order", "invalid")
 	}
 	return nil
 }
+
+// int32OK: DB er INT column e dhore (na hole 22003 → 500 hoto).
+func int32OK(n *int) bool { return n == nil || (*n >= math.MinInt32 && *n <= math.MaxInt32) }
 
 // CreateCategory: POST /api/admin/categories → 201 notun row.
 func (h *Handlers) CreateCategory(w http.ResponseWriter, r *http.Request) {
@@ -206,19 +224,7 @@ func (h *Handlers) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		if err := in.check(false); err != nil {
 			return 0, nil, nil, err
 		}
-		if in.ParentID.Set && in.ParentID.V != nil {
-			parents, err := lockCategoryParents(r.Context(), tx, st.ShopID)
-			if err != nil {
-				return 0, nil, nil, err
-			}
-			if _, ok := parents[id]; !ok {
-				return 0, nil, nil, errNotFound
-			}
-			if makesCycle(parents, id, *in.ParentID.V) {
-				return 0, nil, nil, badField("parent_id", "cycle")
-			}
-		}
-		return updateCategory(r.Context(), tx, st.ShopID, id, in)
+		return changeCategory(r.Context(), tx, st.ShopID, id, in)
 	})
 }
 

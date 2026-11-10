@@ -256,11 +256,37 @@ func TestSearchIntegration(t *testing.T) {
 	if got := f.slugs(t, "a.com", "q="+url.QueryEscape("চ")); len(got) != 5 {
 		t.Errorf("1 okkhor e search hoyeche: %v", got)
 	}
-	if got := f.slugs(t, "a.com", "q=chinigura+chal"); len(got) != 1 || got[0] != "chinigura-chal" {
-		t.Errorf("relevance: %v", got)
-	}
 	if got := f.slugs(t, "a.com", "q=rice&sort=price_desc"); !slices.Equal(got, []string{"chinigura-chal", "lal-chal"}) {
 		t.Errorf("q + sort: %v", got)
+	}
+}
+
+// TestSearchRankingIntegration (6.4 v1.7, M1 acceptance): q thakle default kram relevance: puro shobdo ba
+// shobder shuru te mil age, shobder majhe mil pore (Bangla, juktakkhor, English).
+func TestSearchRankingIntegration(t *testing.T) {
+	f := newFixture(t)
+	// agee banano = notun na, tai relevance na thakle created_at DESC e ulto kram ashto
+	for _, p := range [][3]string{
+		{"modhu", "অর্গানিক মধু", "Organic Honey"},
+		{"modhumoti-chal", "মধুমতি চাল", "Modhumoti Rice"},
+		{"achar", "আমের আচার", "Mango Pickle"},
+		{"lal-chal", "লাল চাল", "Red Rice"},
+		{"ice-cream", "আইসক্রিম", "Ice Cream"},
+		{"khati-modhu", "খাঁটি মধু", "Pure Honey"},
+	} {
+		f.product(t, "a", p[0], p[1], p[2], "", "", 100, 1, true)
+	}
+	for q, want := range map[string][]string{
+		"মধু":      {"khati-modhu", "modhu", "modhumoti-chal"},
+		"চা":       {"lal-chal", "modhumoti-chal", "achar"},
+		"ice":      {"ice-cream", "lal-chal", "modhumoti-chal"},
+		"অর্গানিক": {"modhu"},
+	} {
+		got := f.slugs(t, "a.com", "q="+url.QueryEscape(q))
+		// khati-modhu ar modhu duijon-er word_similarity 1; tie e notun age
+		if !slices.Equal(got, want) {
+			t.Errorf("%q: %v, chai %v", q, got, want)
+		}
 	}
 }
 

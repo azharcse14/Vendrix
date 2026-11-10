@@ -70,6 +70,7 @@ func TestAdminCategoryIntegration(t *testing.T) {
 		`{"slug":"Chal","name":{"bn":"x"}}`:                                                        "validation_failed slug=invalid",
 		`{"slug":"x","name":{"en":"x"}}`:                                                           "validation_failed name=invalid",
 		`{"slug":"x","name":{"bn":"x"},"nai":1}`:                                                   "validation_failed body=invalid",
+		`{"slug":"x","name":{"bn":"x"},"sort_order":3000000000}`:                                   "validation_failed sort_order=invalid",
 		`{"slug":"x","name":{"bn":"x"},"parent_id":` + strconv.FormatInt(f.ids["b-cat"], 10) + `}`: "validation_failed parent_id=invalid",
 	} {
 		status := 400
@@ -85,6 +86,12 @@ func TestAdminCategoryIntegration(t *testing.T) {
 		t.Errorf("cycle: %s", got)
 	}
 	f.admin(t, a, "PATCH", "/api/admin/categories/"+strconv.FormatInt(f.ids["b-cat"], 10), `{"slug":"churi"}`, 404)
+	f.admin(t, a, "DELETE", "/api/admin/categories/"+strconv.FormatInt(f.ids["b-cat"], 10), "", 404)
+	if n := f.id(t, `SELECT count(*) FROM categories WHERE id = $1 AND shop_id = $2 AND slug = 'b-cat'`, f.ids["b-cat"], b.ShopID); n != 1 {
+		t.Error("onno shop er category bodleche")
+	}
+	mixed := httpx.Staff{ID: b.ID, ShopID: a.ShopID, Role: "owner"} // session er bug: staff onno shop er
+	f.admin(t, mixed, "POST", "/api/admin/categories", `{"slug":"mix","name":{"bn":"x"}}`, 500)
 	f.admin(t, b, "PATCH", "/api/admin/categories/"+idOf(root), `{"parent_id":`+strconv.FormatInt(f.ids["b-cat"], 10)+`}`, 404)
 	up := f.admin(t, a, "PATCH", "/api/admin/categories/"+idOf(grand), `{"parent_id":null,"image_key":null,"is_active":false,"name":{"bn":"নতুন"}}`, 200)
 	if up["parent_id"] != nil || up["is_active"] != false || up["slug"] != "lal-chal-2" || up["name"].(map[string]any)["bn"] != "নতুন" {
@@ -223,12 +230,14 @@ func TestAdminVariantIntegration(t *testing.T) {
 		`{"sku":"X","price":-1}`:     "validation_failed price=invalid",
 		`{"sku":"X"}`:                "validation_failed price=invalid",
 		`{"price":1}`:                "validation_failed sku=invalid",
-		`{"sku":"X","price":100,"compare_at_price":100}`:     "validation_failed compare_at_price=invalid",
-		`{"sku":"X","price":100,"stock":5}`:                  "validation_failed body=invalid",
-		`{"sku":"X","price":100,"price_x":1}`:                "validation_failed body=invalid",
-		`{"sku":"X","price":100,"options":{"w":{"en":"x"}}}`: "validation_failed options=invalid",
-		`{"sku":"X","price":100,"nominal_weight_g":0}`:       "validation_failed nominal_weight_g=invalid",
-		`{"sku":"X","price":100,"cost_price":-5}`:            "validation_failed cost_price=invalid",
+		`{"sku":"X","price":100,"compare_at_price":100}`:        "validation_failed compare_at_price=invalid",
+		`{"sku":"X","price":100,"stock":5}`:                     "validation_failed body=invalid",
+		`{"sku":"X","price":100,"price_x":1}`:                   "validation_failed body=invalid",
+		`{"sku":"X","price":100,"options":{"w":{"en":"x"}}}`:    "validation_failed options=invalid",
+		`{"sku":"X","price":100,"nominal_weight_g":0}`:          "validation_failed nominal_weight_g=invalid",
+		`{"sku":"X","price":100,"cost_price":-5}`:               "validation_failed cost_price=invalid",
+		`{"sku":"X","price":100,"sort_order":3000000000}`:       "validation_failed sort_order=invalid",
+		`{"sku":"X","price":100,"nominal_weight_g":3000000000}`: "validation_failed nominal_weight_g=invalid",
 	} {
 		status := 400
 		if want == "sku_taken" {

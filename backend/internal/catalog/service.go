@@ -1,6 +1,9 @@
 package catalog
 
 import (
+	"context"
+	"database/sql"
+	"encoding/json"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -55,4 +58,33 @@ func makesCycle(parents map[int64]int64, id, newParent int64) bool {
 		}
 	}
 	return false
+}
+
+// changeCategory (7.7): parent bodlale shop er category lock kore cycle check, tarpor update.
+func changeCategory(ctx context.Context, tx *sql.Tx, shopID, id int64, in categoryInput) (int64, json.RawMessage, json.RawMessage, error) {
+	if in.ParentID.Set && in.ParentID.V != nil {
+		parents, err := lockCategoryParents(ctx, tx, shopID)
+		if err != nil {
+			return 0, nil, nil, err
+		}
+		if _, ok := parents[id]; !ok {
+			return 0, nil, nil, errNotFound
+		}
+		if makesCycle(parents, id, *in.ParentID.V) {
+			return 0, nil, nil, badField("parent_id", "cycle")
+		}
+	}
+	return updateCategory(ctx, tx, shopID, id, in)
+}
+
+// productVendor (Rule 13, v1.10): vendor staff e shob shomoy nijer vendor (body te onno vendor → 404);
+// shop staff e body er vendor ba nil (store house vendor ney).
+func productVendor(staffVendor, body *int64) (*int64, error) {
+	if staffVendor == nil {
+		return body, nil
+	}
+	if body != nil && *body != *staffVendor {
+		return nil, errNotFound
+	}
+	return staffVendor, nil
 }

@@ -127,9 +127,9 @@ func updateProduct(ctx context.Context, tx *sql.Tx, shopID, id int64, vendor any
 		variable_weight = coalesce($9, variable_weight), attributes = coalesce($10::jsonb, attributes),
 		search_keywords = coalesce($11, search_keywords), seo = coalesce($12::jsonb, seo),
 		is_active = coalesce($13, is_active), updated_at = now()
-		WHERE shop_id = $1 AND id = $2 RETURNING to_jsonb(products.*) - 'shop_id' - 'search_text'`,
+		WHERE shop_id = $1 AND id = $2 AND ($14::bigint IS NULL OR vendor_id = $14) RETURNING to_jsonb(products.*) - 'shop_id' - 'search_text'`,
 		shopID, id, in.CategoryID.Set, in.CategoryID.V, in.Slug, textArg(in.Name), textArg(in.Description), in.Unit,
-		in.VariableWeight, rawArg(in.Attributes), in.SearchKeywords, rawArg(in.SEO), in.IsActive).Scan(&after)
+		in.VariableWeight, rawArg(in.Attributes), in.SearchKeywords, rawArg(in.SEO), in.IsActive, vendor).Scan(&after)
 	return id, before, after, err
 }
 
@@ -161,8 +161,8 @@ func updateVariant(ctx context.Context, tx *sql.Tx, shopID, id int64, vendor any
 		cost_price = CASE WHEN $8 THEN $9::bigint ELSE cost_price END,
 		nominal_weight_g = CASE WHEN $10 THEN $11::int ELSE nominal_weight_g END,
 		is_active = coalesce($12, is_active), sort_order = coalesce($13, sort_order)
-		WHERE shop_id = $1 AND id = $2 RETURNING to_jsonb(product_variants.*) - 'shop_id'`,
+		WHERE shop_id = $1 AND id = $2 AND ($14::bigint IS NULL OR vendor_id = $14) RETURNING to_jsonb(product_variants.*) - 'shop_id'`,
 		shopID, id, in.SKU, optionsArg(in.Options), in.Price, in.CompareAtPrice.Set, in.CompareAtPrice.V,
-		in.CostPrice.Set, in.CostPrice.V, in.NominalWeightG.Set, in.NominalWeightG.V, in.IsActive, in.SortOrder).Scan(&after)
+		in.CostPrice.Set, in.CostPrice.V, in.NominalWeightG.Set, in.NominalWeightG.V, in.IsActive, in.SortOrder, vendor).Scan(&after)
 	return id, before, after, err
 }

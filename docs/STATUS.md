@@ -28,7 +28,8 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
 - **M10 er age**: SSLCommerz validation er HTTP call DB lock er bhetore naki baire (16.1).
 - **M12 er age**: production domain (doc e `tomarshop.com` placeholder), server region, SMS provider (16.1).
-- **Public launch er age**: IP-bhittik rate limit ar CGNAT (16.1).
+- **Public launch er age**: IP-bhittik rate limit ar CGNAT; shathe ochena `X-Shop-Host` er rate limit (M1 review) (16.1).
+- **M7 er age**: `vendor_owner` admin category list porte parbe kina (11.2, 16.1).
 
 ## Milestone
 
