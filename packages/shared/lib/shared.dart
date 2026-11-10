@@ -2,4 +2,5 @@
 /// Pure Dart (Rule 10): Flutter, `dart:io`, `dart:html`, `dart:ui` na.
 library;
 
+export 'src/format/date.dart';
 export 'src/format/money.dart';
