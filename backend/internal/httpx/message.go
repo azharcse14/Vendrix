@@ -32,6 +32,11 @@ func lang(r *http.Request) int {
 	return 0
 }
 
+// Locale (7.1): public API er lekha kon bhasha e: "en" ba "bn" (fallback).
+func Locale(r *http.Request) string {
+	return [2]string{"bn", "en"}[lang(r)]
+}
+
 func message(r *http.Request, code string) string {
 	m, ok := messages[code]
 	if !ok {
