@@ -14,6 +14,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche |
 | Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche |
 | Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant) |
+| Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka format) |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora M4 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
@@ -42,7 +43,13 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
 
-`packages/shared` (M2), `website` (M3), `admin` (M7) er map oi milestone e ekhane jog hobe.
+## Code map (packages/shared)
+
+| Folder | Ki | Doc |
+|---|---|---|
+| `packages/shared/lib/src/format` | Taka (ar tarikh) format | [l10n.md](l10n.md) |
+
+`website` (M3), `admin` (M7) er map oi milestone e ekhane jog hobe.
 
 ## Shobdo
 
