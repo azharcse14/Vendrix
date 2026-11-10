@@ -13,13 +13,13 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 er code shesh (step 1–5, review fix, report); baki shudhu push er por CI green (step 6). M1 cholche: plan approve (design v1.10), step 1–3 shesh (404/405 JSON, paging, error message bn/en, `X-Shop-Host` resolve, staff context ar role, public rate limit, password hash, `shop create`, public settings, translations). Local Postgres host port **5433**.
+- M0 er code shesh (step 1–5, review fix, report); baki shudhu push er por CI green (step 6). M1 cholche (design v1.11): step 0–19 shesh: httpx (404/405 JSON, paging, bn/en message, `X-Shop-Host`, staff/role, rate limit), password hash, `shop create`, public settings/translations, catalog (public list/detail/search, admin category/product/variant, vendor scope), audit, router; local curl thik. Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M1 step 9, catalog test age** ([M1](milestones/M1.md) step 9, 6, 6.4, Rule 3, 13): `internal/catalog` (doc.go, store/service signature) ar fail kora test: `TestShopIsolationIntegration`, `TestTenantForeignKeyIntegration`, `TestVendorScopeIntegration`, `TestSearchIntegration`, `TestLocalizedText`, `TestCategoryCycle`. Local e `sobujbazar.localhost` shop ache. M0 er report [M0](milestones/M0.md) e; CI green hole M0 shesh.
+2. **M1 step 20** ([M1](milestones/M1.md)): `PATH=/opt/homebrew/opt/libpq/bin:$PATH make check`; design-reviewer ar security-reviewer er finding thik koro (`fix` er moto, test age); M1.md er acceptance table e proman ar Report; tarpor Milestone table e M1 shesh, porer kaj M2 (`packages/shared`, plan age).
 
 ## User er kache proshno
 
@@ -52,6 +52,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M1 step 9–19: catalog (public, search, admin category/product/variant), audit, router; design v1.11 (`sku_taken`); local curl; step 20 er check ar review cholche.
 - 10 November 2026: M1 step 8b: `GET /api/translations` (shop er override).
 - 10 November 2026: M1 step 8: public settings (whitelist), settings version; `shop` e handler/store.
 - 10 November 2026: M1 step 7: `shop.DefaultSettings`, `shop.Create`, `shop-api shop create`; local e sobujbazar.localhost banano.
