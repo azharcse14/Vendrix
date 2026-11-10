@@ -96,6 +96,40 @@ void main() {
     });
   });
 
+  group('cssVariables (9.3)', () {
+    test('9.3 er naam, radius, font', () {
+      final v = cssVariables(
+        deriveTokens(presets['organic']!),
+        radius: 14,
+        headingFont: 'Baloo Da 2',
+        bodyFont: 'Hind Siliguri',
+      );
+      expect(v['--color-bg'], '#FBFBF6');
+      expect(v['--color-text-muted'], '#7C7165');
+      expect(
+        [v['--radius'], v['--font-heading'], v['--font-body']],
+        ['14px', '"Baloo Da 2"', '"Hind Siliguri"'],
+      );
+      expect(v.length, 14);
+    });
+    test('font e CSS dhukano ba bhul radius e error', () {
+      final t = deriveTokens(presets['organic']!);
+      expect(
+        () => cssVariables(
+          t,
+          radius: 14,
+          headingFont: 'x"; } body { display:none',
+          bodyFont: 'A',
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => cssVariables(t, radius: -1, headingFont: 'A', bodyFont: 'A'),
+        throwsArgumentError,
+      );
+    });
+  });
+
   group('contrastWarnings (9.3, v1.12)', () {
     test('kharap jora dhore', () {
       final t = deriveTokens({

@@ -49,12 +49,12 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 
 | Folder | Ki | Doc |
 |---|---|---|
-| `packages/shared/lib/src/format` | Taka ar tarikh format | [l10n.md](l10n.md) |
-| `packages/shared/lib/src/l10n` | Translator, default lekha | [l10n.md](l10n.md) |
-| `packages/shared/lib/src/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
-| `packages/shared/lib/src/theme` | Token derive, contrast | [theme.md](theme.md) |
-| `packages/shared/lib/src/api` | `ApiClient`, `ApiError`, repository | [api-client.md](api-client.md) |
-| `packages/shared/lib/src/models` | API er model (`LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
+| `packages/shared/lib/format` | Taka ar tarikh format | [l10n.md](l10n.md) |
+| `packages/shared/lib/l10n` | Translator, default lekha | [l10n.md](l10n.md) |
+| `packages/shared/lib/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
+| `packages/shared/lib/theme` | Token derive, contrast | [theme.md](theme.md) |
+| `packages/shared/lib/api` | `ApiClient`, `ApiError`, repository | [api-client.md](api-client.md) |
+| `packages/shared/lib/models` | API er model (`LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
 
 `website` (M3), `admin` (M7) er map oi milestone e ekhane jog hobe.
 

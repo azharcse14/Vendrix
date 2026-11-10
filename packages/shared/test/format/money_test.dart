@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:shared/shared.dart';
 import 'package:test/test.dart';
 
@@ -14,6 +15,13 @@ void main() {
     test('en_IN: English digit, lakh comma', () {
       expect(formatTaka(12500000, 'en_IN'), '৳1,25,000');
       expect(formatTaka(18050, 'en_IN'), '৳180.50');
+    });
+    test('khub boro amount e poisha thik (double round na)', () {
+      expect(formatTaka(900719925474099, 'en_IN'), '৳90,07,19,92,54,740.99');
+    });
+    test('NumberFormat.currency er output na (regression guard)', () {
+      final cur = NumberFormat.currency(locale: 'bn', symbol: '৳').format(180);
+      expect(formatTaka(18000, 'bn'), isNot(cur));
     });
     test('minus: chinho ৳ er age', () {
       expect(formatTaka(-18000, 'bn'), '-৳১৮০');

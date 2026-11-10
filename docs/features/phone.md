@@ -1,6 +1,6 @@
 # Phone number
 
-Design: 8.1 (Rule 6) · Milestone: login (M4) ar checkout (M6) e use · Code: `backend/internal/phone`, `packages/shared/lib/src/validation` (M2)
+Design: 8.1 (Rule 6) · Milestone: login (M4) ar checkout (M6) e use · Code: `backend/internal/phone`, `packages/shared/lib/validation` (M2)
 
 ## Ki kore
 
@@ -20,7 +20,7 @@ Ei kram e poro:
 |---|---|
 | `backend/internal/phone/phone.go` → `Normalize` | Normalize |
 | `backend/internal/phone/phone_test.go` | Thik ar bhul input |
-| `packages/shared/lib/src/validation/phone.dart` → `normalizePhone` | Ekoi niyom Dart e (form e sathe sathe check; bhul hole `null`), v1.12 |
+| `packages/shared/lib/validation/phone.dart` → `normalizePhone` | Ekoi niyom Dart e (form e sathe sathe check; bhul hole `null`), v1.12; Dart er `\s` U+0085 dhore na, tai alada jog |
 
 ## Niyom ar tar test
 

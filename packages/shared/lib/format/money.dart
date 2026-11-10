@@ -9,8 +9,11 @@ String numberLocale(String uiLocale, {required bool banglaDigits}) =>
 /// `NumberFormat.currency` na: `bn` e ৳ pichone ar shob shomoy duita doshomik ashe.
 String formatTaka(int poisha, String locale) {
   final abs = poisha.abs();
-  final s = abs % 100 == 0
-      ? NumberFormat('#,##,##0', locale).format(abs ~/ 100)
-      : NumberFormat('#,##,##0.00', locale).format(abs / 100);
+  var s = NumberFormat('#,##,##0', locale).format(abs ~/ 100);
+  if (abs % 100 != 0) {
+    // poisha alada int hishebe (double er round na); doshomik chinho locale er
+    final f = NumberFormat('00', locale);
+    s += '${f.symbols.DECIMAL_SEP}${f.format(abs % 100)}';
+  }
   return '${poisha < 0 ? '-' : ''}৳$s';
 }

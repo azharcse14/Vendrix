@@ -58,6 +58,15 @@ void main() {
       // Bangla e ek-bochon/bohubochon alada na: shob shomoy .other
       expect(tr('bn').plural('cart.items', 1), '1টি পণ্য');
       expect(missing, isEmpty);
+      // en e .one/.other kichui na: Bangla er .other
+      final only = Translator(
+        'en',
+        defaults: const {
+          'bn': {'x.other': '{count}টি'},
+          'en': {},
+        },
+      );
+      expect(only.plural('x', 1), '1টি');
     });
   });
 }

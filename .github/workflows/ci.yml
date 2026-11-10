@@ -89,6 +89,6 @@ jobs:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
         run: go test -count=1 ./...
 
-  # M2, M3, M7: packages/shared, website ba admin e pubspec.yaml ashle ekhane Dart job jog koro (4.6):
+  # M3, M7: website ba admin e pubspec.yaml ashle upore dart job e ba Flutter er notun job (4.6):
   # Dart/Flutter setup (version pin kora), tarpor `QUICK_ALL=1 QUICK_PARTS=dart bash scripts/quick-check.sh`.
   # CI te dart/flutter na thakle quick-check fail kore, tai job chhara Dart er check bad pore na.

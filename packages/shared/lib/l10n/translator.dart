@@ -30,22 +30,28 @@ class Translator {
 
   /// `override[locale]` → `file[locale]` → `override[bn]` → `file[bn]` → key; `{name}` er jaygay `args`.
   String t(String key, [Map<String, Object> args = const {}]) {
-    final s =
-        overrides[locale]?[key] ??
-        defaults[locale]?[key] ??
-        overrides['bn']?[key] ??
-        defaults['bn']?[key];
+    final s = _find(key);
     if (s == null) onMissing?.call(key, locale);
-    return (s ?? key).replaceAllMapped(
-      _placeholder,
-      (m) => args[m[1]]?.toString() ?? m[0]!,
-    );
+    return _fill(s ?? key, args);
   }
 
-  /// English e `key.one`/`key.other`; Bangla e shob shomoy `.other` (9.8). `{count}` = count.
-  String plural(String key, int count, [Map<String, Object> args = const {}]) =>
-      t('$key.${locale == 'en' && count == 1 ? 'one' : 'other'}', {
-        ...args,
-        'count': count,
-      });
+  String? _find(String key) =>
+      overrides[locale]?[key] ??
+      defaults[locale]?[key] ??
+      overrides['bn']?[key] ??
+      defaults['bn']?[key];
+
+  String _fill(String s, Map<String, Object> args) =>
+      s.replaceAllMapped(_placeholder, (m) => args[m[1]]?.toString() ?? m[0]!);
+
+  /// English e `key.one`/`key.other`; Bangla e shob shomoy `.other` (9.8). `.one` kothao na pele
+  /// `.other` (Bangla fallback). `{count}` = count.
+  String plural(String key, int count, [Map<String, Object> args = const {}]) {
+    final a = {...args, 'count': count};
+    if (locale == 'en' && count == 1) {
+      final one = _find('$key.one');
+      if (one != null) return _fill(one, a);
+    }
+    return t('$key.other', a);
+  }
 }

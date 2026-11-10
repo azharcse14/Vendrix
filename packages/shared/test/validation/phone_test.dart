@@ -21,6 +21,7 @@ void main() {
       '01712\u200b345678',
       '০১৭১২–৩৪৫৬৭৮',
       '+ 880 1712-345678',
+      '01712\u0085345678',
     ];
     for (final input in ok) {
       test('thik: ${Uri.encodeComponent(input)}', () {

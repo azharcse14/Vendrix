@@ -1,6 +1,6 @@
 # API client ar model (shared)
 
-Design: 7.1, 7.2, 4.3 · Milestone: M2 · Code: `packages/shared/lib/src/api`, `packages/shared/lib/src/models`
+Design: 7.1, 7.2, 4.3 · Milestone: M2 · Code: `packages/shared/lib/api`, `packages/shared/lib/models`
 
 ## Ki kore
 
@@ -8,12 +8,12 @@ Website, admin ar app Go API er JSON ekoi Dart class e pore: product list ar det
 
 ## Kivabe kaj kore
 
-0. `ApiClient(baseUrl, client, locale:, headers:, timeout:)` (`api/api_client.dart`): `send` protiti request e `Accept-Language`, constructor er `headers` (jemon `X-Shop-Host`), body thakle JSON; `204` e `null`. Bhul: network → `ApiError(0, 'network_error')`, `timeout` (default 15 second) → `ApiError(0, 'timeout')`, JSON na (proxy er HTML 502) → asol status ar `internal`, 7.1 er `{"error":{...}}` → `code`, `message`, `fields`, `details`, `429` e `retryAfter`. Auto retry na (v1.12).
-1. Protiti model er `fromJson` `field<T>` (`models/json.dart`) diye pore: type na mille `FormatException`; `number` JSON er `0` (int) ke `double` kore; `objects` list.
-2. `Page.fromJson(json, item)` (`models/page.dart`): 7.1 er `{"items","page","limit","total"}`; `hasNext`.
-3. `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` (`models/catalog.dart`): M1 er public response (lekha age-i locale e resolve, 7.1); dam poisha `int`.
-5. `CatalogRepository` (`categories`, `products` filter shoho, `product`) ar `SettingsRepository` (`settings`, `version`, `translations`) (`api/repositories.dart`): 7.2 er route → model.
-4. `PublicSettings` (`models/settings.dart`): `raw` JSON ar dorkari getter (`name`, `colors`, `defaultLocale`, `enabledLocales`, `banglaDigits`, `paymentMethods`); block na thakle default.
+1. `ApiClient(baseUrl, client, locale:, headers:, timeout:)` (`api/api_client.dart`): `send` protiti request e `Accept-Language`, constructor er `headers` (jemon `X-Shop-Host`), body thakle JSON; `204` e `null`. Bhul: network → `ApiError(0, 'network_error')`, `timeout` (default 15 second) → `ApiError(0, 'timeout')`, JSON na (proxy er HTML 502) → asol status ar `internal`, 7.1 er `{"error":{...}}` → `code`, `message`, `fields`, `details`, `429` e `retryAfter` (second). Body er shape bhul holeo `ApiError` (`code` na thakle `internal`, shudhu string `fields`); 2xx khali body `null`. Auto retry na (v1.12).
+2. Protiti model er `fromJson` `field<T>` (`models/json.dart`) diye pore: type na mille `FormatException`; `number` JSON er `0` (int) ke `double` kore; `objects` list.
+3. `Page.fromJson(json, item)` (`models/page.dart`): 7.1 er `{"items","page","limit","total"}`; `hasNext`.
+4. `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` (`models/catalog.dart`): M1 er public response (lekha age-i locale e resolve, 7.1); dam poisha `int`.
+5. `PublicSettings` (`models/settings.dart`): `raw` JSON ar dorkari getter (`name`, `colors`, `defaultLocale`, `enabledLocales`, `banglaDigits`, `paymentMethods`); block na thakle default.
+6. `CatalogRepository` (`categories`, `products` filter shoho, `product`) ar `SettingsRepository` (`settings`, `version`, `translations`) (`api/repositories.dart`): 7.2 er route → model.
 
 ## Code er map
 
@@ -21,12 +21,12 @@ Ei kram e poro:
 
 | File → function | Ki kore |
 |---|---|
-| `packages/shared/lib/src/api/api_client.dart` → `ApiClient`, `send`, `get`, `ApiError` | HTTP, header, bhul |
-| `packages/shared/lib/src/api/repositories.dart` → `CatalogRepository`, `SettingsRepository` | Route → model |
-| `packages/shared/lib/src/models/json.dart` → `field`, `number`, `objects` | Typed JSON pora |
-| `packages/shared/lib/src/models/page.dart` → `Page` | Paging |
-| `packages/shared/lib/src/models/catalog.dart` → `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` | Catalog |
-| `packages/shared/lib/src/models/settings.dart` → `PublicSettings` | Settings |
+| `packages/shared/lib/api/api_client.dart` → `ApiClient`, `send`, `get`, `ApiError` | HTTP, header, bhul |
+| `packages/shared/lib/api/repositories.dart` → `CatalogRepository`, `SettingsRepository` | Route → model |
+| `packages/shared/lib/models/json.dart` → `field`, `number`, `objects` | Typed JSON pora |
+| `packages/shared/lib/models/page.dart` → `Page` | Paging |
+| `packages/shared/lib/models/catalog.dart` → `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` | Catalog |
+| `packages/shared/lib/models/settings.dart` → `PublicSettings` | Settings |
 
 ## Niyom ar tar test
 

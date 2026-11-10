@@ -110,3 +110,42 @@ List<ContrastWarning> contrastWarnings(Map<String, String> tokens) => [
         when r < minContrast)
       ContrastWarning(p[0], p[1], r),
 ];
+
+const _cssNames = {
+  'primary': '--color-primary',
+  'primary-hover': '--color-primary-hover',
+  'on-primary': '--color-on-primary',
+  'accent': '--color-accent',
+  'on-accent': '--color-on-accent',
+  'tint': '--color-tint',
+  'text': '--color-text',
+  'text-muted': '--color-text-muted',
+  'background': '--color-bg',
+  'surface': '--color-surface',
+  'border': '--color-border',
+};
+
+final _font = RegExp(r'^[A-Za-z0-9 ]{1,60}$');
+
+/// 9.3 er CSS variable (website `<head>` er `:root`): [deriveTokens] er rong, radius (px), font.
+/// Font er naam admin er, tai shudhu harf, shonkhya, space (CSS e kichu dhukano na); bhul hole [ArgumentError].
+Map<String, String> cssVariables(
+  Map<String, String> tokens, {
+  required int radius,
+  required String headingFont,
+  required String bodyFont,
+}) {
+  for (final f in [headingFont, bodyFont]) {
+    if (!_font.hasMatch(f)) throw ArgumentError.value(f, 'font');
+  }
+  if (radius < 0 || radius > 64) throw ArgumentError.value(radius, 'radius');
+  return {
+    for (final e in _cssNames.entries)
+      e.value:
+          tokens[e.key] ??
+          (throw ArgumentError.value(tokens, 'tokens', '${e.key} nai')),
+    '--radius': '${radius}px',
+    '--font-heading': '"$headingFont"',
+    '--font-body': '"$bodyFont"',
+  };
+}

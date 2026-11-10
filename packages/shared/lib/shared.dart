@@ -2,14 +2,14 @@
 /// Pure Dart (Rule 10): Flutter, `dart:io`, `dart:html`, `dart:ui` na.
 library;
 
-export 'src/api/api_client.dart';
-export 'src/api/repositories.dart';
-export 'src/format/date.dart';
-export 'src/format/money.dart';
-export 'src/l10n/translator.dart';
-export 'src/models/catalog.dart';
-export 'src/models/localized_text.dart';
-export 'src/models/page.dart';
-export 'src/models/settings.dart';
-export 'src/theme/tokens.dart';
-export 'src/validation/phone.dart';
+export 'api/api_client.dart';
+export 'api/repositories.dart';
+export 'format/date.dart';
+export 'format/money.dart';
+export 'l10n/translator.dart';
+export 'models/catalog.dart';
+export 'models/localized_text.dart';
+export 'models/page.dart';
+export 'models/settings.dart';
+export 'theme/tokens.dart';
+export 'validation/phone.dart';

@@ -8,6 +8,7 @@ func TestNormalize(t *testing.T) {
 		"+880 01712 345678", "00880 1712 345678", "(+880) 1712-345678", "01712\u00a0345678", "01912.345.678",
 		// v1.3: phone theke copy (lukano chinho, non-breaking hyphen), zero-width space, en dash
 		"\u202a+880 1712\u2011345678\u202c", "01712\u200b345678", "০১৭১২–৩৪৫৬৭৮", "+ 880 1712-345678",
+		"01712\u0085345678", // NEL (Dart test e o)
 	}
 	for _, in := range ok {
 		got, err := Normalize(in)

@@ -84,6 +84,30 @@ void main() {
         ],
       );
     });
+    test('bhul shape er error body o ApiError', () async {
+      final c = client(
+        (_) async => json({
+          'error': {
+            'code': 1,
+            'fields': {
+              'a': [1],
+              'b': 'invalid',
+            },
+          },
+        }, 400),
+      );
+      await expectLater(
+        c.get('/x'),
+        throwsA(
+          isA<ApiError>().having((e) => [e.code, e.fields], 's', [
+            'internal',
+            {'b': 'invalid'},
+          ]),
+        ),
+      );
+      final empty = client((_) async => http.Response('', 201));
+      expect(await empty.send('POST', '/x', body: <String, Object>{}), isNull);
+    });
     test('429 Retry-After', () async {
       final c = client(
         (_) async => json(

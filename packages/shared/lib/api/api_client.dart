@@ -101,7 +101,10 @@ class ApiClient {
     } on http.ClientException {
       throw const ApiError(0, 'network_error');
     }
-    if (res.statusCode == 204) return null;
+    if (res.statusCode == 204 ||
+        (res.bodyBytes.isEmpty && res.statusCode < 300)) {
+      return null;
+    }
     Object? data;
     try {
       data = jsonDecode(utf8.decode(res.bodyBytes));
@@ -113,14 +116,22 @@ class ApiClient {
         data is Map<String, dynamic> && data['error'] is Map<String, dynamic>
         ? data['error'] as Map<String, dynamic>
         : const <String, dynamic>{};
-    final retry = int.tryParse(res.headers['retry-after'] ?? '');
+    final retry = int.tryParse(
+      res.headers['retry-after'] ?? '',
+    ); // Go second e dey
+    // server er shape bhul holeo ApiError (TypeError na)
     throw ApiError(
       res.statusCode,
-      e['code'] as String? ?? 'internal',
-      message: e['message'] as String? ?? '',
-      fields: (e['fields'] as Map<String, dynamic>? ?? const {})
-          .cast<String, String>(),
-      details: e['details'] as Map<String, dynamic>? ?? const {},
+      e['code'] is String ? e['code'] as String : 'internal',
+      message: e['message'] is String ? e['message'] as String : '',
+      fields: {
+        if (e['fields'] is Map<String, dynamic>)
+          for (final f in (e['fields'] as Map<String, dynamic>).entries)
+            if (f.value is String) f.key: f.value as String,
+      },
+      details: e['details'] is Map<String, dynamic>
+          ? e['details'] as Map<String, dynamic>
+          : const {},
       retryAfter: retry == null ? null : Duration(seconds: retry),
     );
   }

@@ -1,5 +1,6 @@
 final _format = RegExp(r'\p{Cf}', unicode: true);
-final _separator = RegExp(r'[\s\p{Pd}.()−]', unicode: true);
+// \u0085: Go er unicode.IsSpace dhore, Dart er \s na
+final _separator = RegExp(r'[\s\u0085\p{Pd}.()−]', unicode: true);
 
 /// Bangladesh mobile → `+8801XXXXXXXXX`; bhul hole `null` (8.1). Niyom
 /// `backend/internal/phone` er `Normalize` er hubohu (Go-i spec; bodlale duitai, ekoi test case).
