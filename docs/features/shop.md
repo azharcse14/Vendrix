@@ -44,7 +44,7 @@ Ei kram e poro:
 | `X-Shop-Host` (lowercase, port chhara) → shop; nai, ochena ba `closed` → `404 shop_not_found`; `suspended` → `423` (3.2, v1.10) | `ShopFromHost`, `hostname` | `TestShopFromHost` |
 | Domain → shop, 60 second cache, ochena domain cache na (3.2) | `Resolver.Resolve` | `TestResolverIntegration` |
 | Preset er 5 rong, font, radius; 9.2 er shob block; payment shudhu `cod`; `seo.noindex` true (9.4, 14.4) | `DefaultSettings` | `TestDefaultSettings` |
-| Ek transaction e shop, primary domain, house vendor, settings, counter, owner (`must_change_password`); bhul slug, `www` domain, naam, email, preset ba duplicate e kono row na (3.8, v1.10) | `Create` | `TestCreateShopIntegration` |
+| Ek transaction e shop, primary domain, house vendor, settings, counter, owner (`must_change_password`, email trim ar lowercase); bhul slug, `www` domain, naam, email, preset ba duplicate e kono row na (3.8, v1.10) | `Create` | `TestCreateShopIntegration` |
 | `shop create` er flag check | `runShopCreate` | `TestRun` |
 | Public settings shudhu whitelist; risk, OTP, SMS cap, inventory, commission ar notun block jay na (7.2, 9.2, v1.10) | `PublicSettings` | `TestPublicSettings` |
 | Protiti host e nijer shop er published settings ar version; draft na (Rule 3, 7.2) | `Handlers.Settings`, `SettingsVersion` | `TestSettingsIsolationIntegration` |

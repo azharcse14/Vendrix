@@ -50,9 +50,10 @@ func (c *captureWriter) Write(b []byte) (int, error) {
 const (
 	defaultLimit = 24
 	maxLimit     = 100
+	maxPage      = 10000 // (page-1)*limit overflow ar khub boro OFFSET na
 )
 
-// Page (7.1): ?page=1&limit=24 (max 100). Bhul hole nijei 400 validation_failed likhe ok = false dey.
+// Page (7.1): ?page=1&limit=24 (limit max 100, page max 10000). Bhul hole nijei 400 validation_failed likhe ok = false dey.
 func Page(w http.ResponseWriter, r *http.Request) (page, limit int, ok bool) {
 	fields := map[string]string{}
 	num := func(name string, def, max int) int {
@@ -66,7 +67,7 @@ func Page(w http.ResponseWriter, r *http.Request) (page, limit int, ok bool) {
 		}
 		return n
 	}
-	page = num("page", 1, int(^uint(0)>>1))
+	page = num("page", 1, maxPage)
 	limit = num("limit", defaultLimit, maxLimit)
 	if len(fields) > 0 {
 		WriteError(w, r, http.StatusBadRequest, ErrorBody{Code: "validation_failed", Fields: fields})

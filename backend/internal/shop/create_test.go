@@ -64,7 +64,7 @@ func TestCreateShopIntegration(t *testing.T) {
 	d := dbtest.New(t)
 	ctx := context.Background()
 	p := Params{Slug: "sobujbazar", Prefix: "SB", Domain: "SobujBazar.com", NameBn: "সবুজ বাজার", NameEn: "Sobuj Bazar",
-		OwnerEmail: "owner@example.com", OwnerName: "Rahim", Preset: "organic"}
+		OwnerEmail: " Owner@Example.com ", OwnerName: "Rahim", Preset: "organic"}
 	id, pw, err := Create(ctx, d, p)
 	if err != nil {
 		t.Fatal(err)

@@ -3,6 +3,7 @@ package httpx
 import (
 	"math"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"sync"
 	"time"
@@ -51,11 +52,21 @@ func (l *rateLimiter) allow(k rateKey) (bool, int) {
 func (l *rateLimiter) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s, _ := ShopFrom(r.Context())
-		if ok, retry := l.allow(rateKey{s.ID, IP(r.Context())}); !ok {
+		if ok, retry := l.allow(rateKey{s.ID, clientKey(IP(r.Context()))}); !ok {
 			w.Header().Set("Retry-After", strconv.Itoa(max(retry, 1)))
 			WriteError(w, r, http.StatusTooManyRequests, ErrorBody{Code: "rate_limited"})
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// clientKey: IPv6 hole /64 (ek client er puro subnet; address ghuriye limit edano na), IPv4 hubohu.
+func clientKey(ip string) string {
+	a, err := netip.ParseAddr(ip)
+	if err != nil || a.Unmap().Is4() {
+		return ip
+	}
+	p, _ := a.Prefix(64)
+	return p.String()
 }

@@ -31,7 +31,7 @@ Ei kram e poro:
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
 | `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
 | `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha; `Locale` public lekha er bhasha (catalog) |
-| `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow` | Public rate limit |
+| `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow`, `clientKey` | Public rate limit |
 | `backend/internal/httpx/staff.go` → `Staff`, `WithStaff`, `StaffFrom`, `RequireStaff`, `RequireRole` | Admin er staff ar role |
 | `backend/internal/httpx/httpx_test.go`, `page_test.go`, `message_test.go`, `staff_test.go`, `ratelimit_test.go` | Test |
 
@@ -49,8 +49,8 @@ Ei kram e poro:
 | Middleware er kram | `Chain` | `TestChainOrder` |
 | Ochena path `404 not_found`, bhul method `405 method_not_allowed` JSON e, `Allow` header shoho (7.1) | `JSONErrors` | `TestNotFoundJSON`, `TestMethodNotAllowedJSON`, `TestRouterBuild` |
 | Admin route e staff na thakle `401 unauthenticated` (fail-closed, login M4 e; v1.10), role na mille `403 forbidden` (11.2); vendor staff er `VendorID` context e (Rule 13) | `RequireStaff`, `RequireRole` | `TestRequireStaff`, `TestRequireRole` |
-| Public: ek shop e ek client IP te minute e 120, tarpor `429 rate_limited` + `Retry-After`; key `shop_id:ip` (7.8) | `RateLimit` | `TestRateLimit` |
-| Paging `page`/`limit` (default 24, max 100), bhul e `400 validation_failed`; response `{"items","page","limit","total"}`, items `[]` (7.1) | `Page`, `NewPaged` | `TestPage` |
+| Public: ek shop e ek client IP te minute e 120, tarpor `429 rate_limited` + `Retry-After`; key `shop_id:ip`, IPv6 e /64 (address ghuriye edano na) (7.8) | `RateLimit`, `clientKey` | `TestRateLimit` |
+| Paging `page`/`limit` (default 24, limit max 100, page max 10000: OFFSET overflow na), bhul e `400 validation_failed`; response `{"items","page","limit","total"}`, items `[]` (7.1) | `Page`, `NewPaged` | `TestPage` |
 | Client er pathano request id mane na | `RequestID` | `TestRequestID` |
 
 ## Data

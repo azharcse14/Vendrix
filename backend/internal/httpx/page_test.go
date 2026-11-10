@@ -56,7 +56,7 @@ func TestPage(t *testing.T) {
 			t.Errorf("%q: %d %d %v", q, page, limit, ok)
 		}
 	}
-	for q, field := range map[string]string{"?page=0": "page", "?page=x": "page", "?limit=101": "limit", "?limit=0": "limit", "?page=-1": "page"} {
+	for q, field := range map[string]string{"?page=0": "page", "?page=x": "page", "?limit=101": "limit", "?limit=0": "limit", "?page=-1": "page", "?page=9223372036854775807": "page", "?page=10001": "page"} {
 		rec := httptest.NewRecorder()
 		if _, _, ok := Page(rec, httptest.NewRequest("GET", "/x"+q, nil)); ok {
 			t.Errorf("%q: ok", q)

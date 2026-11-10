@@ -33,6 +33,7 @@ var (
 func Create(ctx context.Context, d *sql.DB, p Params) (shopID int64, password string, err error) {
 	p.Domain = strings.ToLower(strings.TrimSpace(p.Domain))
 	p.NameBn, p.NameEn, p.OwnerName = strings.TrimSpace(p.NameBn), strings.TrimSpace(p.NameEn), strings.TrimSpace(p.OwnerName)
+	p.OwnerEmail = strings.ToLower(strings.TrimSpace(p.OwnerEmail))
 	user, host, _ := strings.Cut(p.OwnerEmail, "@")
 	switch {
 	case !slugRE.MatchString(p.Slug) || len(p.Slug) > 80:
