@@ -13,16 +13,14 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- pgx driver jog hoyeche (M0 step 1); ekhon local Postgres e chalano baki (Porer kaj 1).
+- M0 step 1–3 shesh: pgx, local e migrate + `/healthz`, runner integration test. Local Postgres host port **5433** (5432 e onno project). Porer: job worker.
 
 ## Porer kaj
 
-1. **M0 step 2, local e chalano**: `make db-up`, `cp backend/env.example backend/.env`, `make migrate` (duibar: ditiyo bar notun 0), `make run`, `curl -s 127.0.0.1:8080/healthz` → `{"status":"ok"}`.
-2. **M0 step 3, runner er integration test**: `cd backend && TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable go test ./internal/db/ -run Integration -v` (14.2 test 42).
-3. **M0 step 4, job worker ar notify** (8.17, 6.4 er claim ar sweep query): [M0](milestones/M0.md) e bistarito.
-4. **M0 step 5, `credentials set` CLI** (3.8, 2.2).
-5. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result; red hole thik koro.
-6. M0 er acceptance er proman, `make check`, `design-reviewer`, report; tarpor **M1** (`milestone` skill).
+1. **M0 step 4, job worker ar notify** (8.17, 6.4 er claim ar sweep query): [M0](milestones/M0.md) e bistarito.
+2. **M0 step 5, `credentials set` CLI** (3.8, 2.2).
+3. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result; red hole thik koro.
+4. M0 er acceptance er proman, `make check`, `design-reviewer`, report; tarpor **M1** (`milestone` skill).
 
 ## User er kache proshno
 
@@ -54,5 +52,5 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
-- 10 November 2026: M0 step 1 (pgx v5.12.0, `driver.go`, CI go cache); `check-rules.sh` macOS bash 3.2 e chole na (mapfile) thik. quick-check green.
+- 10 November 2026: M0 step 1 (pgx v5.12.0, `driver.go`, CI go cache), step 2 (local Postgres 5433 e, migrate duibar, `/healthz` ok), step 3 (`TestMigrateIntegration` pass, shop_app grant check jog); `check-rules.sh` macOS bash 3.2 e chole na (mapfile) thik. quick-check green.
 - 10 November 2026: Repo setup (design v1.8): docs, Claude Code er puro setup, CI, infra; M0 er shuru code (config, httpx, db runner, cmd/api) ar 7 ta feature doc. Go test green, DB test 83/83.

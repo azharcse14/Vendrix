@@ -42,6 +42,7 @@ Ei kram e poro:
 | Test SQL embed e na (6.1) | `LoadMigrations` | `TestLoadMigrations`, `TestEmbeddedMigrations` |
 | `DEPLOYED` er hash = embed kora file | `migrations` | `TestEmbeddedMigrations` |
 | Duibar chalale-o thik, `app.env` set (M0) | `Migrate` | `TestMigrateIntegration` |
+| `shop_app` `schema_migrations` e shudhu SELECT (6.1) | `001_init.sql` | `TestMigrateIntegration` |
 | Deadlock ba serialization e ekbar retry (8.6) | `InTx`, `retryable` | `TestRetryable` |
 | pgx chhara spashto error | `Open` | `TestOpenWithoutDriver` |
 | Schema er constraint (6.4) | `001_init.sql` | `tests/001_init_test.sql` (`make db-test`, 83/83) |

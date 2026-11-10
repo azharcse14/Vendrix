@@ -11,11 +11,13 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"vendrix/backend/migrations"
 )
 
 // TestMigrateIntegration (6.1, 14.2 test 42): asol Postgres e notun database banay, Migrate duibar (ditiyo
 // bar 0 ta), set_config('app.env'), applied file bodlale ba out-of-order file e fail, shesh e database
-// muche fele. TEST_DATABASE_URL e CREATEDB onumoti wala user (local: make db-up er postgres user).
+// muche fele. Asol 001 er por shop_app schema_migrations e shudhu SELECT (6.1). TEST_DATABASE_URL e CREATEDB onumoti wala user (local: make db-up er postgres user).
 // pgx driver na thakle (M0 er driver step er age) skip.
 func TestMigrateIntegration(t *testing.T) {
 	base := os.Getenv("TEST_DATABASE_URL")
@@ -74,5 +76,29 @@ func TestMigrateIntegration(t *testing.T) {
 	late := append(slices.Clone(files), mk("001_z", "SELECT 1"))
 	if _, err := Migrate(ctx, d, late, "local"); err == nil || !strings.Contains(err.Error(), "choto number") {
 		t.Errorf("out-of-order: %v", err)
+	}
+
+	// asol 001: shop_app (infra/postgres/init.sql) schema_migrations e likhte parbe na
+	real, err := LoadMigrations(migrations.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.ExecContext(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public`); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := Migrate(ctx, d, real, "local"); err != nil || n != len(real) {
+		t.Fatalf("001: %d %v", n, err)
+	}
+	var hasRole, canWrite, canRead bool
+	if err := d.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shop_app')`).Scan(&hasRole); err != nil || !hasRole {
+		t.Skipf("shop_app role nai (make db-up banay): %v", err)
+	}
+	if err := d.QueryRowContext(ctx, `SELECT
+		has_table_privilege('shop_app', 'schema_migrations', 'INSERT,UPDATE,DELETE,TRUNCATE'),
+		has_table_privilege('shop_app', 'schema_migrations', 'SELECT')`).Scan(&canWrite, &canRead); err != nil {
+		t.Fatal(err)
+	}
+	if canWrite || !canRead {
+		t.Errorf("shop_app schema_migrations: likhte %v, porte %v; chai likhte false, porte true", canWrite, canRead)
 	}
 }
