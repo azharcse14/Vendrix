@@ -19,16 +19,17 @@ grep_go() { # $1 = pattern, $2 = ok-tag, baki = folder
 SQLKW='(SELECT|INSERT|UPDATE|DELETE)[[:space:]]'
 
 # Rule 2: taka BIGINT poisha, float na
-mapfile -t money < <(existing backend/internal/pricing backend/internal/order backend/internal/payment \
+# folder er list unquoted (path e space nai); mapfile na, karon macOS er bash 3.2 e nai
+money=$(existing backend/internal/pricing backend/internal/order backend/internal/payment \
   backend/internal/coupon backend/internal/cart backend/internal/shipping backend/internal/report)
-report "Rule 2: taka-r package e float (poisha int64 rakho)" "$(grep_go 'float(32|64)' rule2 "${money[@]}")"
+report "Rule 2: taka-r package e float (poisha int64 rakho)" "$(grep_go 'float(32|64)' rule2 $money)"
 
 # Rule 12: SQL shudhu $n parameter diye
-mapfile -t be < <(existing backend)
+be=$(existing backend)
 report "Rule 12: Sprintf ba string jora diye SQL (\$n parameter dao)" "$(
-  grep_go "Sprintf\([[:space:]]*\"[^\"]*$SQLKW" rule12 "${be[@]}"
-  grep_go "\"[^\"]*${SQLKW}[^\"]*\"[[:space:]]*\+" rule12 "${be[@]}"
-  grep_go "\`[^\`]*${SQLKW}[^\`]*\`[[:space:]]*\+" rule12 "${be[@]}")"
+  grep_go "Sprintf\([[:space:]]*\"[^\"]*$SQLKW" rule12 $be
+  grep_go "\"[^\"]*${SQLKW}[^\"]*\"[[:space:]]*\+" rule12 $be
+  grep_go "\`[^\`]*${SQLKW}[^\`]*\`[[:space:]]*\+" rule12 $be)"
 
 # Rule 10: packages/shared pure Dart
 if [ -d packages/shared/lib ]; then
@@ -37,10 +38,10 @@ if [ -d packages/shared/lib ]; then
 fi
 
 # Rule 4: UI te hex rong na (rong theme token theke; preset packages/shared e)
-mapfile -t ui < <(existing website/lib admin/lib app/lib)
-if [ ${#ui[@]} -gt 0 ]; then
+ui=$(existing website/lib admin/lib app/lib)
+if [ -n "$ui" ]; then
   report "Rule 4: UI code e hardcoded rong (theme token use koro)" \
-    "$(grep -rnE '#[0-9A-Fa-f]{6}([^0-9A-Fa-f]|$)|0x[Ff]{2}[0-9A-Fa-f]{6}' "${ui[@]}" | grep -v '// rule4:ok')"
+    "$(grep -rnE '#[0-9A-Fa-f]{6}([^0-9A-Fa-f]|$)|0x[Ff]{2}[0-9A-Fa-f]{6}' $ui | grep -v '// rule4:ok')"
 fi
 
 # 6.1 v1.6: test SQL top-level e thakle embed e migration hishebe chole
