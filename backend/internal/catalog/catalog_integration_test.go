@@ -40,10 +40,8 @@ func newFixture(t *testing.T) *fixture {
 	}
 	h := NewHandlers(d, slog.New(slog.DiscardHandler))
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/categories", h.Categories)
-	mux.HandleFunc("GET /api/products", h.Products)
-	mux.HandleFunc("GET /api/products/{slug}", h.Product)
-	f.srv = httpx.ShopFromHost(slog.New(slog.DiscardHandler), shop.NewResolver(d).Resolve)(httpx.JSONErrors(mux))
+	h.Routes(mux, httpx.ShopFromHost(slog.New(slog.DiscardHandler), shop.NewResolver(d).Resolve))
+	f.srv = httpx.JSONErrors(mux)
 	return f
 }
 

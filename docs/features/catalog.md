@@ -4,7 +4,7 @@ Design: 6.4, 6.7, 7.1, 7.2, 7.7 · Milestone: M1 · Code: `backend/internal/cata
 
 ## Ki kore
 
-Website/app shop er category tree, product list (filter, sort, paging, search) ar product detail pay; lekha `Accept-Language` er bhasha e (na thakle bn). Protiti query shudhu oi shop er (Rule 3).
+Website/app shop er category tree, product list (filter, sort, paging, search) ar product detail pay; lekha `Accept-Language` er bhasha e (na thakle bn). Protiti query shudhu oi shop er (Rule 3). Admin (`/api/admin`, staff login M4 e) category banay, bodlay, muche; protiti kaj audit log e.
 
 ## Kivabe kaj kore
 
@@ -13,6 +13,9 @@ Website/app shop er category tree, product list (filter, sort, paging, search) a
 3. `GET /api/products` (`Handlers.Products`): `httpx.Page`, query check (`min_price`/`max_price` poisha ≥ 0, `in_stock` bool, `sort` `newest|price_asc|price_desc|popular`, `q` max 100 okkhor) → `searchTerm` → `listProducts`. Shudhu active product jar ontoto ekta active variant ache; card er `price` sobcheye kom active variant er dam, `in_stock` kono active variant e `stock > 0`.
 4. Search (6.4): `q` 2 okkhorer kom hole search na (list cholbe). Go te `\ % _` escape kore `ILIKE '%' || normalize(q, NFC) || '%'` (`search_text` generated, NFC); `q` thakle ar `sort` na dile `word_similarity` diye relevance.
 5. `GET /api/products/{slug}` (`Handlers.Product`): `productBySlug`: active product, active variant (`sort_order`), chobi (`sort_order`); `seo` locale er ongsho; `rating` = `rating_sum/review_count` (ek dosomik).
+6. Admin route (`Handlers.Routes`): `httpx.RequireStaff` → `httpx.RequireRole` (category: owner, admin; 11.2). Shop staff er `ShopID` theke, host theke na. Lekhar kaj `write` e: `db.InTx`, kaj, `audit.Log`; response `to_jsonb(row) - 'shop_id'`.
+7. Category (`CreateCategory`, `UpdateCategory`, `DeleteCategory`): `categoryInput.check` (slug, `name.bn`); PATCH e shudhu je key ache (`opt` diye `null` = muche dao); parent bodlale `lockCategoryParents` (shop er category `FOR UPDATE`) → `makesCycle`. Delete e FK error → `409 category_not_empty`.
+8. DB error `writeErr` e: unique → `409 slug_taken`; FK/CHECK → `400 validation_failed` (`constraintField` field dey); nai → `404`.
 
 ## Code er map
 
@@ -21,6 +24,8 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/internal/catalog/handler.go` → `NewHandlers`, `Categories`, `Products`, `Product`, `tree`, `rating`, `seoIn` | Public HTTP |
+| `backend/internal/catalog/admin.go` → `Routes`, `write`, `writeErr`, `constraintField`, `AdminCategories`, `CreateCategory`, `UpdateCategory`, `DeleteCategory` | Admin HTTP, audit, DB error → 7.1 |
+| `backend/internal/catalog/store_admin.go` → `createCategory`, `updateCategory`, `deleteCategory`, `lockCategoryParents` | Admin SQL |
 | `backend/internal/catalog/service.go` → `Text`, `In`, `searchTerm`, `validSlug`, `makesCycle` | Niyom |
 | `backend/internal/catalog/store.go` → `categories`, `listProducts`, `productBySlug` | SQL |
 
@@ -36,6 +41,7 @@ Ei kram e poro:
 | Protiti host e shudhu nijer shop er category ar product (Rule 3) | protiti query te `shop_id` | `TestShopIsolationIntegration` |
 | Onno shop er category, vendor, parent ba product e reference → DB error (14.2 test 13) | `001_init.sql` er composite FK | `TestTenantForeignKeyIntegration` |
 | Category cycle atkano (7.7) | `makesCycle` | `TestCategoryCycle` |
+| Admin category: staff na thakle `401`, vendor role `403`; slug/naam check, `409 slug_taken`, onno shop er parent `400`, cycle `400`, onno shop er category `404`, khali na hole `409 category_not_empty`; protiti kaj audit e (7.7, 11.2, v1.10) | `Routes`, `CreateCategory`, `UpdateCategory`, `DeleteCategory` | `TestAdminCategoryIntegration` |
 | Slug `^[a-z0-9]+(-[a-z0-9]+)*$`, max 80 (7.7, v1.10) | `validSlug` | `TestValidSlug` |
 
 ## Data
@@ -46,6 +52,7 @@ Ei kram e poro:
 
 - Bhul `page`, `limit`, `sort`, dam, `in_stock` ba lomba `q`: `400 validation_failed` (`fields` e naam).
 - Ochena category ba vendor slug: khali list (error na).
+- Admin: staff nai `401`, role nai `403`, duplicate slug `409 slug_taken`, onno shop er id `404` ba `400`.
 - Product inactive, active variant nai, ba onno shop er: `404 not_found`.
 - Database error: `500 internal`, log e `catalog handler`.
 
