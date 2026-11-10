@@ -13,13 +13,13 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 er code shesh (step 1–5, review fix, report); baki shudhu push er por CI green (step 6). M1 cholche (design v1.11): step 0–19 shesh: httpx (404/405 JSON, paging, bn/en message, `X-Shop-Host`, staff/role, rate limit), password hash, `shop create`, public settings/translations, catalog (public list/detail/search, admin category/product/variant, vendor scope), audit, router; local curl thik. Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
+- M0 er code shesh; baki shudhu push er por CI green (step 6). **M1 shesh** (design v1.11): shop resolve, settings, `shop create`, catalog public/admin, search, audit, router; review fix; report [M1](milestones/M1.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M1 step 20** ([M1](milestones/M1.md)): `PATH=/opt/homebrew/opt/libpq/bin:$PATH make check`; design-reviewer ar security-reviewer er finding thik koro (`fix` er moto, test age); M1.md er acceptance table e proman ar Report; tarpor Milestone table e M1 shesh, porer kaj M2 (`packages/shared`, plan age).
+2. **M2 (Shared Dart package) plan** (`milestone` skill): `docs/design/15-milestones.md` er M2 row ar section gulo (4.6, 9, 7.1) pore `docs/milestones/M2.md` e plan ar open question; **user approve na kora porjonto code na**.
 
 ## User er kache proshno
 
@@ -36,7 +36,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | # | Naam | Obostha | Plan |
 |---|---|---|---|
 | M0 | Project setup | cholche (10 November 2026 theke) | [M0](milestones/M0.md) |
-| M1 | Shop, vendor, settings, catalog API | cholche (10 November 2026 theke) | [M1](milestones/M1.md) |
+| M1 | Shop, vendor, settings, catalog API | shesh (10 November 2026) | [M1](milestones/M1.md) |
 | M2 | Shared Dart package | baki | |
 | M3 | Website catalog | baki | |
 | M4 | Login | baki | |
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M1 step 20: `make check` green, design/security review fix, acceptance ☑, report; M1 shesh.
 - 10 November 2026: M1 step 9–19: catalog (public, search, admin category/product/variant), audit, router; design v1.11 (`sku_taken`); local curl; step 20 er check ar review cholche.
 - 10 November 2026: M1 step 8b: `GET /api/translations` (shop er override).
 - 10 November 2026: M1 step 8: public settings (whitelist), settings version; `shop` e handler/store.
