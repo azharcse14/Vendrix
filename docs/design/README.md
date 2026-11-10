@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.11, 10 November 2026
+Version 1.12, 10 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -63,3 +63,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.9 | 10 November 2026 | M0 review: `credentials set` M0 e (4.2 er map, 15 er moto); env.example er `local-only` secret local chhara reject (13.5) |
 | 1.10 | 10 November 2026 | M1 er 12 ta decision (user recommendation niyeche): admin route M4 er age fail-closed `401`, resolve er scope, `shop create` er flag ar password, public settings whitelist, `closed` shop `404`, error message bn/en map, search paged ar `popular`, slug, category delete, product er `vendor_id`, variant e stock na, endpoint er milestone (3.2, 3.8, 7.1, 7.2, 7.7, 9.2, 15) |
 | 1.11 | 10 November 2026 | M1 variant: ek vendor e duplicate `sku` → `409 sku_taken` (7.1, 7.7); M1 plan e `409` chilo, code er naam chilo na |
+| 1.12 | 10 November 2026 | M2 er 9 ta decision (user recommendation niyeche): model shudhu M1 er API er, l10n Dart `const Map`, timezone offset map, digit/mash/minus er niyom, token derive er sRGB formula ar contrast er jora, `ApiError` er client code, phone test Go theke copy, dev tooling (2.3, 4.3, 9.3, 9.8) |

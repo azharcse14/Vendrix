@@ -57,7 +57,7 @@ Standard library jekhane jothesto na, shekhane ei shomadhan:
 
 | Jaygay | Package |
 |---|---|
-| `packages/shared` | `http`, `intl` (ar kichu na, pure Dart) |
+| `packages/shared` | `http`, `intl` (ar kichu na, pure Dart). v1.12: dev e shudhu `test`, `lints`; library tai `pubspec.lock` commit na; CI te `dart-lang/setup-dart` (Flutter 3.47.9 er Dart 3.13.7, action SHA pin) |
 | `website` (Jaspr) | `jaspr`, `jaspr_router` (dorkar hole), Tailwind integration, `shared` |
 | `admin`, `app` (Flutter) | `flutter_bloc`, `bloc`, `go_router`, `get_it`, `shared` |
 

@@ -83,6 +83,8 @@ Admin shudhu 5 ta rong, 2 ta font ar radius dey. Baki token `packages/shared` er
 
 Contrast check (WCAG): rong ke sRGB theke linear kore `L = 0.2126 R + 0.7152 G + 0.0722 B`, ratio = `(L_halka + 0.05) / (L_gaḍho + 0.05)`. Lekha ar tar background er ratio 4.5 er kom hole admin e warning: "Ei rong e lekha porte kothin hobe." Backend-o draft save e ei warning ferot dey. Derived token (muted) er contrast-o function nijei 4.5:1 rakhe: v1.1 er "35% mix" e organic preset er muted lekha 2.0:1 (ba ulto mane 4.46:1) chilo.
 
+v1.12 (M2): derive er hishab sRGB channel e linear mix (`mix(a, b, t) = round(a + (b − a)·t)`, CSS `color-mix(in srgb, ...)` er moto): `primary-hover = mix(primary, #000000, 8%)`, `surface = mix(background, #FFFFFF, 50%)`, `border = mix(background, text, 12%)`, `text-muted` `mix(background, text, 65%)` theke shuru, 1% kore text er dike jotokkhon `background` ar `surface` duitar upore 4.5 na hoy; `on-primary`/`on-accent` shada ba `text`, je ta contrast beshi. Contrast warning ei jora gulote, shob 4.5: `text`/`background`, `text`/`surface`, `text`/`tint`, `on-primary`/`primary`, `on-accent`/`accent`, `primary`/`background` (link, dam); warning er lekha key `theme.low_contrast`. Code `packages/shared` er `theme/` (Go draft save M8 e ekoi hishab).
+
 Tailwind e class gulo variable ke point kore, kokhono hex na:
 
 ```js
@@ -173,7 +175,7 @@ Duitar lekha, duita alada bebostha:
 
 | Dhoron | Udahoron | Kothay thake | Ke bodlay |
 |---|---|---|---|
-| UI lekha | Button, menu, error, SMS | `packages/shared/lib/l10n/bn.json`, `en.json` + `translations` table (override) | Developer (default), admin (override) |
+| UI lekha | Button, menu, error, SMS | `packages/shared/lib/l10n/bn.dart`, `en.dart` (v1.12: `const Map<String, String>`, pure Dart e JSON file pora jay na) + `translations` table (override) | Developer (default), admin (override) |
 | Content | Product er naam, description, category, policy, banner | Database `JSONB {"bn","en"}` | Admin |
 
 **Key er naam**: `bhag.jinish` ba `bhag.jinish.obostha`, jemon `cart.add`, `checkout.place_order`, `product.out_of_stock`, `error.out_of_stock`, `sms.order_placed`. Placeholder `{name}`, `{amount}`. English plural er jonno `.one` ar `.other` (`cart.items.one`, `cart.items.other`).
@@ -186,6 +188,8 @@ Duitar lekha, duita alada bebostha:
 **Lekha khojar kram**: `override[locale][key]` → `file[locale][key]` → `override[bn][key]` → `file[bn][key]` → key nijei (ar log e "missing translation"). Content e `value[locale] ?? value["bn"]`.
 
 **Shonkhya, taka, tarikh**: database e shob shomoy integer poisha. Dekhano `intl` diye: `bangla_digits` on hole `bn` locale (Bangla shonkhya, lakh-style comma, `৳১,২৫,০০০`), off hole `en_IN` (`৳1,25,000`). v1.5: `intl` er `bn` currency pattern `#,##,##0.00¤` (৳ pichone, duita doshomik), `en_IN` er `¤#,##,##0.00`; tai `NumberFormat.currency` na, `NumberFormat('#,##,##0', locale)` (poisha thakle `#,##,##0.00`) diye shonkhya ar ৳ samne nije boshao. Test e `৳১,২৫,০০০`, `৳১৮০.৫০`, `৳1,25,000` (M2). Poisha na thakle doshomik dekhabe na (`৳১৮০`, `৳১৮০.৫০` na hole). Tarikh `DateFormat('d MMMM y', locale)`: "২৭ অক্টোবর ২০২৬". `packages/shared/format` e eder unit test likho.
+
+v1.12 (M2): Bangla digit shudhu UI bhasha `bn` **ar** `bangla_digits` on hole (`en` UI te shob shomoy English digit); mash er naam UI bhasha theke (`bn` + off = "27 অক্টোবর 2026"). Minus taka `-৳১৮০` (chinho ৳ er age). API UTC dey; tarikh shop er timezone e: pure Dart e tz database nai, tai `packages/shared` e choto offset map (`Asia/Dhaka` = +6:00, DST nai), ochena zone e error; onno timezone er shop (MT) ele package ba design-change. Backend er SMS template er default (`sms.*`) Go te alada, M4 e decision (Go `embed` `packages/` e pouchay na).
 
 **URL**: Bangla default root e (`/p/organic-red-rice`), English `/en/` er niche (`/en/p/organic-red-rice`). Protiti page e `hreflang` (`bn`, `en`, `x-default`). `<html lang>` bhasha onujayi. Bhasha bodlale `lang` cookie, login thakle `users.locale`. SMS customer er bhashay, invoice `orders.locale` e.
 

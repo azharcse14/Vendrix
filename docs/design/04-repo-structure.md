@@ -120,10 +120,13 @@ packages/shared/lib/
   shared.dart
   models/        → Product, Variant, Category, Cart, Order, Settings, Theme ... (fromJson/toJson)
   api/           → ApiClient (http), ApiError, repository gulo
-  l10n/          → bn.json, en.json, Translator (key → lekha, override shoho)
+  l10n/          → bn.dart, en.dart (const Map, v1.12), Translator (key → lekha, override shoho)
+  theme/         → token derive, contrast (9.3, v1.12)
   format/        → Money (poisha → "৳১,২৫০"), tarikh, phone
   validation/    → phone, naam, thikana
 ```
+
+v1.12 (M2): model, repository ar validation API er sathe sathe ashe: M2 te shudhu M1 er public API (settings, translations, category, product list/detail, `Page`, `LocalizedText`); cart, order, user, admin ar naam/thikana tader milestone e (M4–M7). `ApiClient` `package:http` er `Client` inject kore; sob bhul `ApiError` (`code`): server er 7.1 body, network fail `status 0` `network_error`, timeout (default 15 second) `timeout`, JSON na (HTML 502) `internal` asol status shoho; auto retry na. Phone er Dart validation Go (`backend/internal/phone`, 8.1) er test case hubohu copy kore test kore; Go bodlale Dart o.
 
 ### 4.4 Website (Jaspr)
 
