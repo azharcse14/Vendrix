@@ -1,5 +1,7 @@
 import 'package:shelf/shelf.dart';
 
+import 'bff.dart';
+
 // Ei cookie thakle page personal (session, cart, draft theme), Cloudflare e cache hole onno jon dekhbe (10.3).
 const _personal = {'__Host-sid', '__Host-cart', 'preview'};
 
@@ -11,7 +13,8 @@ Middleware cacheControl() =>
       final String value;
       if (request.url.path.startsWith('_/')) {
         value = 'no-store';
-      } else if (_hasPersonal(request.headers['cookie']) || res.headers.containsKey('set-cookie')) {
+      } else if (parseCookies(request.headers['cookie']).keys.any(_personal.contains) ||
+          res.headers.containsKey('set-cookie')) {
         value = 'private, no-store';
       } else if (res.headers['cache-control'] case final own?) {
         value = own;
@@ -20,6 +23,3 @@ Middleware cacheControl() =>
       }
       return res.change(headers: {'cache-control': value});
     };
-
-bool _hasPersonal(String? cookie) =>
-    cookie != null && cookie.split(';').any((c) => _personal.contains(c.split('=').first.trim()));

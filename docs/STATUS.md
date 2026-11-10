@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M3 step 4** ([M3](milestones/M3.md)): step 3 shesh (`cacheControl` middleware, server `127.0.0.1` e). Ekhon BFF skeleton: age `website/test/bff/bff_test.dart` (`group('BFF (10.9)')`, `MockClient`) fail commit, tarpor `services/bff.dart` (Origin/`Sec-Fetch-Site` → 403, cookie → header, forward, `303`, `no-store`), `main.server.dart` er `Pipeline` e.
+2. **M3 step 5** ([M3](milestones/M3.md)): step 4 shesh (BFF skeleton). Ekhon settings cache (3.5, 10.10 item 4): age `website/test/services/settings_cache_test.dart` (`group('Settings cache (3.5)')`) fail commit, tarpor `services/settings_cache.dart`.
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M3 step 4: BFF skeleton (`services/bff.dart`: CSRF Origin/`Sec-Fetch-Site`, cookie → token, Referer theke bhasha, form `303`, `no-store`), test 14/14.
 - 10 November 2026: M3 step 3: `Cache-Control` middleware (14.2 test 24 pass), website server shudhu `127.0.0.1` e (`serveApp` + `shelf_io`).
 - 10 November 2026: M3 step 2: website `Config.fromEnv`, `localeOf`, `apiHeaders`/`apiFor` (test 12/12), `docs/features/website.md`.
 - 10 November 2026: M3 step 1: `website/` Jaspr 0.23.5 skeleton, `install-skills`, Tailwind v3.4.19 standalone (`scripts/tailwind.sh`, `jaspr_tailwind` Dart 3.13 e chole na, design v1.14), `make web`.

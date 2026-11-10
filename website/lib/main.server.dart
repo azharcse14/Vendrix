@@ -10,12 +10,16 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import 'app.dart';
 import 'main.server.options.dart';
+import 'services/api.dart';
+import 'services/bff.dart';
 import 'services/cache_control.dart';
+import 'services/config.dart';
 
 Future<void> main() async {
   Jaspr.initializeApp(options: defaultServerOptions);
   final handler = const Pipeline()
       .addMiddleware(cacheControl())
+      .addMiddleware(bff(config, httpClient, bffRoutes))
       .addHandler(
         serveApp(
           (request, render) => render(
