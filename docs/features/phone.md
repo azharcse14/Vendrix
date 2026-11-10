@@ -1,6 +1,6 @@
 # Phone number
 
-Design: 8.1 (Rule 6) · Milestone: login (M4) ar checkout (M6) e use · Code: `backend/internal/phone`
+Design: 8.1 (Rule 6) · Milestone: login (M4) ar checkout (M6) e use · Code: `backend/internal/phone`, `packages/shared/lib/src/validation` (M2)
 
 ## Ki kore
 
@@ -20,6 +20,7 @@ Ei kram e poro:
 |---|---|
 | `backend/internal/phone/phone.go` → `Normalize` | Normalize |
 | `backend/internal/phone/phone_test.go` | Thik ar bhul input |
+| `packages/shared/lib/src/validation/phone.dart` → `normalizePhone` | Ekoi niyom Dart e (form e sathe sathe check; bhul hole `null`), v1.12 |
 
 ## Niyom ar tar test
 
@@ -28,6 +29,7 @@ Ei kram e poro:
 | E.164 e save (Rule 6, 8.1) | `Normalize` | `TestNormalize` |
 | Bhul okkhor chupchap fele na (8.1) | `Normalize` | `TestNormalize` |
 | `+` er por `880`, ekbar-i (8.1) | `Normalize` | `TestNormalize` |
+| Dart er niyom Go er sathe ekoi, ekoi case (8.1, v1.12) | `normalizePhone` | `test/validation/phone_test.dart` → `group('normalizePhone (8.1, Go er sathe ekoi)')` |
 
 ## Data
 
@@ -39,7 +41,8 @@ Ei kram e poro:
 
 ## Bodlanor age mone rakho
 
-- Notun operator prefix hole `Normalize` ar `phone_bd` domain duitai (domain er jonno notun migration).
+- Notun operator prefix hole `Normalize`, Dart er `normalizePhone` ar `phone_bd` domain tinta-i (domain er jonno notun migration).
+- Go er `TestNormalize` er case bodlale `packages/shared/test/validation/phone_test.dart` e hubohu copy (v1.12); server sob shomoy Go diye abar check kore, Dart shudhu form er jonno.
 - Log e phone mask (`+88017****5678`, 12.2): mask er function M4 e ashbe (ekhono nai).
 
 ## Proshno-uttor

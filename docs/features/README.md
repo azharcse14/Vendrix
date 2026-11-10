@@ -47,7 +47,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 
 | Folder | Ki | Doc |
 |---|---|---|
-| `packages/shared/lib/src/format` | Taka (ar tarikh) format | [l10n.md](l10n.md) |
+| `packages/shared/lib/src/format` | Taka ar tarikh format | [l10n.md](l10n.md) |
+| `packages/shared/lib/src/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
 
 `website` (M3), `admin` (M7) er map oi milestone e ekhane jog hobe.
 
