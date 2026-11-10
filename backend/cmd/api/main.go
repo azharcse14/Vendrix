@@ -1,10 +1,14 @@
-// Command api: Vendrix er Go API (binary shop-api, 13.4). Subcommand: serve (default), migrate, version.
+// Command api: Vendrix er Go API (binary shop-api, 13.4). Subcommand: serve (default), migrate,
+// credentials set, version.
 //
-// Feature doc: docs/features/server.md (serve), docs/features/migration.md (migrate)
+// Feature doc: docs/features/server.md (serve), docs/features/migration.md (migrate),
+// docs/features/credentials.md (credentials)
 package main
 
 import (
 	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -18,12 +22,13 @@ import (
 	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/jobs"
 	"vendrix/backend/internal/notify"
+	"vendrix/backend/internal/shop"
 	"vendrix/backend/migrations"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	err := run(ctx, os.Args[1:], os.LookupEnv, os.Stdout)
+	err := run(ctx, os.Args[1:], os.LookupEnv, os.Stdin, os.Stdout)
 	stop()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "shop-api:", err)
@@ -31,8 +36,8 @@ func main() {
 	}
 }
 
-// run: main er asol kaj; test er jonno env (lookup) ar output bahir theke ashe.
-func run(ctx context.Context, args []string, lookup func(string) (string, bool), out io.Writer) error {
+// run: main er asol kaj; test er jonno env (lookup), stdin ar output bahir theke ashe.
+func run(ctx context.Context, args []string, lookup func(string) (string, bool), in io.Reader, out io.Writer) error {
 	cmd := "serve"
 	if len(args) > 0 {
 		cmd = args[0]
@@ -43,11 +48,13 @@ func run(ctx context.Context, args []string, lookup func(string) (string, bool),
 		return runServe(ctx, lookup, log)
 	case "migrate":
 		return runMigrate(ctx, lookup, log)
+	case "credentials":
+		return runCredentials(ctx, args[1:], lookup, in, log)
 	case "version":
 		_, err := fmt.Fprintln(out, version())
 		return err
 	}
-	return fmt.Errorf("ochena command %q: serve, migrate ba version", cmd)
+	return fmt.Errorf("ochena command %q: serve, migrate, credentials ba version", cmd)
 }
 
 func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog.Logger) error {
@@ -101,6 +108,47 @@ func runMigrate(ctx context.Context, lookup func(string) (string, bool), log *sl
 		return err
 	}
 	log.Info("migration shesh", "notun", n, "mot", len(files))
+	return nil
+}
+
+// maxSecret: stdin er secret JSON er shima.
+const maxSecret = 64 << 10
+
+// runCredentials (3.8): `credentials set --shop <slug> --provider <p>`, secret JSON stdin theke (shell history
+// ba process list e jay na).
+func runCredentials(ctx context.Context, args []string, lookup func(string) (string, bool), in io.Reader, log *slog.Logger) error {
+	if len(args) == 0 || args[0] != "set" {
+		return errors.New("credentials set --shop <slug> --provider <provider> (secret JSON stdin e)")
+	}
+	fs := flag.NewFlagSet("credentials set", flag.ContinueOnError)
+	slug := fs.String("shop", "", "shop er slug")
+	provider := fs.String("provider", "", "sslcommerz, bkash, nagad, sms, steadfast, pathao ba redx")
+	if err := fs.Parse(args[1:]); err != nil {
+		return err
+	}
+	if *slug == "" || *provider == "" || fs.NArg() > 0 {
+		return errors.New("--shop ar --provider lagbe")
+	}
+	cfg, err := config.Load(lookup, config.Credentials)
+	if err != nil {
+		return err
+	}
+	secret, err := io.ReadAll(io.LimitReader(in, maxSecret+1))
+	if err != nil {
+		return err
+	}
+	if len(secret) > maxSecret {
+		return fmt.Errorf("secret %d KB er beshi", maxSecret>>10)
+	}
+	database, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	if err := shop.SetCredential(ctx, database, cfg.CredentialsKey, *slug, *provider, secret); err != nil {
+		return err
+	}
+	log.Info("credential save", "shop", *slug, "provider", *provider)
 	return nil
 }
 

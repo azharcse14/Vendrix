@@ -4,7 +4,7 @@ Design: 2.2, 4.2, 12.2, 13.4, 13.5 · Milestone: M0 · Code: `backend/cmd/api`, 
 
 ## Ki kore
 
-`shop-api` binary: `serve` (default) HTTP API chalay, `migrate` database migration chalay ([migration.md](migration.md)), `version` git commit dekhay. Shuru tei env check kore; bhul thakle start-i hoy na. SIGTERM pele cholche emon request shesh kore thame.
+`shop-api` binary: `serve` (default) HTTP API chalay, `migrate` database migration chalay ([migration.md](migration.md)), `credentials set` shop er secret rakhe ([credentials.md](credentials.md)), `version` git commit dekhay. Shuru tei env check kore; bhul thakle start-i hoy na. SIGTERM pele cholche emon request shesh kore thame.
 
 ## Kivabe kaj kore
 

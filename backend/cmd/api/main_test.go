@@ -107,21 +107,31 @@ func TestRun(t *testing.T) {
 	ctx := context.Background()
 	var out bytes.Buffer
 	noEnv := func(string) (string, bool) { return "", false }
-	if err := run(ctx, []string{"version"}, noEnv, &out); err != nil || out.Len() == 0 {
+	if err := run(ctx, []string{"version"}, noEnv, nil, &out); err != nil || out.Len() == 0 {
 		t.Errorf("version: %v", err)
 	}
-	if err := run(ctx, []string{"nai"}, noEnv, &out); err == nil {
+	if err := run(ctx, []string{"nai"}, noEnv, nil, &out); err == nil {
 		t.Error("ochena command e error ashe ni")
 	}
 	for _, cmd := range []string{"serve", "migrate"} {
-		if err := run(ctx, []string{cmd}, noEnv, &out); err == nil || !strings.Contains(err.Error(), "APP_ENV") {
+		if err := run(ctx, []string{cmd}, noEnv, nil, &out); err == nil || !strings.Contains(err.Error(), "APP_ENV") {
 			t.Errorf("%s env chhara: %v", cmd, err)
 		}
 	}
 	env := map[string]string{"APP_ENV": "local", "DATABASE_URL": "postgres://x@127.0.0.1:1/db?connect_timeout=1",
 		"JASPR_INTERNAL_SECRET": strings.Repeat("s", 32)}
 	lookup := func(k string) (string, bool) { v, ok := env[k]; return v, ok }
-	if err := run(ctx, nil, lookup, &out); err == nil {
+	if err := run(ctx, nil, lookup, nil, &out); err == nil {
 		t.Error("database chhara serve chole geche")
+	}
+	for _, args := range [][]string{{"credentials"}, {"credentials", "get"}, {"credentials", "set", "--shop", "x"},
+		{"credentials", "set", "--provider", "sms"}, {"credentials", "set", "--shop", "x", "--provider", "sms", "extra"}} {
+		if err := run(ctx, args, noEnv, strings.NewReader("{}"), &out); err == nil || strings.Contains(err.Error(), "APP_ENV") {
+			t.Errorf("%q: argument er error chai, pelam %v", args, err)
+		}
+	}
+	args := []string{"credentials", "set", "--shop", "x", "--provider", "sms"}
+	if err := run(ctx, args, noEnv, strings.NewReader("{}"), &out); err == nil || !strings.Contains(err.Error(), "CREDENTIALS_KEY") {
+		t.Errorf("env chhara credentials: %v", err)
 	}
 }

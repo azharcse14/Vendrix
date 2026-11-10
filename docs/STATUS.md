@@ -13,14 +13,13 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 step 1–4 shesh: pgx, local e migrate + `/healthz`, runner integration test, job worker + notify (`internal/jobs`, `internal/notify`, `internal/dbtest`). Local Postgres host port **5433**. Porer: `credentials set` CLI.
+- M0 step 1–5 shesh: pgx, local e migrate + `/healthz`, runner integration test, job worker + notify, `credentials set` CLI (`internal/shop`). Local Postgres host port **5433**. Porer: CI (step 6).
 - DB integration test (jobs, migrate) CI te chole na (go job e Postgres ar `TEST_DATABASE_URL` nai); M0 step 6 e dekho.
 
 ## Porer kaj
 
-1. **M0 step 5, `credentials set` CLI** (3.8, 2.2).
-2. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result; red hole thik koro.
-3. M0 er acceptance er proman, `make check`, `design-reviewer`, report; tarpor **M1** (`milestone` skill).
+1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result; red hole thik koro.
+2. M0 er acceptance er proman, `make check`, `design-reviewer`, report; tarpor **M1** (`milestone` skill).
 
 ## User er kache proshno
 
@@ -52,6 +51,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M0 step 5: `shop-api credentials set` (config `CREDENTIALS_KEY`, `internal/shop` AES-GCM + upsert); test ar asol CLI e dekha.
 - 10 November 2026: M0 step 4: `internal/jobs` (6.4 claim, backoff, failed_at + log alert, stale lock guard, `jobs.sweep` 5 minute slot), `internal/notify` (local log, phone mask), `internal/dbtest`; serve e worker. Asol Postgres e test pass, end-to-end SMS job done.
 - 10 November 2026: M0 step 1 (pgx v5.12.0, `driver.go`, CI go cache), step 2 (local Postgres 5433 e, migrate duibar, `/healthz` ok), step 3 (`TestMigrateIntegration` pass, shop_app grant check jog); `check-rules.sh` macOS bash 3.2 e chole na (mapfile) thik. quick-check green.
 - 10 November 2026: Repo setup (design v1.8): docs, Claude Code er puro setup, CI, infra; M0 er shuru code (config, httpx, db runner, cmd/api) ar 7 ta feature doc. Go test green, DB test 83/83.

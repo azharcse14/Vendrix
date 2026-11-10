@@ -87,3 +87,23 @@ func TestLoadMigrate(t *testing.T) {
 		t.Error("ochena command e error ashe ni")
 	}
 }
+
+// TestLoadCredentials (12.2, 13.5): CREDENTIALS_KEY base64 e thik 32 byte; error e key thake na.
+func TestLoadCredentials(t *testing.T) {
+	key := "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=" // 32 byte
+	c, err := Load(env("APP_ENV", "local", "DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5433/shop",
+		"CREDENTIALS_KEY", key), Credentials)
+	if err != nil || len(c.CredentialsKey) != 32 || c.DatabaseURL == "" {
+		t.Fatalf("%v %v", len(c.CredentialsKey), err)
+	}
+	for _, bad := range []string{"", "not base64!", "MDEyMzQ1Njc4OWFiY2RlZg=="} { // shesh ta 16 byte
+		_, err := Load(env("APP_ENV", "local", "DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5433/shop",
+			"CREDENTIALS_KEY", bad), Credentials)
+		if err == nil || !strings.Contains(err.Error(), "CREDENTIALS_KEY") || (bad != "" && strings.Contains(err.Error(), bad)) {
+			t.Errorf("%q: %v", bad, err)
+		}
+	}
+	if _, err := Load(env("APP_ENV", "local", "CREDENTIALS_KEY", key), Credentials); err == nil || !strings.Contains(err.Error(), "DATABASE_URL") {
+		t.Errorf("DATABASE_URL chhara: %v", err)
+	}
+}
