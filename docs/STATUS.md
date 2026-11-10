@@ -19,10 +19,11 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M2 (Shared Dart package) plan** (`milestone` skill): `docs/design/15-milestones.md` er M2 row ar section gulo (4.6, 9, 7.1) pore `docs/milestones/M2.md` e plan ar open question; **user approve na kora porjonto code na**.
+2. **M2 plan approve** ([M2](milestones/M2.md)): plan likha; 9 ta open question er uttor user er kache. Uttor pele step 0 (16.1, design 9.3, 9.8, 4.3 update, design-change), tarpor step 1 theke code.
 
 ## User er kache proshno
 
+- **M2 er age (ekhon)**: [M2](milestones/M2.md) er 9 ta open question (model scope, l10n file Dart `const Map`, timezone map, format matrix, token formula, contrast jora, ApiClient error, phone test, dev tooling).
 - **M4 er age**: OTP SMS er code `jobs.payload` e plain text thake; AES-GCM naki job chhara pathano (16.1).
 - **M4 er age**: `jobs` er purono row: `jobs.cleanup` (30 din) naki done hole payload khali (16.1).
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
@@ -53,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M2 plan likha (9 ta open question), approve er opekkhay.
 - 10 November 2026: M1 step 20: `make check` green, design/security review fix, acceptance ☑, report; M1 shesh.
 - 10 November 2026: M1 step 9–19: catalog (public, search, admin category/product/variant), audit, router; design v1.11 (`sku_taken`); local curl; step 20 er check ar review cholche.
 - 10 November 2026: M1 step 8b: `GET /api/translations` (shop er override).
