@@ -30,6 +30,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/migrations` | SQL migration (embed), constraint test | [migration.md](migration.md) |
 | `backend/internal/dbtest` | Asol Postgres e test er database | [migration.md](migration.md) |
 | `backend/internal/shop` | Shop er data: resolve, credential encrypt ar save | [shop.md](shop.md), [credentials.md](credentials.md) |
+| `backend/internal/auth` | Staff password hash (login M4) | [shop.md](shop.md) |
 | `backend/internal/jobs` | Job queue, worker, sweep | [jobs.md](jobs.md) |
 | `backend/internal/notify` | SMS sender, `sms.send` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |

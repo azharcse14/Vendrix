@@ -1,6 +1,6 @@
 # Shop chena
 
-Design: 3.2, 6.7, 7.1 · Milestone: M1 · Code: `backend/internal/httpx`, `backend/internal/shop`
+Design: 3.2, 6.7, 7.1, 8.3 · Milestone: M1 · Code: `backend/internal/httpx`, `backend/internal/shop`, `backend/internal/auth`
 
 ## Ki kore
 
@@ -23,6 +23,7 @@ Ei kram e poro:
 |---|---|
 | `backend/internal/httpx/shop.go` → `ShopFromHost`, `ShopFrom`, `hostname`, `Shop`, `ResolveShop` | Middleware ar context |
 | `backend/internal/shop/resolve.go` → `NewResolver`, `Resolve` | Domain → shop, cache |
+| `backend/internal/auth/password.go` → `HashPassword`, `CheckPassword` | Owner staff er password hash (`shop create`) |
 
 ## Niyom ar tar test
 
@@ -30,6 +31,7 @@ Ei kram e poro:
 |---|---|---|
 | `X-Shop-Host` (lowercase, port chhara) → shop; nai, ochena ba `closed` → `404 shop_not_found`; `suspended` → `423` (3.2, v1.10) | `ShopFromHost`, `hostname` | `TestShopFromHost` |
 | Domain → shop, 60 second cache, ochena domain cache na (3.2) | `Resolver.Resolve` | `TestResolverIntegration` |
+| Password: pbkdf2-sha256, 600000, 16 byte salt, format `pbkdf2-sha256$600000$<salt>$<hash>`, constant-time tulona, bhul format e false (8.3) | `HashPassword`, `CheckPassword` | `TestPasswordHash` |
 
 ## Data
 
@@ -47,6 +49,7 @@ Ei kram e poro:
 - Cache process er memory te; ek er beshi API process hole protitir nijer cache, tai bodol 60 second porjonto alada dekhay.
 - Ochena domain cache korbe na: random `X-Shop-Host` diye memory bhore jabe.
 - Admin route e shop staff session theke (M4), `X-Shop-Host` theke na (3.2).
+- `auth` package M4 e login, session, TOTP pabe; tokhon password er map `auth` er nijer doc e jabe. Ochena email e dummy hash ar ek shathe 4 tar beshi PBKDF2 na (8.3) login er kaj, M4 e.
 
 ## Proshno-uttor
 
