@@ -105,6 +105,12 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 	default:
 		bad("ochena command %q", cmd)
 	}
+	// env.example er secret e "local-only" ache; copy kore deploy korle repo-r public secret byabohar hoto
+	for name, v := range map[string]string{"JASPR_INTERNAL_SECRET": c.JasprInternalSecret, "CREDENTIALS_KEY": string(c.CredentialsKey)} {
+		if c.Env != "local" && strings.Contains(v, "local-only") {
+			bad("%s env.example er local-only value; notun dao (openssl rand -base64 32)", name)
+		}
+	}
 	return c, errors.Join(errs...)
 }
 

@@ -24,6 +24,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## User er kache proshno
 
 - **M4 er age**: OTP SMS er code `jobs.payload` e plain text thake; AES-GCM naki job chhara pathano (16.1).
+- **M4 er age**: `jobs` er purono row: `jobs.cleanup` (30 din) naki done hole payload khali (16.1).
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
 - **M10 er age**: SSLCommerz validation er HTTP call DB lock er bhetore naki baire (16.1).
 - **M12 er age**: production domain (doc e `tomarshop.com` placeholder), server region, SMS provider (16.1).
@@ -51,6 +52,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 10 November 2026: M0 review (design + security): batch e churi kora lock er job bad, handler 1 minute timeout, shutdown e baki job ferot, `run_at` DB er `now()`, concurrency test, env.example `local-only` secret local chhara reject (design v1.9); `jobs` cleanup 16.1 e.
 - 10 November 2026: M0 step 6 (local ongsho): CI `database` job e Go DB test, `check.sh` e DB shoho race, PG env default 5433; `make check` green (83/83), govulncheck, staticcheck clean.
 - 10 November 2026: M0 step 5: `shop-api credentials set` (config `CREDENTIALS_KEY`, `internal/shop` AES-GCM + upsert); test ar asol CLI e dekha.
 - 10 November 2026: M0 step 4: `internal/jobs` (6.4 claim, backoff, failed_at + log alert, stale lock guard, `jobs.sweep` 5 minute slot), `internal/notify` (local log, phone mask), `internal/dbtest`; serve e worker. Asol Postgres e test pass, end-to-end SMS job done.

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -190,5 +191,83 @@ func TestBatchStolenLockIntegration(t *testing.T) {
 	}
 	if deadline <= 0 || deadline > handlerTimeout {
 		t.Errorf("handler er deadline %v, chai 0 < x <= %v", deadline, handlerTimeout)
+	}
+}
+
+// TestConcurrentClaimIntegration (6.4): duita worker ek shathe nile protiti job ekbar-i chole; 5 minute er
+// purono lock abar neya jay.
+func TestConcurrentClaimIntegration(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	var mu sync.Mutex
+	seen := map[int64]int{}
+	h := map[string]Handler{"t.n": func(_ context.Context, j Job) error {
+		mu.Lock()
+		seen[j.ID]++
+		mu.Unlock()
+		return nil
+	}}
+	for range 30 {
+		if err := Enqueue(ctx, d, New{Kind: "t.n"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var wg sync.WaitGroup
+	for range 2 {
+		w := NewWorker(d, slog.New(slog.DiscardHandler), h)
+		wg.Go(func() {
+			for {
+				n, err := w.RunOnce(ctx)
+				if err != nil {
+					t.Error(err)
+				}
+				if n == 0 || err != nil {
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
+	if len(seen) != 30 {
+		t.Errorf("%d ta job cholche, chai 30", len(seen))
+	}
+	for id, n := range seen {
+		if n != 1 {
+			t.Errorf("job %d cholche %d bar", id, n)
+		}
+	}
+
+	if _, err := d.Exec(`INSERT INTO jobs (kind, attempts, locked_at) VALUES ('t.n', 1, now() - interval '6 minutes')`); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := NewWorker(d, slog.New(slog.DiscardHandler), h).RunOnce(ctx); err != nil || n != 1 {
+		t.Errorf("5 minute er purono lock: %d %v", n, err)
+	}
+}
+
+// TestShutdownReleasesIntegration: ctx bondho hole batch er baki job chalay na, attempt o khoroch hoy na.
+func TestShutdownReleasesIntegration(t *testing.T) {
+	d := dbtest.New(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	ran := 0
+	w := NewWorker(d, slog.New(slog.DiscardHandler), map[string]Handler{"t.s": func(context.Context, Job) error {
+		ran++
+		cancel() // prothom job er majhe shutdown
+		return nil
+	}})
+	for range 3 {
+		if err := Enqueue(context.Background(), d, New{Kind: "t.s"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := w.RunOnce(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+	var waiting int
+	if err := d.QueryRow(`SELECT count(*) FROM jobs WHERE kind = 't.s' AND done_at IS NULL AND attempts = 0 AND locked_at IS NULL`).Scan(&waiting); err != nil {
+		t.Fatal(err)
+	}
+	if ran != 1 || waiting != 2 {
+		t.Errorf("chole %d (chai 1), ager moto baki %d (chai 2)", ran, waiting)
 	}
 }

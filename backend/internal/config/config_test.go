@@ -107,3 +107,21 @@ func TestLoadCredentials(t *testing.T) {
 		t.Errorf("DATABASE_URL chhara: %v", err)
 	}
 }
+
+// TestRejectExampleSecrets (13.5): env.example er "local-only" secret staging/production e cholbe na.
+func TestRejectExampleSecrets(t *testing.T) {
+	exampleKey := "bG9jYWwtb25seS1rZXktbm90LWZvci1wcm9kLTAwMDE=" // "local-only-key-not-for-prod-0001"
+	base := []string{"DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5433/shop"}
+	if _, err := Load(env(append(base, "APP_ENV", "local", "CREDENTIALS_KEY", exampleKey)...), Credentials); err != nil {
+		t.Errorf("local e example key: %v", err)
+	}
+	if _, err := Load(env(append(base, "APP_ENV", "production", "CREDENTIALS_KEY", exampleKey)...), Credentials); err == nil ||
+		!strings.Contains(err.Error(), "CREDENTIALS_KEY") {
+		t.Errorf("production e example key: %v", err)
+	}
+	if _, err := Load(env(append(base, "APP_ENV", "staging", "ADMIN_ORIGINS", "https://admin.tomarshop.com",
+		"JASPR_INTERNAL_SECRET", "local-only-jaspr-internal-secret-change-me")...), Serve); err == nil ||
+		!strings.Contains(err.Error(), "JASPR_INTERNAL_SECRET") {
+		t.Errorf("staging e example JASPR secret: %v", err)
+	}
+}

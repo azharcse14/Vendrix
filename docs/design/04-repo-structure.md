@@ -29,7 +29,7 @@ Vendrix/                    → repo (github.com/azharcse14/Vendrix), v1.8
 ```
 backend/
   go.mod                    → module vendrix/backend; dependency shudhu github.com/jackc/pgx/v5 (M0)
-  cmd/api/                  → main.go (serve, migrate, version; pore shop create, credentials set: 3.8),
+  cmd/api/                  → main.go (serve, migrate, credentials set, version; pore shop create: 3.8),
                               router.go (route, middleware, healthz), server.go (timeout, shutdown)
   internal/
     config/                 → env theke config (os.Getenv), validation

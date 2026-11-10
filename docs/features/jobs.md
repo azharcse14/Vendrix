@@ -8,7 +8,7 @@ Request er baire je kaj (SMS, alert, auto-cancel, reconcile) `jobs` table e queu
 
 ## Kivabe kaj kore
 
-1. Kaj jog: `jobs.Enqueue` (`*sql.DB` ba order er `*sql.Tx`). `DedupeKey` thakle ekoi key e duibar row hoy na.
+1. Kaj jog: `jobs.Enqueue` (`*sql.DB` ba order er `*sql.Tx`). `DedupeKey` thakle ekoi key e duibar row hoy na. `RunAt` khali hole database er `now()` (app er ghori na).
 2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob`), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
 3. `Worker.Run`: protiti 2 second e `schedule` (recurring `jobs.sweep`, 5 minute er slot `dedupe_key`), tarpor `RunOnce`. 10 ta pele shathe shathe abar.
 4. `RunOnce`: 6.4 er claim query (`FOR UPDATE SKIP LOCKED`, `attempts + 1`, `locked_at`). Protiti kaj er age lock notun kore (onno worker niye thakle bad), `call` (1 minute timeout; panic o error), tarpor `finish`.
@@ -22,7 +22,7 @@ Ei kram e poro:
 
 | File → function | Ki kore |
 |---|---|
-| `backend/internal/jobs/jobs.go` → `Enqueue`, `NewWorker`, `Run`, `RunOnce`, `finish`, `sweep`, `backoff` | Queue ar worker |
+| `backend/internal/jobs/jobs.go` → `Enqueue`, `NewWorker`, `Run`, `RunOnce`, `release`, `finish`, `sweep`, `backoff` | Queue ar worker |
 | `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `mask` | SMS sender ar `sms.send` handler |
 | `backend/cmd/api/main.go` → `runServe` | Worker chalu ar shutdown |
 | `backend/internal/dbtest/dbtest.go` → `New` | Test er database |
@@ -37,6 +37,8 @@ Ei kram e poro:
 | Batch e chalanor age lock notun; churi hole job bad (SMS duibar na); handler 1 minute er shima | `RunOnce` | `TestBatchStolenLockIntegration` |
 | `dedupe_key` e duibar na; panic = fail (8.17) | `Enqueue`, `call` | `TestWorkerIntegration` |
 | Crash kora shesh attempt sweep e failed (6.4) | `sweep` | `TestWorkerIntegration` |
+| Duita worker ek shathe: protiti job ekbar; 5 minute er purono lock abar neya jay (6.4) | `RunOnce` | `TestConcurrentClaimIntegration` |
+| Shutdown ba DB error e batch er baki job chere dey, attempt ferot (8.17) | `RunOnce`, `release` | `TestShutdownReleasesIntegration` |
 | `jobs.sweep` protiti 5 minute e ekbar (8.17) | `schedule` | `TestScheduleSweep` |
 | SMS shudhu local e log, production e log mode na (8.2 step 4); log e phone mask (12.2) | `NewSMS` | `TestNewSMS` |
 | `sms.send` payload e phone ar text lage | `SendSMSJob` | `TestSendSMSJob` |

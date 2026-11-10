@@ -25,7 +25,7 @@ type Job struct {
 // Handler: ek kind er kaj. Idempotent hote hobe (ekoi job abar chalte pare, 8.17). Error dile retry.
 type Handler func(ctx context.Context, j Job) error
 
-// New: notun job. RunAt khali = ekhon; MaxAttempts 0 = 5; DedupeKey thakle ekoi key e duibar insert hoy na.
+// New: notun job. RunAt khali = database er now() (app ar DB er ghori na milleo shathe shathe chole); MaxAttempts 0 = 5; DedupeKey thakle ekoi key e duibar insert hoy na.
 type New struct {
 	ShopID      int64
 	Kind        string
@@ -49,16 +49,13 @@ func Enqueue(ctx context.Context, e Execer, n New) error {
 			return fmt.Errorf("job %s payload: %w", n.Kind, err)
 		}
 	}
-	if n.RunAt.IsZero() {
-		n.RunAt = time.Now()
-	}
 	if n.MaxAttempts == 0 {
 		n.MaxAttempts = 5
 	}
 	_, err := e.ExecContext(ctx, `INSERT INTO jobs (shop_id, kind, payload, dedupe_key, run_at, max_attempts)
-		VALUES (NULLIF($1, 0), $2, $3, NULLIF($4, ''), $5, $6)
+		VALUES (NULLIF($1, 0), $2, $3, NULLIF($4, ''), coalesce($5, now()), $6)
 		ON CONFLICT (dedupe_key) DO NOTHING`,
-		n.ShopID, n.Kind, payload, n.DedupeKey, n.RunAt, n.MaxAttempts)
+		n.ShopID, n.Kind, payload, n.DedupeKey, sql.NullTime{Time: n.RunAt, Valid: !n.RunAt.IsZero()}, n.MaxAttempts)
 	return err
 }
 
@@ -150,11 +147,6 @@ func (w *Worker) RunOnce(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	type claimed struct {
-		Job
-		lockedAt time.Time
-		attempts int
-	}
 	var todo []claimed
 	for rows.Next() {
 		var c claimed
@@ -167,7 +159,11 @@ func (w *Worker) RunOnce(ctx context.Context) (int, error) {
 	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
 		return 0, err
 	}
-	for _, c := range todo {
+	for i, c := range todo {
+		// shutdown e baki job na chaliye chere dao, na hole bondho ctx e fail hoye attempt khoroch
+		if err := ctx.Err(); err != nil {
+			return len(todo), errors.Join(err, w.release(todo[i:]))
+		}
 		// batch er ager job dhire cholle 5 minute por onno worker eta nite pare; nile bad, na hole SMS duibar
 		err := w.db.QueryRowContext(ctx, `UPDATE jobs SET locked_at = now() WHERE id = $1 AND locked_at = $2
 			RETURNING locked_at`, c.ID, c.lockedAt).Scan(&c.lockedAt)
@@ -175,16 +171,35 @@ func (w *Worker) RunOnce(ctx context.Context) (int, error) {
 			continue
 		}
 		if err != nil {
-			return len(todo), err
+			return len(todo), errors.Join(err, w.release(todo[i:]))
 		}
 		hctx, cancel := context.WithTimeout(ctx, handlerTimeout)
 		jobErr := w.call(hctx, c.Job)
 		cancel()
 		if err := w.finish(c.Job, c.lockedAt, c.attempts, jobErr); err != nil {
-			return len(todo), err
+			return len(todo), errors.Join(err, w.release(todo[i+1:]))
 		}
 	}
 	return len(todo), nil
+}
+
+type claimed struct {
+	Job
+	lockedAt time.Time
+	attempts int
+}
+
+// release: claim kora kintu na chala job ager obosthay (attempt ferot), jate shathe shathe abar neya jay.
+func (w *Worker) release(rest []claimed) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var errs []error
+	for _, c := range rest {
+		_, err := w.db.ExecContext(ctx, `UPDATE jobs SET locked_at = NULL, attempts = attempts - 1
+			WHERE id = $1 AND locked_at = $2`, c.ID, c.lockedAt)
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func (w *Worker) call(ctx context.Context, j Job) (err error) {

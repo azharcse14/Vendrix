@@ -9,7 +9,7 @@ Design: 2.2, 4.2, 12.2, 13.4, 13.5 · Milestone: M0 · Code: `backend/cmd/api`, 
 ## Kivabe kaj kore
 
 1. `main` (`cmd/api/main.go`): SIGINT ba SIGTERM e bondho hoy emon context banay, tarpor `run`.
-2. `run`: command bachai (`serve`, `migrate`, `version`); log JSON e stdout e.
+2. `run`: command bachai (`serve`, `migrate`, `credentials`, `version`); log JSON e stdout e.
 3. `runServe`: `config.Load(lookup, config.Serve)` → `db.Open` (pgx) → `newHandler` → `net.Listen(ADDR)` → job worker goroutine ([jobs.md](jobs.md)) → `serve`; shutdown e worker thamar por database close.
 4. `newHandler` (`router.go`): route (`GET /healthz`), CrossOriginProtection e `ADMIN_ORIGINS`, middleware er kram ([http-foundation.md](http-foundation.md)).
 5. `serve` (`server.go`): `newServer` er timeout (4.2) e chalay; ctx bondho hole `Shutdown` (25 second, systemd er 30 second er kom).
@@ -35,6 +35,7 @@ Ei kram e poro:
 | Env bhul hole start na; error e password na (13.5) | `config.Load`, `postgresURL` | `TestLoadRejects`, `TestLoadServe` |
 | `ADMIN_ORIGINS` https; local e `http://localhost` (13.5) | `config.origin` | `TestLoadServe`, `TestLoadRejects` |
 | Migrate e shudhu `MIGRATE_DATABASE_URL` (6.1) | `config.Load` | `TestLoadMigrate` |
+| env.example er `local-only` secret local chhara na (13.5) | `config.Load` | `TestRejectExampleSecrets` |
 | Router build e panic na (12.2 Server 7) | `newHandler` | `TestRouterBuild` |
 | Onno site er browser er POST atkano (12.2 Server 3) | `newHandler` (CrossOriginProtection) | `TestCrossOrigin` |
 | Timeout ar graceful shutdown (4.2, 2.2) | `newServer`, `serve` | `TestServeShutdown` |
