@@ -27,6 +27,7 @@ Ei kram e poro:
 | `backend/internal/db/migrate.go` → `LoadMigrations`, `Pending`, `Migrate` | Runner |
 | `backend/internal/db/db.go` → `Open`, `InTx`, `retryable` | Pool ar transaction |
 | `backend/internal/db/driver.go` | pgx driver register |
+| `backend/internal/dbtest/dbtest.go` → `New` | Onno package er DB test: notun database, migration shoho |
 | `backend/migrations/001_init.sql` | Puro schema (6.7) |
 | `backend/migrations/tests/001_init_test.sql` | Constraint test |
 | `backend/migrations/DEPLOYED` | Production e chola file er hash (13.6) |

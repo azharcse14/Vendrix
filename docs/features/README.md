@@ -10,7 +10,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 |---|---|---|---|---|
 | Server, config, healthz | [server.md](server.md) | 2.2, 4.2, 13.5 | M0 | cholche |
 | HTTP er bhitti: client IP, log, error | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 12.2 | M0, M1 | chalu |
-| Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | cholche (integration test baki) |
+| Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | chalu |
+| Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
 | Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
@@ -25,6 +26,9 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/httpx` | Middleware, client IP, log, JSON error | [http-foundation.md](http-foundation.md) |
 | `backend/internal/db` | Connection, transaction, migration runner | [migration.md](migration.md) |
 | `backend/migrations` | SQL migration (embed), constraint test | [migration.md](migration.md) |
+| `backend/internal/dbtest` | Asol Postgres e test er database | [migration.md](migration.md) |
+| `backend/internal/jobs` | Job queue, worker, sweep | [jobs.md](jobs.md) |
+| `backend/internal/notify` | SMS sender, `sms.send` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
 | `backend/internal/order` | Status er state machine (pure) | [order-status.md](order-status.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |

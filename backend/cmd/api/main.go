@@ -16,6 +16,8 @@ import (
 
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/db"
+	"vendrix/backend/internal/jobs"
+	"vendrix/backend/internal/notify"
 	"vendrix/backend/migrations"
 )
 
@@ -66,8 +68,18 @@ func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog
 	if err != nil {
 		return err
 	}
+	w := jobs.NewWorker(database, log, map[string]jobs.Handler{
+		"sms.send": notify.SendSMSJob(notify.NewSMS(cfg.Env, log)),
+	})
+	wctx, stopWorker := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() { w.Run(wctx); close(done) }()
 	log.Info("server shuru", "addr", cfg.Addr, "env", cfg.Env, "version", version())
-	return serve(ctx, newServer(h), ln, log)
+	err = serve(ctx, newServer(h), ln, log)
+	// cholche emon job er result lekha porjonto apekkha (database close er age)
+	stopWorker()
+	<-done
+	return err
 }
 
 func runMigrate(ctx context.Context, lookup func(string) (string, bool), log *slog.Logger) error {
