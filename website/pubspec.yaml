@@ -10,6 +10,7 @@ dependencies:
   http: ^1.6.0
   jaspr: ^0.23.5
   jaspr_router: ^0.9.0
+  shelf: ^1.4.2
   shared:
     path: ../packages/shared
 
