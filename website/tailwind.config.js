@@ -10,7 +10,10 @@ module.exports = {
       ink: 'var(--color-text)', muted: 'var(--color-text-muted)',
       page: 'var(--color-bg)', surface: 'var(--color-surface)', line: 'var(--color-border)',
     },
+    // 9.6: choto lekha 14px/1.6, body 16px/1.7 (Bangla kar-fola).
+    fontSize: { sm: ['0.875rem', { lineHeight: '1.6' }], base: ['1rem', { lineHeight: '1.7' }] },
     borderRadius: { DEFAULT: 'var(--radius)' },
-    fontFamily: { heading: 'var(--font-heading)', body: 'var(--font-body)' },
+    // Font file ashar age ba na thakle system font (Bangla shoho).
+    fontFamily: { heading: ['var(--font-heading)', 'sans-serif'], body: ['var(--font-body)', 'sans-serif'] },
   }},
 };

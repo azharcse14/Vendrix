@@ -1,14 +1,17 @@
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
-/// Home (10.1): ekhon shudhu skeleton; data ar layout step 6–8 e.
+import '../components/site.dart';
+
+/// Home (10.1): ekhon shudhu shop er naam; data step 8 e.
 class Home extends StatelessComponent {
   const Home({super.key});
 
   @override
   Component build(BuildContext context) {
-    return main_(classes: 'min-h-screen bg-page text-ink font-body', [
-      h1(classes: 'font-heading text-primary', [.text('Vendrix')]),
+    final site = Site.of(context);
+    return div(classes: 'px-4 py-8', [
+      h1([.text(site.settings.name.of(site.locale))]),
     ]);
   }
 }

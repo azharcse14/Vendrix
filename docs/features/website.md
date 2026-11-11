@@ -5,18 +5,21 @@ Design: 10.1–10.5, 10.9, 10.10, 3.2, 13.5 · Milestone: M3 · Code: `website/`
 ## Ki kore
 
 Customer er website: Jaspr server mode e protiti page server e render hoy (SSR), dokan chena jay `Host` theke. Bangla root e, English `/en/...` e. Browser kokhono Go API te jay na; page er data Jaspr server API theke ane.
-M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, BFF skeleton ar settings cache; page, SEO porer step e ([M3](../milestones/M3.md)).
+M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, BFF skeleton, settings cache, theme/font, layout (header, bottom nav, footer) ar 404/bondho/error page; catalog page, SEO porer step e ([M3](../milestones/M3.md)).
 
 ## Kivabe kaj kore
 
-1. Shuru: `lib/main.server.dart` nijer shelf server `127.0.0.1:$PORT` e (13.5; `jaspr serve`/build `PORT` dey, local default 8081), `Pipeline` e `cacheControl()`, `bff(...)`, tarpor `serveApp` → Jaspr `Document` (`lang`, viewport `viewport-fit=cover`, `/styles.css`) ar `App` (`lib/app.dart`, `jaspr_router`). Env `lib/services/config.dart` → `config` (`Config.fromEnv`): `API_BASE_URL`, `JASPR_INTERNAL_SECRET`, `IMAGE_BASE_URL`, `IMAGE_RESIZE`; bhul hole `FormatException` e variable er naam.
+1. Shuru: `lib/main.server.dart` nijer shelf server `127.0.0.1:$PORT` e (13.5; `jaspr serve`/build `PORT` dey, local default 8081), `Pipeline` e `cacheControl()`, `bff(...)`, tarpor `serveApp` → `renderPage` (`lib/services/render.dart`). Env `lib/services/config.dart` → `config` (`Config.fromEnv`): `API_BASE_URL`, `JASPR_INTERNAL_SECRET`, `IMAGE_BASE_URL`, `IMAGE_RESIZE`; bhul hole `FormatException` e variable er naam.
 2. Bhasha: `localeOf(path)` (`lib/services/locale.dart`): `/en` ba `/en/...` → `en` ar baki route, na hole `bn`. Browser er `Accept-Language` dekha hoy na (10.3: URL-i bhasha, cache thik thake).
 3. API: `apiFor(requestHeaders, locale, config, httpClient)` (`lib/services/api.dart`) protiti request e notun `ApiClient` (shared), ek `http.Client`. Header `apiHeaders`: `X-Shop-Host` = `Host` (API nijei port bad diye normalize kore), Caddy er `X-Real-IP` thakle `X-Client-IP` + `X-Internal-Auth`; local e `X-Real-IP` nai, API connection IP ney.
 4. CSS: Tailwind v3.4.19 standalone CLI (`scripts/tailwind.sh`, version ar sha256 pin, binary `website/.dart_tool` e) `tailwind.css` → `web/styles.css`; `tailwind.config.js` e rong, radius, font shudhu CSS variable (9.3). `jaspr_tailwind` Dart 3.13 e resolve hoy na (v1.14).
 5. Cache (10.3): `cacheControl()` (`lib/services/cache_control.dart`): BFF `/_/...` → `no-store`; `__Host-sid`, `__Host-cart`, `preview` cookie ba response e `Set-Cookie` → `private, no-store` (page er nijer header o bodle); baki page nije `Cache-Control` dile seta, na dile 2xx e `public, max-age=60`, onno status e `no-store`.
 6. BFF (10.9): `bff(config, httpClient, bffRoutes)` (`lib/services/bff.dart`) shudhu `/_/...` dhore, baki page e jay. POST/PATCH/DELETE e CSRF check: `Origin` thakle tar host:port = `Host`, na thakle `Sec-Fetch-Site: same-origin`, na hole `403 forbidden`. `bffRoutes` (`BffRoute`: method, path regex → Go API path) e na mille `404 not_found`; M3 e list khali, prothom route M4 e. Forward: `apiHeaders` (shop, IP), cookie `__Host-sid` → `Authorization: Bearer`, `__Host-cart` → `X-Cart-Key`, `Idempotency-Key`, bhasha nijer page er `Referer` path theke (`localeOf`; nai ba onno host hole `bn`); browser er cookie ar `Accept-Language` jay na. Go API er status, body ar `content-type` hubohu. JS chhara form (`x-www-form-urlencoded`) JSON hoye jay, uttor `303`: 2xx e `Referer` er page e, error e oi page e `?error=<code>` (onno host er Referer hole `/`). API e na pele `502 network_error`, 15 second e `504 timeout`. Shob uttor `no-store`.
 7. Settings cache (3.5, 10.10 item 4): `settingsCache.get(host)` (`lib/services/settings_cache.dart` → `SettingsCache`, global `lib/services/api.dart` e) `ShopSettings` (settings, version, `translations` bn/en) dey. Prothom bar `version`, `settings`, duita `translations` (ek host e ekshathe ekta load). 30 second por prothom request purono data dey ar background e `version` check (host e ekta); bodlale shob abar. API down ba `429`: purono rakhe, log, 30 second por abar. `shop_not_found`/`shop_suspended`: cache theke bad, porer request error. Faka cache e bhul `get` theke `ApiError` (error page); ochena host cache hoy na.
-8. Local: `make web` (`scripts/web.sh`): `website/.env` load, Tailwind `--watch`, `jaspr serve` (port `pubspec.yaml` er `jaspr.port` 8081).
+8. Page (10.10 item 10): `resolvePage(host, path, settingsCache.get)` bhasha (`localeOf`) ar shop er settings niye `Site` (`lib/components/site.dart`, InheritedComponent: `locale`, `settings`, `Translator` (default + override), `t`, `href`) banay. Shop nai (`shop_not_found`) → `404`; bondho (`shop_suspended`) → `503` + `Retry-After: 3600` "dokan bondho" page; onno bhul (API down) → log, `503` error page; ei tin page e shop er theme ar layout nai. `locales.enabled` e `en` na thakle `/en/*` → `404` (lekha Bangla). `renderPage` Jaspr `Document` (`lang` = bhasha, viewport `viewport-fit=cover`, `/styles.css`, `<style>` e `themeCss`) render kore status ar header boshay; non-2xx `cacheControl` e `no-store`.
+9. Route ar layout: `App` (`lib/app.dart`, `jaspr_router`) protiti route `/x` ar `/en/x` duitai; na mille `_NotFound` (`setStatusCode(404)`). `Layout` (`lib/components/layout.dart`, 10.5): header (shop er naam → home, desktop e "Category" `/#categories`, `en` chalu thakle bhasha bodlanor link ekoi path e, GET search form `/search?q=`, input 16px), content max 1280px, footer (phone, email, DBID, BFSA thakle), mobile e fixed bottom nav (Home, Category; Cart/Account M4/M5 porjonto lukano, 10.10 item 6) `env(safe-area-inset-bottom)` shoho. Tap 44px (`min-h-11`).
+10. Theme (9.3, 9.6): `themeCss` (`lib/services/theme.dart`) `:root` e settings er rong, radius, font, ar shudhu settings er duita font er `@font-face` (`web/fonts/`, bengali/latin subset `unicode-range`, `font-display: swap`). `tailwind.css` er base layer e 9.6 er typography (body 16px/1.7, h1–h3 `clamp`, heading font 500); `tailwind.config.js` e font `var(--font-*)`, fallback `sans-serif`; `text-sm` 14px/1.6.
+11. Local: `make web` (`scripts/web.sh`): `website/.env` load, Tailwind `--watch`, `jaspr serve` (port `pubspec.yaml` er `jaspr.port` 8081).
 
 ## Code er map
 
@@ -26,7 +29,12 @@ Ei kram e poro:
 |---|---|
 | `website/lib/main.server.dart` → `main` | Server entry, `Document` |
 | `website/lib/main.client.dart` | Browser entry, shudhu `@client` |
-| `website/lib/app.dart` → `App` | Route |
+| `website/lib/services/render.dart` → `renderPage`, `resolvePage` | Request → page, status (404/503), `Document` |
+| `website/lib/components/site.dart` → `Site` | Request er shop, bhasha, lekha |
+| `website/lib/app.dart` → `App` | Route (`/en` shoho), router 404 |
+| `website/lib/components/layout.dart` → `Layout` | Header, bottom nav, footer |
+| `website/lib/pages/status.dart` → `StatusPage`, `StatusKind` | 404, bondho, error page |
+| `website/lib/services/theme.dart` → `themeCss`, `fontFiles` | `:root` variable ar `@font-face` |
 | `website/lib/services/config.dart` → `Config.fromEnv`, `config` | Env (13.5) |
 | `website/lib/services/locale.dart` → `localeOf` | URL theke bhasha |
 | `website/lib/services/cache_control.dart` → `cacheControl` | `Cache-Control` middleware |
@@ -45,6 +53,9 @@ Ei kram e poro:
 | Personal cookie (`__Host-sid`, `__Host-cart`, `preview`) ba `Set-Cookie` → `private, no-store`; cookie chhara public page `public, max-age=60`; BFF `no-store`; non-2xx `no-store` (10.3, 14.2 test 24) | `cacheControl` | `website/test/server/cache_control_test.dart` → `group('Cache-Control (10.3, 14.2 test 24)')` |
 | BFF: Origin nai/onno/`null`/onno port ba `Sec-Fetch-Site` cross-site → `403`, API te jay na; header forward; Go API er status/error hubohu; ochena route `404`; form `303`; `no-store` (10.9) | `bff` | `website/test/bff/bff_test.dart` → `group('BFF (10.9)')` |
 | Settings cache: 30 second er moddhe API te na; por version check, na bodlale shudhu version; bodlale background e notun; ekshathe ekta; host onujayi; API down/429 e purono + log; faka cache e error; ochena host cache na; shop nai/suspended e bad (3.5, 10.10) | `SettingsCache` | `website/test/services/settings_cache_test.dart` → `group('Settings cache (3.5)')` |
+| Shop nai → `404`; bondho → `503` + `Retry-After: 3600`; API down/onno bhul → `503` error page; `en` bondho hole `/en/*` `404`; bhasha URL theke, override shoho (10.10 item 10) | `resolvePage` | `website/test/server/render_test.dart` → `group('Page status (10.10 item 10)')` |
+| `:root` e settings er rong/radius/font; shudhu settings er font er `@font-face`, `swap`; 9.6 er protiti font file `web/fonts/` e (9.3, 9.6) | `themeCss`, `fontFiles` | `website/test/services/theme_test.dart` → `group('Theme CSS (9.3, 9.6)')` |
+| UI te Bangla okkhor shorasori na, lekha key theke (Rule 4, 9.8) | `scripts/check-rules.sh` | `bash scripts/check-rules.sh` |
 | Env nai ba bhul hole server uthe na (13.5) | `Config.fromEnv` | `website/test/services/api_test.dart` → `group('Config (13.5)')` |
 
 ## Data
@@ -54,7 +65,9 @@ Nai (website database dhore na; shob Go API theke).
 ## Bhul hole ki hoy
 
 - Env nai ba bhul: prothom `config` use e `FormatException` (variable er naam shoho).
-- `Host` nai: `X-Shop-Host` khali, API `404 shop_not_found`.
+- `Host` nai: `X-Shop-Host` khali, API `404 shop_not_found` → 404 page.
+- API down ar cache faka: `503` error page (`no-store`), log `page: ...`; cache e purono thakle purono dekhay.
+- Router e route nai: `404` page (layout shoho).
 - BFF: CSRF check fail `403 forbidden`; ochena `/_/` route `404 not_found`; API down `502 network_error`, dhir `504 timeout` (client `ApiError` er code er moto).
 
 ## Bodlanor age mone rakho

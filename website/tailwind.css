@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Typography 9.6: Bangla kar-fola er jonno line-height beshi; weight shudhu 400/500 (heading font e 600). */
+@layer base {
+  body { @apply bg-page font-body text-ink; font-size: 1rem; line-height: 1.7; }
+  h1, h2, h3 { @apply font-heading; font-weight: 500; }
+  h1 { font-size: clamp(1.75rem, 6vw, 2.75rem); line-height: 1.25; }
+  h2 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.3; }
+  h3 { font-size: 1.25rem; line-height: 1.35; }
+  small { font-size: 0.875rem; line-height: 1.6; }
+  p { max-width: 70ch; }
+  @media (min-width: 1024px) { h3 { font-size: 1.375rem; } }
+}

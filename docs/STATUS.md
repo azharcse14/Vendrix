@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M3 step 6** ([M3](milestones/M3.md)), adhek: hoyeche `services/theme.dart` (`themeCss`: `:root` + `@font-face`), `web/fonts/` (6 font, Fontsource 5.3.0, OFL), shared `PublicSettings` getter (font, radius, branding, announcement) ar notun lekha key (`nav.*`, `search.*`, `page.*`, `footer.*`, `lang.switch`). Baki: `Site` InheritedComponent (locale, settings, Translator), render handler (`/en` route, `en` na thakle 404, `shop_suspended` 503 + `Retry-After`, error 503), header/bottom nav (Category → `/#categories`, 10.1 e route nai)/footer, 404/closed/error page, Tailwind typography (9.6) ar `font-body` fallback, `check-rules.sh` e Bangla okkhor check, feature doc.
+2. **M3 step 7** ([M3](milestones/M3.md)): `scripts/dev-seed.sql` (shudhu local; `sobujbazar.localhost` er category, product, variant, stock), `make` e chalano target; Q4 er dev chobi `website/web/dev-images/` (ba `tint` placeholder). Tarpor step 8 (home ar category page, `product_card`, `price`, `responsive_image`, header e logo). Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`.
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 11 November 2026: CI fix (ci.yml er Dart job naam e `: ` → YAML parse error, quote); M3 step 6 shesh: `Site`, render (404/503), `/en` route, layout, status page, typography, Bangla okkhor check; local e `/`, `/en` 200, ochena path/host 404.
 - 10 November 2026: M3 step 6 er ardhek: theme CSS, self-host font, shared settings getter ar UI key.
 - 10 November 2026: M3 step 5: website settings cache (host onujayi, 30 second background version check, API down e purono, suspended e bad), test 11/11.
 - 10 November 2026: M3 step 4: BFF skeleton (`services/bff.dart`: CSRF Origin/`Sec-Fetch-Site`, cookie → token, Referer theke bhasha, form `303`, `no-store`), test 14/14.

@@ -44,6 +44,13 @@ if [ -n "$ui" ]; then
     "$(grep -rnE '#[0-9A-Fa-f]{6}([^0-9A-Fa-f]|$)|0x[Ff]{2}[0-9A-Fa-f]{6}' $ui | grep -v '// rule4:ok')"
 fi
 
+# Rule 4, 9.8: UI te lekha translation key theke; Bangla okkhor (U+0980–U+09FF) shorasori na (grep -P macOS e nai, tai perl)
+web=$(existing website/lib admin/lib app/lib)
+if [ -n "$web" ]; then
+  report "Rule 4: UI code e Bangla lekha (packages/shared/lib/l10n e key dao)" "$(
+    find $web -name '*.dart' -exec perl -CSD -ne 'print "$ARGV:$.: $_" if /[\x{0980}-\x{09FF}]/ && !/rule4:ok/; close ARGV if eof' {} +)"
+fi
+
 # 6.1 v1.6: test SQL top-level e thakle embed e migration hishebe chole
 report "Migration folder e test SQL (backend/migrations/tests/ e rakho)" \
   "$(ls backend/migrations/*_test.sql 2>/dev/null)"

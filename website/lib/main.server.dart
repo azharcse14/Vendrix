@@ -3,17 +3,16 @@ library;
 
 import 'dart:io';
 
-import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
-import 'app.dart';
 import 'main.server.options.dart';
 import 'services/api.dart';
 import 'services/bff.dart';
 import 'services/cache_control.dart';
 import 'services/config.dart';
+import 'services/render.dart';
 
 Future<void> main() async {
   Jaspr.initializeApp(options: defaultServerOptions);
@@ -22,13 +21,11 @@ Future<void> main() async {
       .addMiddleware(bff(config, httpClient, bffRoutes))
       .addHandler(
         serveApp(
-          (request, render) => render(
-            Document(
-              lang: 'bn',
-              viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
-              head: [link(rel: 'stylesheet', href: '/styles.css')],
-              body: const App(),
-            ),
+          (request, render) => renderPage(
+            request,
+            render,
+            settingsCache.get,
+            log: (e) => stderr.writeln('page: $e'),
           ),
         ),
       );
