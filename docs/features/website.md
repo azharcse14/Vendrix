@@ -19,7 +19,7 @@ M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, B
 8. Page (10.10 item 10): `resolvePage(host, path, settingsCache.get)` bhasha (`localeOf`) ar shop er settings niye `Site` (`lib/components/site.dart`, InheritedComponent: `locale`, `settings`, `Translator` (default + override), `t`, `href`) banay. Shop nai (`shop_not_found`) → `404`; bondho (`shop_suspended`) → `503` + `Retry-After: 3600` "dokan bondho" page; onno bhul (API down) → log, `503` error page; ei tin page e shop er theme ar layout nai. `locales.enabled` e `en` na thakle `/en/*` → `404` (lekha Bangla). `renderPage` Jaspr `Document` (`lang` = bhasha, viewport `viewport-fit=cover`, `/styles.css`, `<style>` e `themeCss`) render kore status ar header boshay; non-2xx `cacheControl` e `no-store`.
 9. Route ar layout: `App` (`lib/app.dart`, `jaspr_router`) protiti route `/x` ar `/en/x` duitai; na mille `_NotFound` (`setStatusCode(404)`). `Layout` (`lib/components/layout.dart`, 10.5): header (shop er naam → home, desktop e "Category" `/#categories`, `en` chalu thakle bhasha bodlanor link ekoi path e, GET search form `/search?q=`, input 16px), content max 1280px, footer (phone, email, DBID, BFSA thakle), mobile e fixed bottom nav (Home, Category; Cart/Account M4/M5 porjonto lukano, 10.10 item 6) `env(safe-area-inset-bottom)` shoho. Tap 44px (`min-h-11`).
 10. Theme (9.3, 9.6): `themeCss` (`lib/services/theme.dart`) `:root` e settings er rong, radius, font, ar shudhu settings er duita font er `@font-face` (`web/fonts/`, bengali/latin subset `unicode-range`, `font-display: swap`). `tailwind.css` er base layer e 9.6 er typography (body 16px/1.7, h1–h3 `clamp`, heading font 500); `tailwind.config.js` e font `var(--font-*)`, fallback `sans-serif`; `text-sm` 14px/1.6.
-11. Local: `make web` (`scripts/web.sh`): `website/.env` load, Tailwind `--watch`, `jaspr serve` (port `pubspec.yaml` er `jaspr.port` 8081).
+11. Local: `make web` (`scripts/web.sh`): `website/.env` load, Tailwind `--watch`, `jaspr serve` (port `pubspec.yaml` er `jaspr.port` 8081). Catalog data: `make dev-seed` (`scripts/dev-seed.sql`, docker er Postgres e `shop_owner` diye; `sobujbazar.localhost` shop lage; 3 category, 5 product, variant, stock batch + movement shoho; abar chalale bad; chobi nai).
 
 ## Code er map
 
@@ -43,6 +43,7 @@ Ei kram e poro:
 | `website/lib/services/api.dart` → `apiHeaders`, `apiFor`, `httpClient` | Request theke `ApiClient` |
 | `website/tailwind.config.js`, `scripts/tailwind.sh` | Tailwind token ar build |
 | `scripts/web.sh` | `make web` |
+| `scripts/dev-seed.sql` | `make dev-seed`: local catalog data |
 
 ## Niyom ar tar test
 

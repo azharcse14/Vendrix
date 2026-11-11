@@ -1,5 +1,5 @@
 # Asol kaj scripts/ e (Windows/Git Bash e make na thakle sorasori chalao).
-.PHONY: quick-check check db-test rules db-up db-down migrate run web
+.PHONY: quick-check check db-test rules db-up db-down migrate run web dev-seed
 quick-check:
 	@bash scripts/quick-check.sh
 check:
@@ -13,6 +13,9 @@ db-up:
 	docker compose -f infra/docker-compose.yml up -d --wait
 db-down:
 	docker compose -f infra/docker-compose.yml down
+# Local catalog data (M3): docker er Postgres e, tai shudhu local; shop age (shop-api shop create)
+dev-seed:
+	docker compose -f infra/docker-compose.yml exec -T postgres psql -q -U shop_owner -d shop < scripts/dev-seed.sql
 # backend/.env lage (cp backend/env.example backend/.env)
 migrate:
 	@bash scripts/dev.sh migrate

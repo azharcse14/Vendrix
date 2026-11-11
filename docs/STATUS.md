@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
-2. **M3 step 7** ([M3](milestones/M3.md)): `scripts/dev-seed.sql` (shudhu local; `sobujbazar.localhost` er category, product, variant, stock), `make` e chalano target; Q4 er dev chobi `website/web/dev-images/` (ba `tint` placeholder). Tarpor step 8 (home ar category page, `product_card`, `price`, `responsive_image`, header e logo). Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`.
+2. **M3 step 8** ([M3](milestones/M3.md)): home ar category page (10.1, 10.5; Q4, Q13): `pages/home.dart` (announcement, banner, `featured_*`, category list `id="categories"`), `pages/category.dart` (`/c/{slug}`: sort, `in_stock`, dam filter, `?page=`), `components/product_card.dart`, `price.dart` (`formatTaka`, API er dam), `responsive_image.dart` (`IMAGE_BASE_URL`/`IMAGE_RESIZE`, `srcset` 320–1280, chobi na thakle `tint`), `filter_sheet.dart` (@client, `<dialog>`), header e logo; component test (`jaspr_test`). Local data: `make dev-seed`. Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`, website `jaspr serve` (8081), `curl -H 'Host: sobujbazar.localhost' 127.0.0.1:8081/`.
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 11 November 2026: M3 step 7: `make dev-seed` (`scripts/dev-seed.sql`, local catalog data, idempotent).
 - 11 November 2026: CI fix (ci.yml er Dart job naam e `: ` → YAML parse error, quote); M3 step 6 shesh: `Site`, render (404/503), `/en` route, layout, status page, typography, Bangla okkhor check; local e `/`, `/en` 200, ochena path/host 404.
 - 10 November 2026: M3 step 6 er ardhek: theme CSS, self-host font, shared settings getter ar UI key.
 - 10 November 2026: M3 step 5: website settings cache (host onujayi, 30 second background version check, API down e purono, suspended e bad), test 11/11.
