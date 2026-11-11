@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **Milestone M0 (Project setup): cholche.** Plan ar progress: [M0](milestones/M0.md).
+- **Milestone M0 (Project setup): cholche** (CI e shudhu Go toolchain bump baki, v1.15). Plan ar progress: [M0](milestones/M0.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M0 er code shesh; baki shudhu push er por CI green (step 6). M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,7 +18,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M0 step 6, CI**: user GitHub e push korle `ci` workflow er result (`gh run list --limit 3`); red hole log dekhe thik koro. `database` job e ekhon Go DB test o (`TEST_DATABASE_URL`).
+1. **M0 step 6, CI**: push (`73d9364`) er run e Dart ar Database job green; Go job e `govulncheck` 1.27.3 er `net/http` e GO-2026-6859 dhorechhe. Fix: toolchain `go1.27.4` (`go.mod`, `scripts/`, `ci.yml`, design v1.15), commit hoye user push korle `gh run list --limit 3` abar dekho. **User**: `.claude/settings.json` er `GOTOOLCHAIN` `go1.27.4` korte hobe (shudhu user bodlay).
 2. **M3 step 8** ([M3](milestones/M3.md)): home ar category page (10.1, 10.5; Q4, Q13): `pages/home.dart` (announcement, banner, `featured_*`, category list `id="categories"`), `pages/category.dart` (`/c/{slug}`: sort, `in_stock`, dam filter, `?page=`), `components/product_card.dart`, `price.dart` (`formatTaka`, API er dam), `responsive_image.dart` (`IMAGE_BASE_URL`/`IMAGE_RESIZE`, `srcset` 320–1280, chobi na thakle `tint`), `filter_sheet.dart` (@client, `<dialog>`), header e logo; component test (`jaspr_test`). Local data: `make dev-seed`. Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`, website `jaspr serve` (8081), `curl -H 'Host: sobujbazar.localhost' 127.0.0.1:8081/`.
 
 ## User er kache proshno
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 11 November 2026: CI Go job e govulncheck (GO-2026-6859, `net/http`): toolchain go1.27.4, design v1.15.
 - 11 November 2026: M3 step 7: `make dev-seed` (`scripts/dev-seed.sql`, local catalog data, idempotent).
 - 11 November 2026: CI fix (ci.yml er Dart job naam e `: ` → YAML parse error, quote); M3 step 6 shesh: `Site`, render (404/503), `/en` route, layout, status page, typography, Bangla okkhor check; local e `/`, `/en` 200, ochena path/host 404.
 - 10 November 2026: M3 step 6 er ardhek: theme CSS, self-host font, shared settings getter ar UI key.

@@ -55,7 +55,7 @@ Vendrix: ekoi code e single store, marketplace ar multi-tenant ecommerce (Bangla
 - Migration runner (`backend/internal/db`): protiti file ek transaction e; shurute `pg_advisory_xact_lock`, `SELECT set_config('app.env', $1, true)` (`SET LOCAL` e string jora na, Rule 12); embed `backend/migrations/embed.go` theke. `schema_migrations` e file er sha256; applied file bodlale ba out-of-order file e fail (6.1).
 - `backend/internal/phone`, `pricing`, `order` er code-i oi niyom er asol spec (8.1, 8.5, 8.8 e link ar niyom er lekha). Niyom bodlate hole age doc er lekha, tarpor code ar test (`design-change` skill).
 - `order_items` theke taka-r hishab er line shudhu `pricing.LineFromItem` diye; nije `Line` banabe na (8.5).
-- Go toolchain 1.27.x (`go.mod` er `toolchain`); Go 1.25 e ar security patch ashe na. Script, CI ar `.claude/settings.json` `GOTOOLCHAIN=go1.27.3` dey; notun patch ele tin jaygay ek shathe (2.1).
+- Go toolchain 1.27.x (`go.mod` er `toolchain`); Go 1.25 e ar security patch ashe na. Script, CI ar `.claude/settings.json` `GOTOOLCHAIN=go1.27.4` dey; notun patch ele tin jaygay ek shathe (2.1).
 - Feature doc: protiti feature `docs/features/<naam>.md` (template `docs/features/_template.md`), code er sathe ek commit e; `backend` er protiti package er package comment e tar feature doc er link. `backend/internal/docsync` test heading, link, test er naam ar package map dhore (4.7).
 - Dart: `packages/shared` path dependency diye (`shared: {path: ../packages/shared}`); website er nijer resolution ar `pubspec.lock`; admin ar app chaile ek pub workspace (4.6).
 - Jaspr code likhar age `website/` e `jaspr install-skills --agent claude-code` chalao.

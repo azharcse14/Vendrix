@@ -4,7 +4,7 @@ module vendrix/backend
 go 1.25.1
 
 // v1.3: Go 1.25 line 1.25.14 e shesh (ar security patch nai); build ar CI Go 1.27.x e.
-toolchain go1.27.3
+toolchain go1.27.4
 
 require github.com/jackc/pgx/v5 v5.12.0
 

@@ -103,7 +103,7 @@ Detailed milestones (M0–M12, marketplace, multi-tenant) with acceptance criter
 
 ## Getting Started
 
-Prerequisites: Go 1.27.3, Docker (local PostgreSQL), `make`, `bash`, `git`; for `make db-test` also the PostgreSQL client tools (`psql`, `createdb`, `dropdb`).
+Prerequisites: Go 1.27.4, Docker (local PostgreSQL), `make`, `bash`, `git`; for `make db-test` also the PostgreSQL client tools (`psql`, `createdb`, `dropdb`).
 
 ```bash
 make db-up                            # PostgreSQL 16 with the shop_owner/shop_app roles and the shop database

@@ -5,7 +5,7 @@
 # QUICK_PARTS=go ba dart diye ekta-i (CI er alada job). DB lage emon test TEST_DATABASE_URL chhara skip.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.3}"
+export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.4}"
 parts=",${QUICK_PARTS:-go,dart},"
 
 if [[ $parts == *,go,* ]] && [ -d backend ]; then

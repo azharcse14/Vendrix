@@ -128,7 +128,7 @@ v1.9: `backend/env.example` er secret e `local-only` thake; `APP_ENV` local na h
 
 ### 13.6 Deploy (GitHub Actions)
 
-1. Protiti push (v1.8: `.github/workflows/ci.yml`; `GOTOOLCHAIN=go1.27.3`, v1.5: tai CI ar local e ekoi Go): Go `vet` + `test` (docsync shoho) + `govulncheck` (Postgres service container, `C.UTF-8`, `shop_app` role), `make check` (`tests/001_init_test.sql` shoho, `scripts/db-test.sh`), router build test, Dart `analyze` + `test` (shared, website, admin).
+1. Protiti push (v1.8: `.github/workflows/ci.yml`; `GOTOOLCHAIN=go1.27.4`, v1.5: tai CI ar local e ekoi Go): Go `vet` + `test` (docsync shoho) + `govulncheck` (Postgres service container, `C.UTF-8`, `shop_app` role), `make check` (`tests/001_init_test.sql` shoho, `scripts/db-test.sh`), router build test, Dart `analyze` + `test` (shared, website, admin).
 2. `main` e merge: build: Go `CGO_ENABLED=0 GOOS=linux go build`, `jaspr build`, `flutter build web --release`.
 3. Staging e deploy → migration (`shop-api migrate`, `MIGRATE_DATABASE_URL`) → service restart → `/healthz` check → Playwright checkout test.
 4. Hate approve korle production e ekoi step. `/healthz` fail hole ager binary te ferot (rollback). v1.7: production e notun migration chalanor por deploy job oi file er `sha256sum` line `backend/migrations/DEPLOYED` e jog kore PR khole (merge manush kore); tarpor Claude Code hook ar CI hash check oi file pahara dey. Asol pahara runner er checksum (6.1): applied file er ek byte bodlaleo `migrate` fail.

@@ -3,7 +3,7 @@
 # make run → serve, make migrate → migrate. Database: make db-up (infra/docker-compose.yml).
 set -euo pipefail
 cd "$(dirname "$0")/../backend"
-export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.3}"
+export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.4}"
 if [ ! -f .env ]; then
   echo "backend/.env nai: cp backend/env.example backend/.env" >&2
   exit 1
