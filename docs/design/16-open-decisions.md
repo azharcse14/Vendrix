@@ -36,6 +36,7 @@
 | COD e packing e beshi ojon (v1.7 review) | (a) shima nai (ekhon: notun total SMS e), (b) shima (jemon +10%) er beshi hole staff call ar customer er OK, (c) free delivery shima abar dekha (beshi ojon e shima chhuyle delivery 0) | Thik hoyni; M7 er age. Customer refuse korle `phone_refused_before` (8.7) tar gaye lage |
 | Dart package er jora (v1.8) | (a) ek pub workspace, (b) `packages/shared` path dependency ar website alada resolution | Thik holo (v1.8): (b); admin ar app chaile ek workspace (4.6) |
 | Production domain (v1.8) | Platform er domain (doc e `tomarshop.com` placeholder) | Thik hoyni; M12 er age (`docs/STATUS.md`) |
+| Client JS er `?v=<git sha>` (M3 review, 10.3, 10.10 item 10) | (a) Jaspr 0.23.5 nijei `<script src="main.client.dart.js">` boshay, hook nai: deploy e Cloudflare er HTML + JS cache purge (10.3 er onno upay); (b) Jaspr er client script bondho kore `Document` e nijer `<script src="...?v=">` (Jaspr internal e hat, update e bhangte pare); (c) ekhon kichu na: HTML ar JS duitai `max-age=60`, tai purono/notun mile na emon shomoy beshi hole 60 second | Thik hoyni; M12 (deploy) er age. Recommendation (a): deploy script e purge, code bodol na |
 
 ### 16.2 Assumption
 

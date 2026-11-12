@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.15, 11 November 2026
+Version 1.16, 12 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -67,3 +67,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.13 | 10 November 2026 | M3 er 13 ta decision (user recommendation niyeche): Jaspr/Tailwind v3.4 standalone setup, `policies` block ar `GET /api/policies/{kind}`, admin lekha plain text, `IMAGE_BASE_URL`, settings cache, BFF skeleton, cart link M5 porjonto lukano, security header/CSP, test ar CI build, install-skills commit, cloudflared, choto niyom (3.5, 7.2, 9.2, 10.10, 13.5) |
 | 1.14 | 10 November 2026 | 10.10: `jaspr_tailwind` Dart 3.13 er sathe resolve hoy na, tai Tailwind v3.4 standalone CLI `scripts/tailwind.sh` diye shorasori (M3 step 1 e dekha; decision ekoi) |
 | 1.15 | 11 November 2026 | 2.1, 13.6, 15: Go toolchain `go1.27.4` (`go.mod`, script, CI): CI er `govulncheck` 1.27.3 er `net/http` e GO-2026-6859 dhorechhe, 1.27.4 e fix |
+| 1.16 | 12 November 2026 | 16.1: client JS er `?v=<git sha>` (10.10 item 10) er proshno: Jaspr 0.23.5 e script tag er hook nai (M3 review); M12 er age |
