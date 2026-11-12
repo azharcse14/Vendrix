@@ -5,6 +5,9 @@ import 'package:shared/shared.dart';
 import '../app.dart';
 import '../components/site.dart';
 import '../pages/status.dart';
+import 'api.dart';
+import 'config.dart';
+import 'image.dart';
 import 'locale.dart';
 import 'settings_cache.dart';
 import 'theme.dart';
@@ -18,6 +21,8 @@ Future<ResolvedPage> resolvePage(
   String host,
   String path,
   Future<ShopSettings> Function(String host) settingsFor, {
+  required CatalogRepository Function(String locale) catalogFor,
+  required ImageUrls images,
   required void Function(Object error) log,
 }) async {
   final locale = localeOf(path).locale;
@@ -29,6 +34,8 @@ Future<ResolvedPage> resolvePage(
       locale: locale,
       settings: const PublicSettings({}),
       translator: Translator(locale),
+      catalog: catalogFor(locale),
+      images: images,
       child: StatusPage(kind),
     ),
     css: null,
@@ -68,6 +75,8 @@ Future<ResolvedPage> resolvePage(
         overrides: shop.translations,
         onMissing: (key, l) => log('missing translation: $key ($l)'),
       ),
+      catalog: catalogFor(lang),
+      images: images,
       child: missing ? const StatusPage(StatusKind.notFound) : const App(),
     ),
     css: css,
@@ -81,7 +90,14 @@ Future<Response> renderPage(
   Future<ShopSettings> Function(String host) settingsFor, {
   required void Function(Object error) log,
 }) async {
-  final page = await resolvePage(request.headers['host'] ?? '', '/${request.url.path}', settingsFor, log: log);
+  final page = await resolvePage(
+    request.headers['host'] ?? '',
+    '/${request.url.path}',
+    settingsFor,
+    catalogFor: (locale) => CatalogRepository(apiFor(request.headers, locale, config, httpClient)),
+    images: ImageUrls(config.imageBaseUrl, resize: config.imageResize),
+    log: log,
+  );
   final res = await render(
     Document(
       lang: page.site.locale,

@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:jaspr/dom.dart';
-import 'package:jaspr/jaspr.dart';
+import 'package:jaspr/server.dart';
+import 'package:shared/shared.dart';
 
 import '../components/site.dart';
 
@@ -42,4 +45,15 @@ class StatusPage extends StatelessComponent {
         ),
     ]);
   }
+}
+
+/// Page er API bhul (10.10 item 10): `not_found` → 404 page; baki (API down) → 503 error page, log.
+Component pageError(BuildContext context, Object error) {
+  if (error is ApiError && error.code == 'not_found') {
+    context.setStatusCode(404);
+    return const StatusPage(StatusKind.notFound);
+  }
+  stderr.writeln('page: $error');
+  context.setStatusCode(503);
+  return const StatusPage(StatusKind.error);
 }

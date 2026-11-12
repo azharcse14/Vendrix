@@ -1,7 +1,10 @@
+import 'package:http/http.dart';
+import 'package:http/testing.dart';
 import 'package:shared/shared.dart';
 import 'package:test/test.dart';
 import 'package:website/components/site.dart';
 import 'package:website/pages/status.dart';
+import 'package:website/services/image.dart';
 import 'package:website/services/render.dart';
 import 'package:website/services/settings_cache.dart';
 
@@ -22,7 +25,15 @@ void main() {
     String path,
     Future<ShopSettings> Function(String host) settings,
   ) async {
-    final p = await resolvePage('shop.test', path, settings, log: (_) {});
+    final p = await resolvePage(
+      'shop.test',
+      path,
+      settings,
+      catalogFor: (locale) =>
+          CatalogRepository(ApiClient(Uri.parse('http://api.test'), MockClient((_) async => Response('', 500)))),
+      images: ImageUrls(Uri.parse('http://img.test'), resize: false),
+      log: (_) {},
+    );
     site = p.site;
     return (statusCode: p.status, headers: p.headers);
   }

@@ -23,7 +23,7 @@ BEGIN
   SELECT id INTO vid FROM vendors WHERE shop_id = sid AND is_house;
 
   FOR c IN SELECT * FROM jsonb_array_elements('[
-    {"slug":"rice","bn":"চাল","en":"Rice","sort":1,"products":[
+    {"slug":"chal","bn":"চাল","en":"Rice","sort":1,"products":[
       {"slug":"red-rice","bn":"অর্গানিক লাল চাল","en":"Organic red rice","unit":"kg",
        "desc_bn":"পাহাড়ি জমির লাল চাল।\n\nরান্নার আগে ৩০ মিনিট ভিজিয়ে রাখুন।","desc_en":"Hill-grown red rice.\n\nSoak for 30 minutes before cooking.",
        "variants":[{"sku":"RICE-RED-1","bn":"১ কেজি","en":"1 kg","price":18000,"compare":20000,"stock":40},

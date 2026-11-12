@@ -85,4 +85,47 @@ class PublicSettings {
         ? _block('homepage')['announcement'] as Map<String, dynamic>
         : const {},
   );
+
+  List<String> _strings(String block, String key) => [
+    for (final v in _block(block)[key] as List<dynamic>? ?? const [])
+      if (v is String) v,
+  ];
+
+  /// `homepage.banners`; `image_key` string na hole item bad. `link` 9.2 e validate, tobu render e abar check (12.2).
+  List<Banner> get banners => [
+    for (final b in _block('homepage')['banners'] as List<dynamic>? ?? const [])
+      if (b is Map<String, dynamic> && b['image_key'] is String)
+        Banner(
+          b['image_key'] as String,
+          LocalizedText.fromJson(
+            b['alt'] is Map<String, dynamic>
+                ? b['alt'] as Map<String, dynamic>
+                : const {},
+          ),
+          b['link'] is String ? b['link'] as String : null,
+        ),
+  ];
+
+  /// `homepage.featured_category_slugs`.
+  List<String> get featuredCategorySlugs =>
+      _strings('homepage', 'featured_category_slugs');
+
+  /// `homepage.featured_product_slugs`.
+  List<String> get featuredProductSlugs =>
+      _strings('homepage', 'featured_product_slugs');
+}
+
+/// Home er banner (9.2).
+class Banner {
+  /// Chobi (storage key).
+  final String imageKey;
+
+  /// `alt`.
+  final LocalizedText alt;
+
+  /// `/...` ba `https://...`.
+  final String? link;
+
+  /// Banner.
+  const Banner(this.imageKey, this.alt, this.link);
 }
