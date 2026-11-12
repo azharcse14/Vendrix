@@ -54,7 +54,7 @@ class _Header extends StatelessComponent {
         ),
         if (site.hasEnglish)
           a(
-            href: site.locale == 'en' ? path : (path == '/' ? '/en' : '/en$path'),
+            href: localePath(site.locale == 'en' ? 'bn' : 'en', path),
             classes: 'ml-auto flex min-h-11 items-center px-2 text-sm lg:ml-0',
             attributes: {'hreflang': site.locale == 'en' ? 'bn' : 'en'},
             [.text(site.t('lang.switch'))],

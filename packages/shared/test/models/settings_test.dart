@@ -43,6 +43,23 @@ void main() {
       expect(s.phone, isNull);
       expect(s.logoKey, isNull);
       expect(s.announcement.of('bn'), '');
+      expect(s.noindex, isFalse);
+      expect(s.ogImageKey, isNull);
+    });
+
+    test('seo: title, description, og_image_key, noindex', () {
+      final s = PublicSettings.fromJson({
+        'seo': {
+          'title': {'bn': 'শিরোনাম', 'en': 'Title'},
+          'description': {'bn': 'বিবরণ'},
+          'og_image_key': 'shops/1/og.jpg',
+          'noindex': true,
+        },
+      });
+      expect(s.seoTitle.of('en'), 'Title');
+      expect(s.seoDescription.of('en'), 'বিবরণ');
+      expect(s.ogImageKey, 'shops/1/og.jpg');
+      expect(s.noindex, isTrue);
     });
 
     test('homepage: banner, featured slug; bhul item bad', () {

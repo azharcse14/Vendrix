@@ -5,6 +5,7 @@ import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
 
 import '../components/site.dart';
+import '../seo/meta.dart';
 
 /// Kon status page.
 enum StatusKind {
@@ -34,6 +35,7 @@ class StatusPage extends StatelessComponent {
   Component build(BuildContext context) {
     final site = Site.of(context);
     return main_(classes: 'mx-auto max-w-screen-sm px-4 py-16 text-center', [
+      SeoHead(title: site.t('${kind.key}.title'), noindex: true),
       h1([.text(site.t('${kind.key}.title'))]),
       p(classes: 'mt-4 text-muted', [.text(site.t('${kind.key}.body'))]),
       // Bondho shop e home o bondho, tai link na.

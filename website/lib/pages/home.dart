@@ -9,6 +9,7 @@ import '../components/responsive_image.dart';
 import '../components/site.dart';
 import '../services/link.dart';
 import 'status.dart';
+import '../seo/meta.dart';
 
 /// Home (10.1, 10.5): announcement, banner, category (`#categories`, bottom nav er "Category" eikhane ashe),
 /// featured product.
@@ -34,6 +35,7 @@ class Home extends AsyncStatelessComponent {
           ];
     final announcement = s.announcement.of(site.locale);
     return div(classes: 'space-y-8 px-4 py-4', [
+      const SeoHead(),
       if (announcement.isNotEmpty) p(classes: 'rounded bg-tint px-4 py-2 text-center text-sm', [.text(announcement)]),
       for (final (i, b) in s.banners.indexed) _banner(site, b, lcp: i == 0),
       if (shown.isNotEmpty)

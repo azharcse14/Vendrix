@@ -12,7 +12,7 @@ Website, admin ar app Go API er JSON ekoi Dart class e pore: product list ar det
 2. Protiti model er `fromJson` `field<T>` (`models/json.dart`) diye pore: type na mille `FormatException`; `number` JSON er `0` (int) ke `double` kore; `objects` list.
 3. `Page.fromJson(json, item)` (`models/page.dart`): 7.1 er `{"items","page","limit","total"}`; `hasNext`.
 4. `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` (`models/catalog.dart`): M1 er public response (lekha age-i locale e resolve, 7.1); dam poisha `int`.
-5. `PublicSettings` (`models/settings.dart`): `raw` JSON ar dorkari getter (`name`, `colors`, `defaultLocale`, `enabledLocales`, `banglaDigits`, `paymentMethods`, font, radius, branding, `announcement`, `banners` (`Banner`: `imageKey`, `alt`, `link`; `image_key` string na hole item bad), `featuredCategorySlugs`, `featuredProductSlugs` (string na hole bad)); block na thakle default.
+5. `PublicSettings` (`models/settings.dart`): `raw` JSON ar dorkari getter (`name`, `colors`, `defaultLocale`, `enabledLocales`, `banglaDigits`, `paymentMethods`, font, radius, branding, `announcement`, `banners` (`Banner`: `imageKey`, `alt`, `link`; `image_key` string na hole item bad), `featuredCategorySlugs`, `featuredProductSlugs` (string na hole bad), `seoTitle`, `seoDescription`, `ogImageKey`, `noindex` (na thakle false)); block na thakle default.
 6. `CatalogRepository` (`categories`, `products` filter shoho, `product`, `policy` (v1.13: `body`)) ar `SettingsRepository` (`settings`, `version`, `translations`) (`api/repositories.dart`): 7.2 er route → model.
 
 ## Code er map

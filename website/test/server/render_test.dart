@@ -29,6 +29,7 @@ void main() {
       'shop.test',
       path,
       settings,
+      origin: 'https://shop.test',
       catalogFor: (locale) =>
           CatalogRepository(ApiClient(Uri.parse('http://api.test'), MockClient((_) async => Response('', 500)))),
       images: ImageUrls(Uri.parse('http://img.test'), resize: false),

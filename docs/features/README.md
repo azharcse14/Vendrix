@@ -17,7 +17,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
 | API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2 | M2 | cholche |
-| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3 | cholche (skeleton, config, API header) |
+| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3 | cholche (layout, home, category, product, search, policy) |
+| SEO: meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) | 10.4 | M3 | cholche |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora M4 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
@@ -62,7 +63,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Folder | Ki | Doc |
 |---|---|---|
 | `website/lib/services` | Env, URL theke bhasha, request theke `ApiClient` | [website.md](website.md) |
-| `website/lib` (`main.*.dart`, `app.dart`, `pages/`) | Entry, route, page | [website.md](website.md) |
+| `website/lib` (`main.*.dart`, `app.dart`, `pages/`, `components/`) | Entry, route, page | [website.md](website.md) |
+| `website/lib/seo` | Meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) |
 
 `admin` (M7) er map oi milestone e ekhane jog hobe.
 

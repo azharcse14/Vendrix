@@ -90,7 +90,7 @@ void main() {
             : throw const ApiError(404, 'shop_not_found'),
         (request) => catalog,
       )((_) => Response.ok('page'));
-      Future<Response> get(String path, String host) =>
+      Future<Response> get(String path, String host) async =>
           handler(Request('GET', Uri.parse('http://$host$path'), headers: {'host': host}));
 
       final sm = await get('/sitemap.xml', 'shop.test');

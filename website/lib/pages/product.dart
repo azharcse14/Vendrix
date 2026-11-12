@@ -7,6 +7,8 @@ import '../components/plain_text.dart';
 import '../components/site.dart';
 import '../components/variant_picker.dart';
 import 'status.dart';
+import '../seo/json_ld.dart';
+import '../seo/meta.dart';
 
 /// Product (`/p/{slug}`, 10.1, 10.5): gallery, naam, rating, variant ar dam (API theke, Rule 1), description.
 /// Mobile e bottom nav er bodole niche sticky bar (dam + variant); "Cart e add" M5 e (10.10 item 6).
@@ -32,7 +34,20 @@ class ProductPage extends AsyncStatelessComponent {
         ? p(classes: 'text-muted', [.text(site.t('product.out_of_stock'))])
         : VariantPrices(variants, selected, perKg: product.variableWeight);
 
+    final seo = product.seo;
+    final url = '${site.origin}${site.href('/p/${Uri.encodeComponent(product.slug)}')}';
+    final images = [for (final im in product.images) ?site.images.url(im.storageKey, 1280)];
     return div(classes: 'px-4 py-4', [
+      SeoHead(
+        title: seo['title'] is String && (seo['title'] as String).isNotEmpty ? seo['title'] as String : product.name,
+        description: seo['description'] is String && (seo['description'] as String).isNotEmpty
+            ? seo['description'] as String
+            : product.description,
+        imageKey: product.images.firstOrNull?.storageKey,
+        type: 'product',
+        price: selected?.price,
+        data: productJsonLd(product, url: url, images: images),
+      ),
       div(classes: 'md:grid md:grid-cols-2 md:gap-8', [
         div(classes: '-mx-4 md:mx-0', [Gallery(product.images, alt: product.name)]),
         div(classes: 'mt-4 space-y-4 md:mt-0', [

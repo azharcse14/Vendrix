@@ -5,7 +5,7 @@ Design: 10.1–10.5, 10.9, 10.10, 3.2, 13.5 · Milestone: M3 · Code: `website/`
 ## Ki kore
 
 Customer er website: Jaspr server mode e protiti page server e render hoy (SSR), dokan chena jay `Host` theke. Bangla root e, English `/en/...` e. Browser kokhono Go API te jay na; page er data Jaspr server API theke ane.
-M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, BFF skeleton, settings cache, theme/font, layout (header, bottom nav, footer), 404/bondho/error page, home, category page, product card, chobi, filter, product page, search, policy; SEO porer step e ([M3](../milestones/M3.md)).
+M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, BFF skeleton, settings cache, theme/font, layout (header, bottom nav, footer), 404/bondho/error page, home, category page, product card, chobi, filter, product page, search, policy, SEO ([seo.md](seo.md)) ([M3](../milestones/M3.md)).
 
 ## Kivabe kaj kore
 

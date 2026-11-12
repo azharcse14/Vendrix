@@ -21,6 +21,7 @@ Future<ResolvedPage> resolvePage(
   String host,
   String path,
   Future<ShopSettings> Function(String host) settingsFor, {
+  required String origin,
   required CatalogRepository Function(String locale) catalogFor,
   required ImageUrls images,
   required void Function(Object error) log,
@@ -31,6 +32,7 @@ Future<ResolvedPage> resolvePage(
     headers: headers,
     // Shop chhara: default lekha, theme na (browser er default rong).
     site: Site(
+      origin: origin,
       locale: locale,
       settings: const PublicSettings({}),
       translator: Translator(locale),
@@ -68,6 +70,7 @@ Future<ResolvedPage> resolvePage(
     status: missing ? 404 : 200,
     headers: const <String, String>{},
     site: Site(
+      origin: origin,
       locale: lang,
       settings: shop.settings,
       translator: Translator(
@@ -94,6 +97,7 @@ Future<Response> renderPage(
     request.headers['host'] ?? '',
     '/${request.url.path}',
     settingsFor,
+    origin: originOf(request.headers),
     catalogFor: (locale) => CatalogRepository(apiFor(request.headers, locale, config, httpClient)),
     images: ImageUrls(config.imageBaseUrl, resize: config.imageResize),
     log: log,

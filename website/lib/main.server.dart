@@ -4,10 +4,12 @@ library;
 import 'dart:io';
 
 import 'package:jaspr/server.dart';
+import 'package:shared/shared.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import 'main.server.options.dart';
+import 'seo/sitemap.dart';
 import 'services/api.dart';
 import 'services/bff.dart';
 import 'services/cache_control.dart';
@@ -19,6 +21,7 @@ Future<void> main() async {
   final handler = const Pipeline()
       .addMiddleware(cacheControl())
       .addMiddleware(bff(config, httpClient, bffRoutes))
+      .addMiddleware(seoFiles(settingsCache.get, (r) => CatalogRepository(apiFor(r.headers, 'bn', config, httpClient))))
       .addHandler(
         serveApp(
           (request, render) => renderPage(

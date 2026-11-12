@@ -10,6 +10,9 @@ void main() {
   setUpAll(() => Jaspr.initializeApp(options: defaultServerOptions));
 
   const shop = {
+    'locales': {
+      'enabled': ['bn', 'en'],
+    },
     'branding': {
       'name': {'bn': 'সবুজ বাজার'},
     },

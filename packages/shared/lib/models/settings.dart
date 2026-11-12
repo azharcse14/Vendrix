@@ -79,12 +79,26 @@ class PublicSettings {
   /// `branding.bfsa_number`.
   String? get bfsaNumber => _str('branding', 'bfsa_number');
 
-  /// `homepage.announcement`.
-  LocalizedText get announcement => LocalizedText.fromJson(
-    _block('homepage')['announcement'] is Map<String, dynamic>
-        ? _block('homepage')['announcement'] as Map<String, dynamic>
+  LocalizedText _text(String block, String key) => LocalizedText.fromJson(
+    _block(block)[key] is Map<String, dynamic>
+        ? _block(block)[key] as Map<String, dynamic>
         : const {},
   );
+
+  /// `homepage.announcement`.
+  LocalizedText get announcement => _text('homepage', 'announcement');
+
+  /// `seo.title` (home er `<title>`, 10.4).
+  LocalizedText get seoTitle => _text('seo', 'title');
+
+  /// `seo.description`.
+  LocalizedText get seoDescription => _text('seo', 'description');
+
+  /// `seo.og_image_key`.
+  String? get ogImageKey => _str('seo', 'og_image_key');
+
+  /// `seo.noindex`: puro site `noindex` (limited launch, 14.4); na thakle false.
+  bool get noindex => _block('seo')['noindex'] == true;
 
   List<String> _strings(String block, String key) => [
     for (final v in _block(block)[key] as List<dynamic>? ?? const [])

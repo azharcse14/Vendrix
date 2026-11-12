@@ -19,6 +19,11 @@ Map<String, String> apiHeaders(Map<String, String> request, Config cfg) {
   };
 }
 
+/// Request er origin (absolute URL er jonno): Caddy `X-Forwarded-Proto: https` dey, local e `http`. Host ochena hole
+/// API age-i `shop_not_found` dey, tai page e ashe na.
+String originOf(Map<String, String> request) =>
+    '${request['x-forwarded-proto'] == 'https' ? 'https' : 'http'}://${request['host'] ?? ''}';
+
 /// Protiti page request e notun [ApiClient] (10.2); bhasha URL theke ([locale]), browser er header na.
 ApiClient apiFor(Map<String, String> request, String locale, Config cfg, http.Client client) =>
     ApiClient(cfg.apiBaseUrl, client, locale: locale, headers: apiHeaders(request, cfg));

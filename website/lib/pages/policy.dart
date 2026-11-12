@@ -4,6 +4,7 @@ import 'package:jaspr/server.dart';
 import '../components/plain_text.dart';
 import '../components/site.dart';
 import 'status.dart';
+import '../seo/meta.dart';
 
 /// Policy er kind (10.1); footer er link o eta theke.
 const policyKinds = ['terms', 'return', 'refund', 'delivery', 'privacy'];
@@ -26,6 +27,7 @@ class PolicyPage extends AsyncStatelessComponent {
       return pageError(context, e);
     }
     return article(classes: 'mx-auto max-w-screen-md px-4 py-8', [
+      SeoHead(title: site.t('policy.$kind'), description: body),
       h1(classes: 'mb-4', [.text(site.t('policy.$kind'))]),
       ...plainText(body),
     ]);

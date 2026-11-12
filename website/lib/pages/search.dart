@@ -6,6 +6,7 @@ import '../components/product_listing.dart';
 import '../components/site.dart';
 import '../services/list_query.dart';
 import 'status.dart';
+import '../seo/meta.dart';
 
 /// Search (`/search?q=`, 10.1): `products(q:)` diye [ProductListing]; `noindex` (10.4). `q` 2 okkhorer kom hole
 /// API call na (API oikhane search kore na, 6.4), shudhu lekha.
@@ -21,10 +22,9 @@ class SearchPage extends AsyncStatelessComponent {
     final site = Site.of(context);
     final q = ListQuery.parse(query);
     final text = q.q;
-    const noindex = Document.head(meta: {'robots': 'noindex'});
     if (text == null || text.runes.length < 2) {
       return div(classes: 'px-4 py-12 text-center text-muted', [
-        noindex,
+        SeoHead(title: site.t('search.submit'), noindex: true),
         p([.text(site.t('search.prompt'))]),
       ]);
     }
@@ -42,15 +42,13 @@ class SearchPage extends AsyncStatelessComponent {
     } catch (e) {
       return pageError(context, e);
     }
-    return div([
-      noindex,
-      ProductListing(
-        title: site.t('search.title', {'q': text}),
-        action: site.href('/search'),
-        query: q,
-        list: list,
-        emptyText: site.t('search.empty'),
-      ),
-    ]);
+    return ProductListing(
+      title: site.t('search.title', {'q': text}),
+      action: site.href('/search'),
+      query: q,
+      list: list,
+      emptyText: site.t('search.empty'),
+      noindex: true,
+    );
   }
 }

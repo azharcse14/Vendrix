@@ -2,9 +2,13 @@ import 'package:jaspr/jaspr.dart';
 import 'package:shared/shared.dart';
 
 import '../services/image.dart';
+import '../services/locale.dart';
 
 /// Ek request er shop ar bhasha (9.8): page ar component `Site.of(context)` diye settings, lekha ar link pay.
 class Site extends InheritedComponent {
+  /// `https://<host>` (canonical, OG, sitemap er absolute URL).
+  final String origin;
+
   /// URL er bhasha (`bn`, `en`).
   final String locale;
 
@@ -22,6 +26,7 @@ class Site extends InheritedComponent {
 
   /// Site.
   const Site({
+    required this.origin,
     required this.locale,
     required this.settings,
     required this.translator,
@@ -49,7 +54,7 @@ class Site extends InheritedComponent {
   String rating(double r) => formatRating(r, _numbers);
 
   /// Ei bhashar link: `en` e `/en` prefix (10.1).
-  String href(String path) => locale == 'en' ? (path == '/' ? '/en' : '/en$path') : path;
+  String href(String path) => localePath(locale, path);
 
   /// Shop e `en` chalu.
   bool get hasEnglish => settings.enabledLocales.contains('en');

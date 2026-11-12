@@ -6,6 +6,7 @@ import '../services/list_query.dart';
 import 'filter_sheet.dart';
 import 'product_card.dart';
 import 'site.dart';
+import '../seo/meta.dart';
 
 /// Ek page e koyta product (2/3/4 column e mile).
 const listLimit = 24;
@@ -28,6 +29,9 @@ class ProductListing extends StatelessComponent {
   /// List khali hole lekha.
   final String emptyText;
 
+  /// Search (10.4 item 7).
+  final bool noindex;
+
   /// ProductListing.
   const ProductListing({
     required this.title,
@@ -35,6 +39,7 @@ class ProductListing extends StatelessComponent {
     required this.query,
     required this.list,
     required this.emptyText,
+    this.noindex = false,
     super.key,
   });
 
@@ -64,6 +69,7 @@ class ProductListing extends StatelessComponent {
     );
 
     return div(classes: 'px-4 py-4', [
+      SeoHead(title: title, noindex: noindex),
       h1(classes: 'mb-1', [.text(title)]),
       p(classes: 'mb-4 text-sm text-muted', [
         .text(site.translator.plural('category.count', list.total, {'count': site.number(list.total)})),

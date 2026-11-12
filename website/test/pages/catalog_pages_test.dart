@@ -84,7 +84,7 @@ void main() {
       expect(doc.querySelectorAll('[data-variant="7"]').every((e) => e.attributes.containsKey('hidden')), isTrue);
       expect(doc.querySelector('.fixed [data-variant="8"]')!.text, contains('৫ কেজি'));
       // Plain text: escape, khali line → <p>, newline → <br>.
-      expect(doc.querySelector('script:not([src])'), isNull);
+      expect(doc.querySelector('script:not([src]):not([type="application/ld+json"])'), isNull);
       final paras = doc.querySelectorAll('section p');
       expect(paras.map((e) => e.text), ['প্রথম <script>x</script>দ্বিতীয়', 'তৃতীয়']);
       expect(paras.first.querySelectorAll('br'), hasLength(1));
