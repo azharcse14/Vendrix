@@ -44,5 +44,31 @@ void main() {
       expect(s.logoKey, isNull);
       expect(s.announcement.of('bn'), '');
     });
+
+    test('homepage: banner, featured slug; bhul item bad', () {
+      final s = PublicSettings.fromJson({
+        'homepage': {
+          'banners': [
+            {
+              'image_key': 'shops/1/b1.jpg',
+              'alt': {'bn': 'অফার'},
+              'link': '/c/chal',
+            },
+            {'image_key': 5},
+            'x',
+          ],
+          'featured_category_slugs': ['chal', 7, 'modhu'],
+          'featured_product_slugs': ['lal-chal'],
+        },
+      });
+      expect(s.banners, hasLength(1));
+      expect(s.banners.single.imageKey, 'shops/1/b1.jpg');
+      expect(s.banners.single.alt.of('en'), 'অফার');
+      expect(s.banners.single.link, '/c/chal');
+      expect(s.featuredCategorySlugs, ['chal', 'modhu']);
+      expect(s.featuredProductSlugs, ['lal-chal']);
+      expect(const PublicSettings({}).banners, isEmpty);
+      expect(const PublicSettings({}).featuredProductSlugs, isEmpty);
+    });
   });
 }
