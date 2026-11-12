@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–12 shesh, porer step 13; plan [M3](milestones/M3.md). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–13 shesh, porer step 14; plan [M3](milestones/M3.md). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,8 +18,8 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M3 step 13** ([M3](milestones/M3.md)): CI te website build (Q10 (a), 10.5 "JS size maapo"): `.github/workflows/ci.yml` er Dart job e `dart pub global activate jaspr_cli 0.23.5`, Tailwind binary (`scripts/tailwind.sh`, sha256 pin), `cd website && jaspr build`, `build/jaspr/web/main.client.dart.js` (ba build er asol path, local e `jaspr build` chaliye dekho) er size log e (`wc -c`). Local e age `jaspr build` chaliye path ar shomoy dekho. Commit `ci(M3): website build`. CI chalano/green dekha user er push er por.
-2. Tarpor step 14 (feature doc: `l10n.md`, `theme.md` baki kina dekho), step 15 (manual: 360/390/412/768/1280 duita bhashay, Lighthouse mobile, browser e CSP shoho filter dialog ar variant bodlano, Facebook debugger (Q12)), step 16 (`make check`, `design-reviewer`, `security-reviewer` BFF/header er jonno).
+1. **M3 step 14** ([M3](milestones/M3.md)): feature doc mile kina: `docs/features/l10n.md` (website e `Translator`/override, URL theke bhasha, notun key `product.*`, `search.*`, `policy.*`), `theme.md` (website `<head>` er `themeCss`, Tailwind token), `api-client.md` (website: protiti request e `ApiClient`, `X-Client-IP`); code pore likho, `go test ./internal/docsync` (quick-check) green. Commit `docs(M3): feature doc`.
+2. Step 15 (manual: `make dev-seed` + API + `jaspr serve`; Chrome DevTools 360/390/412/768/1280 duita bhashay, browser e CSP shoho filter dialog ar variant bodlano; `jaspr build` er binary e Lighthouse mobile; Facebook debugger (Q12: `cloudflared` lage, na hole 14.3 e)), step 16 (`make check`, `design-reviewer`, `security-reviewer` BFF/header er jonno, acceptance ☑, M3 shesh). CI (`ci(M3): website build`) push er por green kina dekho.
 
 ## User er kache proshno
 
@@ -54,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 12 November 2026: M3 step 13: CI Dart job e website `jaspr build` + JS size (local 141 KB, gzip 45 KB).
 - 12 November 2026: M3 step 12: security header ar CSP middleware, `@client` list test; website 85/85.
 - 12 November 2026: M3 step 11: SEO (`SeoHead`, JSON-LD escape, sitemap/robots, hreflang, `noindex`); test age (`c75c2b7`); website 83/83, shared 76/76.
 - 12 November 2026: M3 step 10: `GET /api/policies/{kind}` (Go test, Postgres e integration), search (`noindex`), policy page, footer link, `ProductListing`; website test 74/74, shared 75/75.
@@ -68,4 +69,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 10 November 2026: M3 step 5: website settings cache (host onujayi, 30 second background version check, API down e purono, suspended e bad), test 11/11.
 - 10 November 2026: M3 step 4: BFF skeleton (`services/bff.dart`: CSRF Origin/`Sec-Fetch-Site`, cookie → token, Referer theke bhasha, form `303`, `no-store`), test 14/14.
 - 10 November 2026: M3 step 3: `Cache-Control` middleware (14.2 test 24 pass), website server shudhu `127.0.0.1` e (`serveApp` + `shelf_io`).
-- 10 November 2026: M3 step 2: website `Config.fromEnv`, `localeOf`, `apiHeaders`/`apiFor` (test 12/12), `docs/features/website.md`.
