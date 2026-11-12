@@ -4,6 +4,7 @@ import 'package:jaspr_router/jaspr_router.dart';
 import 'components/layout.dart';
 import 'pages/category.dart';
 import 'pages/home.dart';
+import 'pages/product.dart';
 import 'pages/status.dart';
 
 /// Route (10.1): protiti route Bangla (root) ar English (`/en`) duitai; baki page M3 er porer step e.
@@ -21,6 +22,7 @@ class App extends StatelessComponent {
         routes: [
           ...both('/', (_) => const Home()),
           ...both('/c/:slug', (s) => CategoryPage(s.params['slug']!, s.queryParams)),
+          ...both('/p/:slug', (s) => ProductPage(s.params['slug']!)),
         ],
         errorBuilder: (context, state) => const _NotFound(),
       ),

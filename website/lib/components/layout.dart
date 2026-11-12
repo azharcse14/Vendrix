@@ -14,12 +14,14 @@ class Layout extends StatelessComponent {
 
   @override
   Component build(BuildContext context) {
-    // Mobile e bottom nav er jayga (h-14 + safe area).
+    // Product page e bottom nav er bodole page er sticky bar (10.5 niyom 1).
+    final product = localeOf(Uri.parse(context.url).path).path.startsWith('/p/');
+    // Mobile e bottom nav ba sticky bar er jayga (h-14 + safe area).
     return div(classes: 'flex min-h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0', [
       const _Header(),
       main_(classes: 'mx-auto w-full max-w-screen-xl flex-1', [child]),
       const _Footer(),
-      const _BottomNav(),
+      if (!product) const _BottomNav(),
     ]);
   }
 }

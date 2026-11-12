@@ -7,6 +7,8 @@
 import 'package:jaspr/client.dart';
 
 import 'package:website/components/filter_sheet.dart' deferred as _filter_sheet;
+import 'package:website/components/variant_picker.dart'
+    deferred as _variant_picker;
 
 /// Default [ClientOptions] for use with your Jaspr project.
 ///
@@ -29,6 +31,10 @@ ClientOptions get defaultClientOptions => ClientOptions(
     'filter_sheet': ClientLoader(
       (p) => _filter_sheet.DialogToggle(p['dialogId'] as String),
       loader: _filter_sheet.loadLibrary,
+    ),
+    'variant_picker': ClientLoader(
+      (p) => _variant_picker.VariantSwitch(),
+      loader: _variant_picker.loadLibrary,
     ),
   },
 );

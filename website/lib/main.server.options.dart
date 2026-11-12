@@ -6,6 +6,7 @@
 
 import 'package:jaspr/server.dart';
 import 'package:website/components/filter_sheet.dart' as _filter_sheet;
+import 'package:website/components/variant_picker.dart' as _variant_picker;
 
 /// Default [ServerOptions] for use with your Jaspr project.
 ///
@@ -29,6 +30,9 @@ ServerOptions get defaultServerOptions => ServerOptions(
     _filter_sheet.DialogToggle: ClientTarget<_filter_sheet.DialogToggle>(
       'filter_sheet',
       params: __filter_sheetDialogToggle,
+    ),
+    _variant_picker.VariantSwitch: ClientTarget<_variant_picker.VariantSwitch>(
+      'variant_picker',
     ),
   },
 );

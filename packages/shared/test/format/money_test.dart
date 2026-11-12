@@ -54,4 +54,12 @@ void main() {
       expect(formatCount(125000, 'en_IN'), '1,25,000');
     });
   });
+
+  group('formatRating (9.8)', () {
+    test('ek doshomik, locale er digit', () {
+      expect(formatRating(4.5, 'bn'), '৪.৫');
+      expect(formatRating(4, 'en_IN'), '4.0');
+      expect(formatRating(4.666, 'en_IN'), '4.7');
+    });
+  });
 }

@@ -53,6 +53,35 @@ void main() {
           'limit': 24,
           'total': 30,
         };
+      case '/api/products/red-rice':
+        body = {
+          'id': 1,
+          'slug': 'red-rice',
+          'name': 'লাল চাল',
+          'description': 'প্রথম <script>x</script>\nদ্বিতীয়\n\nতৃতীয়',
+          'unit': 'kg',
+          'variable_weight': false,
+          'category': 'lal',
+          'attributes': <String, dynamic>{},
+          'seo': <String, dynamic>{},
+          'rating': 4.5,
+          'review_count': 24,
+          'variants': [
+            for (final (id, w, price, stock) in [(7, '১ কেজি', 18000, false), (8, '৫ কেজি', 85000, true)])
+              {
+                'id': id,
+                'sku': 'R$id',
+                'options': {'weight': w},
+                'price': price,
+                'compare_at_price': null,
+                'nominal_weight_g': null,
+                'in_stock': stock,
+              },
+          ],
+          'images': [
+            for (final k in ['a', 'b']) {'storage_key': 'shops/1/$k.jpg', 'alt': '', 'width': 800, 'height': 600},
+          ],
+        };
       default:
         return http.Response(
           jsonEncode({
@@ -125,6 +154,42 @@ void main() {
       expect(doc.querySelector('#categories a[href="/c/chal"]'), isNotNull);
       expect(doc.querySelector('a[href="//evil.com"]'), isNull);
       expect(doc.querySelector('img[srcset*="shops/1/b1.jpg"]'), isNotNull);
+    });
+  });
+
+  group('Product page (10.1, 10.5)', () {
+    testServer('gallery, variant, dam, rating, description escape, sticky bar; bottom nav na', (t) async {
+      t.pumpComponent(site({}));
+      final res = await t.request('/p/red-rice');
+      expect(res.statusCode, 200);
+      final doc = res.document!;
+      expect(doc.querySelector('h1')!.text, 'লাল চাল');
+      expect(doc.body!.text, contains('৪.৫ (২৪টি রিভিউ)'));
+      // Gallery: scroll-snap, prothom ta LCP, baki lazy, alt = naam.
+      final imgs = doc.querySelectorAll('.snap-x img');
+      expect(imgs, hasLength(2));
+      expect(imgs.first.attributes['fetchpriority'], 'high');
+      expect(imgs.last.attributes['loading'], 'lazy');
+      expect(imgs.every((i) => i.attributes['alt'] == 'লাল চাল' && i.attributes['width'] == '800'), isTrue);
+      // Stock e thaka variant (8) shuru te bachai; dam API theke.
+      expect(doc.querySelector('input[name="variant"][value="8"]')!.attributes.containsKey('checked'), isTrue);
+      expect(doc.querySelector('input[name="variant"][value="7"]')!.attributes.containsKey('checked'), isFalse);
+      final shown = doc.querySelectorAll('[data-variant="8"]');
+      expect(shown, hasLength(2)); // page ar sticky bar
+      expect(shown.every((e) => !e.attributes.containsKey('hidden') && e.text.contains('৳৮৫০')), isTrue);
+      expect(doc.querySelectorAll('[data-variant="7"]').every((e) => e.attributes.containsKey('hidden')), isTrue);
+      expect(doc.querySelector('.fixed [data-variant="8"]')!.text, contains('৫ কেজি'));
+      // Plain text: escape, khali line → <p>, newline → <br>.
+      expect(doc.querySelector('script:not([src])'), isNull);
+      final paras = doc.querySelectorAll('section p');
+      expect(paras.map((e) => e.text), ['প্রথম <script>x</script>দ্বিতীয়', 'তৃতীয়']);
+      expect(paras.first.querySelectorAll('br'), hasLength(1));
+      expect(doc.querySelector('nav.fixed'), isNull);
+    });
+
+    testServer('ochena product → 404', (t) async {
+      t.pumpComponent(site({}));
+      expect((await t.request('/p/nai')).statusCode, 404);
     });
   });
 }

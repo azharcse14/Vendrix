@@ -45,6 +45,9 @@ class Site extends InheritedComponent {
   /// Shonkhya shop er digit setting e (9.8).
   String number(int n) => formatCount(n, _numbers);
 
+  /// Rating (ek doshomik) shop er digit setting e.
+  String rating(double r) => formatRating(r, _numbers);
+
   /// Ei bhashar link: `en` e `/en` prefix (10.1).
   String href(String path) => locale == 'en' ? (path == '/' ? '/en' : '/en$path') : path;
 
