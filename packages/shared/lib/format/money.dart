@@ -17,3 +17,7 @@ String formatTaka(int poisha, String locale) {
   }
   return '${poisha < 0 ? '-' : ''}৳$s';
 }
+
+/// Shonkhya (page, koyta product) locale er digit e, lakh comma shoho (9.8). `locale` = [numberLocale].
+String formatCount(int n, String locale) =>
+    NumberFormat('#,##,##0', locale).format(n);

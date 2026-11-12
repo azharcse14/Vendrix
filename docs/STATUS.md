@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–7 shesh, porer step 8; plan [M3](milestones/M3.md).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–8 shesh, porer step 9; plan [M3](milestones/M3.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,7 +18,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M3 step 8** ([M3](milestones/M3.md)): home ar category page (10.1, 10.5; Q4, Q13): `pages/home.dart` (announcement, banner, `featured_*`, category list `id="categories"`), `pages/category.dart` (`/c/{slug}`: sort, `in_stock`, dam filter, `?page=`), `components/product_card.dart`, `price.dart` (`formatTaka`, API er dam), `responsive_image.dart` (`IMAGE_BASE_URL`/`IMAGE_RESIZE`, `srcset` 320–1280, chobi na thakle `tint`), `filter_sheet.dart` (@client, `<dialog>`), header e logo; component test (`jaspr_test`). Local data: `make dev-seed`. Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`, website `jaspr serve` (8081), `curl -H 'Host: sobujbazar.localhost' 127.0.0.1:8081/`.
+1. **M3 step 9** ([M3](milestones/M3.md)): product page `/p/{slug}` (10.1, 10.2, 10.5; Q3, Q7): `pages/product.dart` (`catalog.product(slug)`, `not_found` → `pageError` 404), gallery CSS `scroll-snap` (`components/gallery.dart`, `ResponsiveImage`, prothom ta LCP), `variant_picker` (@client, dam bodlay; data shudhu variant id/dam/stock er shonkhya, lekha server e, `DialogToggle` er moto), description plain text (khali line `<p>`, newline `<br>`, 10.10 item 2), rating/`review_count`, mobile e bottom nav er bodole sticky bar (dam + variant; "Cart e add" M5 e), `app.dart` e route, `catalog_pages_test.dart` e test. Local: `make dev-seed`, API (`backend/env.example`, `ADDR=127.0.0.1:8090`, binary `go build ./cmd/api`), website `jaspr serve` (`website/env.example`), `curl -H 'Host: sobujbazar.localhost' 127.0.0.1:8081/p/red-rice`.
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 12 November 2026: M3 step 8: home, category page, product card, chobi (`srcset`), filter (`<dialog>` + `@client DialogToggle`), header logo; website test 69/69, shared 74/74.
 - 12 November 2026: CI green (run 43151580056); M0 shesh (`make check` green, go1.27.4).
 - 11 November 2026: CI Go job e govulncheck (GO-2026-6859, `net/http`): toolchain go1.27.4, design v1.15.
 - 11 November 2026: M3 step 7: `make dev-seed` (`scripts/dev-seed.sql`, local catalog data, idempotent).

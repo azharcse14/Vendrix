@@ -53,6 +53,7 @@ const en = {
   'category.apply': 'Show',
   'category.clear': 'Clear all',
   'category.close': 'Close',
+  'page.nav': 'Pages',
   'page.prev': 'Previous page',
   'page.next': 'Next page',
   'page.of': 'Page {page} of {pages}',

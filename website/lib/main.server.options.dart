@@ -5,6 +5,7 @@
 // Generated with jaspr_builder
 
 import 'package:jaspr/server.dart';
+import 'package:website/components/filter_sheet.dart' as _filter_sheet;
 
 /// Default [ServerOptions] for use with your Jaspr project.
 ///
@@ -22,5 +23,15 @@ import 'package:jaspr/server.dart';
 ///   runApp(...);
 /// }
 /// ```
-ServerOptions get defaultServerOptions =>
-    ServerOptions(clientId: 'main.client.dart.js');
+ServerOptions get defaultServerOptions => ServerOptions(
+  clientId: 'main.client.dart.js',
+  clients: {
+    _filter_sheet.DialogToggle: ClientTarget<_filter_sheet.DialogToggle>(
+      'filter_sheet',
+      params: __filter_sheetDialogToggle,
+    ),
+  },
+);
+
+Map<String, Object?> __filter_sheetDialogToggle(_filter_sheet.DialogToggle c) =>
+    {'dialogId': c.dialogId};

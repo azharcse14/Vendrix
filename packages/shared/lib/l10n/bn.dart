@@ -52,6 +52,7 @@ const bn = {
   'category.apply': 'দেখুন',
   'category.clear': 'সব মুছুন',
   'category.close': 'বন্ধ',
+  'page.nav': 'পাতা',
   'page.prev': 'আগের পাতা',
   'page.next': 'পরের পাতা',
   'page.of': 'পাতা {page} / {pages}',

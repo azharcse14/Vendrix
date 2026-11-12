@@ -45,9 +45,9 @@ class Translator {
       s.replaceAllMapped(_placeholder, (m) => args[m[1]]?.toString() ?? m[0]!);
 
   /// English e `key.one`/`key.other`; Bangla e shob shomoy `.other` (9.8). `.one` kothao na pele
-  /// `.other` (Bangla fallback). `{count}` = count.
+  /// `.other` (Bangla fallback). `{count}` = `args['count']` (jemon Bangla digit) na thakle count.
   String plural(String key, int count, [Map<String, Object> args = const {}]) {
-    final a = {...args, 'count': count};
+    final a = {'count': count, ...args};
     if (locale == 'en' && count == 1) {
       final one = _find('$key.one');
       if (one != null) return _fill(one, a);

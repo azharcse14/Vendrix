@@ -34,6 +34,8 @@ Future<void> main() async {
     handler,
     InternetAddress.loopbackIPv4,
     int.parse(Platform.environment['PORT'] ?? '8081'),
+    // `jaspr serve` er hot restart e ager isolate port dhore thake (Jaspr nijeo `shared` dey).
+    shared: true,
   );
   print('Serving at http://localhost:${server.port}');
 }

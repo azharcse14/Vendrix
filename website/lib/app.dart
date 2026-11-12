@@ -2,6 +2,7 @@ import 'package:jaspr/server.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'components/layout.dart';
+import 'pages/category.dart';
 import 'pages/home.dart';
 import 'pages/status.dart';
 
@@ -11,13 +12,16 @@ class App extends StatelessComponent {
 
   @override
   Component build(BuildContext context) {
-    List<Route> both(String path, Component page) => [
-      Route(path: path, builder: (context, state) => page),
-      Route(path: path == '/' ? '/en' : '/en$path', builder: (context, state) => page),
+    List<Route> both(String path, Component Function(RouteState state) page) => [
+      Route(path: path, builder: (context, state) => page(state)),
+      Route(path: path == '/' ? '/en' : '/en$path', builder: (context, state) => page(state)),
     ];
     return Layout(
       child: Router(
-        routes: [...both('/', const Home())],
+        routes: [
+          ...both('/', (_) => const Home()),
+          ...both('/c/:slug', (s) => CategoryPage(s.params['slug']!, s.queryParams)),
+        ],
         errorBuilder: (context, state) => const _NotFound(),
       ),
     );

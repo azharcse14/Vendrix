@@ -6,6 +6,8 @@
 
 import 'package:jaspr/client.dart';
 
+import 'package:website/components/filter_sheet.dart' deferred as _filter_sheet;
+
 /// Default [ClientOptions] for use with your Jaspr project.
 ///
 /// Use this to initialize Jaspr **before** calling [runApp].
@@ -22,4 +24,11 @@ import 'package:jaspr/client.dart';
 ///   runApp(...);
 /// }
 /// ```
-ClientOptions get defaultClientOptions => ClientOptions();
+ClientOptions get defaultClientOptions => ClientOptions(
+  clients: {
+    'filter_sheet': ClientLoader(
+      (p) => _filter_sheet.DialogToggle(p['dialogId'] as String),
+      loader: _filter_sheet.loadLibrary,
+    ),
+  },
+);

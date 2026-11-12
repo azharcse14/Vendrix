@@ -11,6 +11,7 @@ dependencies:
   jaspr: ^0.23.5
   jaspr_router: ^0.9.0
   shelf: ^1.4.2
+  universal_web: ^1.1.1
   shared:
     path: ../packages/shared
 

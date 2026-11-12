@@ -31,10 +31,17 @@ class _Header extends StatelessComponent {
   Component build(BuildContext context) {
     final site = Site.of(context);
     final path = localeOf(Uri.parse(context.url).path).path;
+    final name = site.settings.name.of(site.locale);
+    final logoKey = site.settings.logoKey;
+    final logo = logoKey == null ? null : site.images.url(logoKey, 320);
     return header(classes: 'border-b border-line bg-surface', [
       div(classes: 'mx-auto flex max-w-screen-xl flex-wrap items-center gap-3 px-4 py-2', [
         a(href: site.href('/'), classes: 'flex min-h-11 items-center font-heading text-xl text-primary', [
-          .text(site.settings.name.of(site.locale)),
+          // Logo thakle chobi (alt = naam), na hole naam.
+          if (logo != null)
+            img(src: logo, alt: name, height: 40, classes: 'h-10 w-auto')
+          else
+            .text(name),
         ]),
         nav(
           classes: 'ml-auto hidden lg:block',

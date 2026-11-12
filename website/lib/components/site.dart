@@ -37,8 +37,13 @@ class Site extends InheritedComponent {
   /// Lekha (9.8).
   String t(String key, [Map<String, Object> args = const {}]) => translator.t(key, args);
 
+  String get _numbers => numberLocale(locale, banglaDigits: settings.banglaDigits);
+
   /// Taka (poisha) shop er digit setting e (9.8).
-  String taka(int poisha) => formatTaka(poisha, numberLocale(locale, banglaDigits: settings.banglaDigits));
+  String taka(int poisha) => formatTaka(poisha, _numbers);
+
+  /// Shonkhya shop er digit setting e (9.8).
+  String number(int n) => formatCount(n, _numbers);
 
   /// Ei bhashar link: `en` e `/en` prefix (10.1).
   String href(String path) => locale == 'en' ? (path == '/' ? '/en' : '/en$path') : path;
