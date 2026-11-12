@@ -15,6 +15,8 @@ Admin shudhu 5 ta rong dey (primary, accent, tint, text, background); baki token
 5. `contrastWarnings(tokens)`: `text`/`background`, `text`/`surface`, `text`/`tint`, `on-primary`/`primary`, `on-accent`/`accent`, `primary`/`background` e 4.5 er kom hole `ContrastWarning` (lekha key `theme.low_contrast`).
 6. `cssVariables(tokens, radius:, headingFont:, bodyFont:)`: 9.3 er CSS variable naam (`background` → `--color-bg`), `--radius` px, font `"..."`; font e shudhu harf/shonkhya/space (admin er lekha `<style>` e dhukano na), radius 0–64, na hole `ArgumentError`. Website `<head>` er `:root` (M3).
 
+Website e (M3, [website.md](website.md)): `themeCss` (`website/lib/services/theme.dart`) shop er settings theke `deriveTokens` + `cssVariables` diye `<head>` er `:root` `<style>` banay; Tailwind config (9.3) shudhu `var(--...)` token, component e hex rong na (`scripts/check-rules.sh` Rule 4).
+
 ## Code er map
 
 Ei kram e poro:

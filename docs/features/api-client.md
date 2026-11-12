@@ -15,6 +15,8 @@ Website, admin ar app Go API er JSON ekoi Dart class e pore: product list ar det
 5. `PublicSettings` (`models/settings.dart`): `raw` JSON ar dorkari getter (`name`, `colors`, `defaultLocale`, `enabledLocales`, `banglaDigits`, `paymentMethods`, font, radius, branding, `announcement`, `banners` (`Banner`: `imageKey`, `alt`, `link`; `image_key` string na hole item bad), `featuredCategorySlugs`, `featuredProductSlugs` (string na hole bad), `seoTitle`, `seoDescription`, `ogImageKey`, `noindex` (na thakle false)); block na thakle default.
 6. `CatalogRepository` (`categories`, `products` filter shoho, `product`, `policy` (v1.13: `body`)) ar `SettingsRepository` (`settings`, `version`, `translations`) (`api/repositories.dart`): 7.2 er route → model.
 
+Website e (M3, [website.md](website.md)): protiti page request e notun `ApiClient` (`apiFor`, ek `http.Client`): `X-Shop-Host` = `Host`, `Accept-Language` URL er bhasha, Caddy er `X-Real-IP` thakle `X-Client-IP` + `X-Internal-Auth`. Settings er `SettingsRepository` process er cache e (`settingsCache`, 3.5).
+
 ## Code er map
 
 Ei kram e poro:
