@@ -57,6 +57,25 @@ func (h *Handlers) fail(w http.ResponseWriter, r *http.Request, err error) {
 	httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
 }
 
+// Policy: GET /api/policies/{kind} (7.2, v1.13): `{"kind", "body"}`, body plain text (10.10); ochena kind 404.
+func (h *Handlers) Policy(w http.ResponseWriter, r *http.Request) {
+	published, _, ok := h.settings(w, r)
+	if !ok {
+		return
+	}
+	kind := r.PathValue("kind")
+	body, found, err := PolicyText(published, kind, httpx.Locale(r))
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	if !found {
+		httpx.WriteError(w, r, http.StatusNotFound, httpx.ErrorBody{Code: "not_found"})
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"kind": kind, "body": body})
+}
+
 // Translations: GET /api/translations?locale=bn|en, default file er upore shop er override (7.2, 9.8).
 func (h *Handlers) Translations(w http.ResponseWriter, r *http.Request) {
 	locale := r.URL.Query().Get("locale")

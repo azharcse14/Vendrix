@@ -15,7 +15,7 @@ Public API er protiti request kon shop er, sheta `X-Shop-Host` header (customer 
 
 Router (`cmd/api/router.go` → `newHandler`): `/api/settings`, `/api/settings/version`, `/api/translations` public middleware (`ShopFromHost` → `RateLimit`) er pore.
 
-Public settings (`Handlers.Settings`, `handler.go`): `httpx.ShopFrom` er shop → `publishedSettings` (`store.go`) → `PublicSettings` (whitelist: `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`). `GET /api/settings/version` shudhu version. `GET /api/translations?locale=bn|en` (`Handlers.Translations`) shop er `translations` override `{key: value}` dey; default lekha app/website er file e (9.8).
+Public settings (`Handlers.Settings`, `handler.go`): `httpx.ShopFrom` er shop → `publishedSettings` (`store.go`) → `PublicSettings` (whitelist: `branding`, `theme`, `locales`, `features`, `homepage`, `seo`, `integrations`, `checkout.payment_methods`, `checkout.return_window_days`, `marketplace.show_vendor_name`). `GET /api/settings/version` shudhu version. `GET /api/translations?locale=bn|en` (`Handlers.Translations`) shop er `translations` override `{key: value}` dey; default lekha app/website er file e (9.8). `GET /api/policies/{kind}` (`Handlers.Policy`, `policy.go` er `PolicyText`, v1.13): kind `PolicyKinds` (`terms`, `return`, `refund`, `delivery`, `privacy`) chhara `404 not_found`; published settings er `policies[kind]` theke `Accept-Language` er lekha, khali hole `bn`, ta-o khali (ba block nai, purono shop) hole Bangla placeholder; response `{"kind", "body"}` (plain text, website escape kore, 10.10). `policies` `/api/settings` e jay na (whitelist e nai). Notun shop er `DefaultSettings` e protiti kind e placeholder; editor M8 e.
 
 Shop khola (`runShopCreate` → `shop.Create`): flag check; `DefaultSettings` (preset theke theme, 9.2 er shob block); temporary password `rand.Text()` ar `auth.HashPassword`; tarpor `db.InTx` e `shops`, `shop_domains` (primary), house vendor, `shop_settings` (draft = published), `shop_counters` (`order_number` 0), owner `staff`. Password shudhu stdout e ekbar.
 
@@ -31,7 +31,8 @@ Ei kram e poro:
 | `backend/internal/shop/resolve.go` → `NewResolver`, `Resolve` | Domain → shop, cache |
 | `backend/internal/shop/settings.go` → `DefaultSettings`, `presets` | Notun shop er settings (9.2, 9.4) |
 | `backend/internal/shop/create.go` → `Create`, `Params` | Shop khola (3.8) |
-| `backend/internal/shop/handler.go` → `NewHandlers`, `Settings`, `SettingsVersion`, `Translations` | Public settings route |
+| `backend/internal/shop/handler.go` → `NewHandlers`, `Settings`, `SettingsVersion`, `Translations`, `Policy` | Public settings route |
+| `backend/internal/shop/policy.go` → `PolicyKinds`, `PolicyText` | Policy er lekha (v1.13) |
 | `backend/internal/shop/settings.go` → `PublicSettings`, `publicKeys` | Whitelist (7.2) |
 | `backend/internal/shop/store.go` → `publishedSettings`, `translations` | SQL |
 | `backend/cmd/api/main.go` → `runShopCreate` | CLI |
@@ -47,7 +48,8 @@ Ei kram e poro:
 | Ek transaction e shop, primary domain, house vendor, settings, counter, owner (`must_change_password`, email trim ar lowercase); bhul slug, `www` domain, naam, email, preset ba duplicate e kono row na (3.8, v1.10) | `Create` | `TestCreateShopIntegration` |
 | `shop create` er flag check | `runShopCreate` | `TestRun` |
 | Public settings shudhu whitelist; risk, OTP, SMS cap, inventory, commission ar notun block jay na (7.2, 9.2, v1.10) | `PublicSettings` | `TestPublicSettings` |
-| Protiti host e nijer shop er published settings ar version; draft na (Rule 3, 7.2) | `Handlers.Settings`, `SettingsVersion` | `TestSettingsIsolationIntegration` |
+| Protiti host e nijer shop er published settings ar version; draft na; policy shop er nijer, settings e na, ochena kind `404` (Rule 3, 7.2) | `Handlers.Settings`, `SettingsVersion`, `Policy` | `TestSettingsIsolationIntegration` |
+| Policy: locale er lekha, khali hole `bn`, ta-o khali hole Bangla placeholder (404 na); notun shop e placeholder (7.2, 9.2, v1.13) | `PolicyText`, `DefaultSettings` | `TestPolicyText` |
 | Translation override shudhu oi shop ar locale er; `locale` bn/en chhara `400` (7.2, 9.8) | `Handlers.Translations` | `TestTranslationsIntegration` |
 | Password: pbkdf2-sha256, 600000, 16 byte salt, format `pbkdf2-sha256$600000$<salt>$<hash>`, constant-time tulona, bhul format e false (8.3) | `HashPassword`, `CheckPassword` | `TestPasswordHash` |
 

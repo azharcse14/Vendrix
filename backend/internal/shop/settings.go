@@ -51,6 +51,7 @@ func DefaultSettings(presetName string, name map[string]string) ([]byte, error) 
 		},
 		"seo":          map[string]any{"title": name, "description": map[string]string{}, "og_image_key": nil, "noindex": true},
 		"integrations": map[string]any{"facebook_pixel_id": nil, "ga4_id": nil},
+		"policies":     defaultPolicies(),
 	})
 }
 

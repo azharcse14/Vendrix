@@ -69,6 +69,7 @@ func TestSettingsIsolationIntegration(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/settings", h.Settings)
 	mux.HandleFunc("GET /api/settings/version", h.SettingsVersion)
+	mux.HandleFunc("GET /api/policies/{kind}", h.Policy)
 	srv := httpx.ShopFromHost(slog.New(slog.DiscardHandler), NewResolver(d).Resolve)(mux)
 	get := func(host, path string) string {
 		r := httptest.NewRequest("GET", path, nil)
@@ -89,5 +90,27 @@ func TestSettingsIsolationIntegration(t *testing.T) {
 	}
 	if v := strings.TrimSpace(get("b.com", "/api/settings/version")); v != `{"version":7}` {
 		t.Errorf("version: %s", v)
+	}
+
+	// Policy (v1.13): shop er nijer published lekha; settings payload e na; ochena kind 404.
+	if _, err := d.Exec(`UPDATE shop_settings SET published = jsonb_set(published, '{policies,terms,bn}', '"এ এর শর্ত"')
+		WHERE shop_id = (SELECT id FROM shops WHERE slug = 'a')`); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(a, "policies") {
+		t.Errorf("settings e policies: %s", a)
+	}
+	if p := get("a.com", "/api/policies/terms"); !strings.Contains(p, `"body":"এ এর শর্ত"`) {
+		t.Errorf("a terms: %s", p)
+	}
+	if p := get("b.com", "/api/policies/terms"); !strings.Contains(p, policyPlaceholder) {
+		t.Errorf("b terms: %s", p)
+	}
+	r := httptest.NewRequest("GET", "/api/policies/faq", nil)
+	r.Header.Set("X-Shop-Host", "a.com")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, r)
+	if rec.Code != 404 {
+		t.Errorf("faq: %d", rec.Code)
 	}
 }

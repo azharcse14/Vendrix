@@ -38,6 +38,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/settings", public(http.HandlerFunc(sh.Settings)))
 	mux.Handle("GET /api/settings/version", public(http.HandlerFunc(sh.SettingsVersion)))
 	mux.Handle("GET /api/translations", public(http.HandlerFunc(sh.Translations)))
+	mux.Handle("GET /api/policies/{kind}", public(http.HandlerFunc(sh.Policy)))
 	catalog.NewHandlers(d, log).Routes(mux, public)
 
 	cop := http.NewCrossOriginProtection()
