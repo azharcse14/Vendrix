@@ -9,6 +9,9 @@ class FilterForm extends StatelessComponent {
   /// Form er `action` (ei page).
   final String action;
 
+  /// Search er lekha (lukano input e thake).
+  final String? q;
+
   /// Ekhon er value.
   final String? sort;
 
@@ -19,7 +22,15 @@ class FilterForm extends StatelessComponent {
   final int? minTaka, maxTaka;
 
   /// FilterForm.
-  const FilterForm({required this.action, this.sort, this.inStock = false, this.minTaka, this.maxTaka, super.key});
+  const FilterForm({
+    required this.action,
+    this.q,
+    this.sort,
+    this.inStock = false,
+    this.minTaka,
+    this.maxTaka,
+    super.key,
+  });
 
   @override
   Component build(BuildContext context) {
@@ -28,6 +39,7 @@ class FilterForm extends StatelessComponent {
     const field = 'min-h-11 w-full rounded border border-line bg-page px-3 text-base';
     // Page e duita form (sidebar, sheet), tai id na; input label er bhetore.
     return form(action: action, method: FormMethod.get, classes: 'space-y-4', [
+      if (q != null) input(type: InputType.hidden, name: 'q', value: q),
       label(classes: 'block space-y-1', [
         span(classes: 'text-sm', [.text(l('sort'))]),
         select(name: 'sort', classes: field, [
@@ -56,7 +68,11 @@ class FilterForm extends StatelessComponent {
         button(type: ButtonType.submit, classes: 'min-h-11 flex-1 rounded bg-primary px-4 text-on-primary', [
           .text(l('apply')),
         ]),
-        a(href: action, classes: 'flex min-h-11 items-center px-4 underline', [.text(l('clear'))]),
+        a(
+          href: q == null ? action : '$action?${Uri(queryParameters: {'q': q}).query}',
+          classes: 'flex min-h-11 items-center px-4 underline',
+          [.text(l('clear'))],
+        ),
       ]),
     ]);
   }

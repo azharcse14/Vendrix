@@ -3,7 +3,7 @@ import '../models/page.dart';
 import '../models/settings.dart';
 import 'api_client.dart';
 
-/// Public catalog (7.2): category, product list (filter, search, paging), detail.
+/// Public catalog (7.2): category, product list (filter, search, paging), detail, shop er policy.
 class CatalogRepository {
   /// Client.
   final ApiClient api;
@@ -51,6 +51,12 @@ class CatalogRepository {
     await api.get('/api/products/${Uri.encodeComponent(slug)}')
         as Map<String, dynamic>,
   );
+
+  /// `GET /api/policies/{kind}` er `body` (plain text; locale er, na hole Bangla, v1.13); ochena kind `not_found`.
+  Future<String> policy(String kind) async =>
+      (await api.get('/api/policies/${Uri.encodeComponent(kind)}')
+              as Map<String, dynamic>)['body']
+          as String;
 }
 
 /// Shop er public settings ar translation override (7.2, 9.8).

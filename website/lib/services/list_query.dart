@@ -4,9 +4,12 @@ const sorts = ['newest', 'price_asc', 'price_desc', 'popular'];
 // Dam er upor shima (taka): poisha int e thake, ar bhul boro shonkhya API te jay na.
 const _maxTaka = 10000000;
 
-/// Category/search page er URL query (`?sort=&in_stock=1&min=&max=&page=`). Dam URL e taka (manush lekhe), API te
+/// Category/search page er URL query (`?q=&sort=&in_stock=1&min=&max=&page=`). Dam URL e taka (manush lekhe), API te
 /// poisha. Bhul value bad, tai API `400` dey na.
 class ListQuery {
+  /// Search er lekha (trim, API er shima 100 okkhor); khali hole null.
+  final String? q;
+
   /// [sorts] er ekta.
   final String? sort;
 
@@ -20,7 +23,7 @@ class ListQuery {
   final int page;
 
   /// ListQuery.
-  const ListQuery({this.sort, this.inStock = false, this.minTaka, this.maxTaka, this.page = 1});
+  const ListQuery({this.q, this.sort, this.inStock = false, this.minTaka, this.maxTaka, this.page = 1});
 
   /// URL query theke.
   factory ListQuery.parse(Map<String, String> q) {
@@ -30,7 +33,9 @@ class ListQuery {
     }
 
     final page = int.tryParse(q['page'] ?? '');
+    final text = String.fromCharCodes((q['q'] ?? '').trim().runes.take(100)).trim();
     return ListQuery(
+      q: text.isEmpty ? null : text,
       sort: sorts.contains(q['sort']) ? q['sort'] : null,
       inStock: q['in_stock'] == '1',
       minTaka: taka(q['min']),
@@ -47,6 +52,7 @@ class ListQuery {
 
   /// Filter thik rekhe [page] er query (1 e `page` na).
   Map<String, String> withPage(int page) => {
+    'q': ?q,
     'sort': ?sort,
     if (inStock) 'in_stock': '1',
     'min': ?minTaka?.toString(),

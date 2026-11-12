@@ -1,6 +1,7 @@
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 
+import '../pages/policy.dart';
 import '../services/locale.dart';
 import 'site.dart';
 
@@ -106,7 +107,7 @@ class _BottomNav extends StatelessComponent {
   }
 }
 
-// Policy link step 10 e, puro compliance M11 e.
+// Puro compliance (DBID page, complaint) M11 e.
 class _Footer extends StatelessComponent {
   const _Footer();
 
@@ -116,6 +117,16 @@ class _Footer extends StatelessComponent {
     final s = site.settings;
     return footer(classes: 'mt-12 border-t border-line bg-surface', [
       div(classes: 'mx-auto max-w-screen-xl space-y-2 px-4 py-8 text-sm text-muted', [
+        nav(
+          classes: 'flex flex-wrap gap-x-4',
+          attributes: {'aria-label': site.t('policy.nav')},
+          [
+            for (final kind in policyKinds)
+              a(href: site.href('/policy/$kind'), classes: 'flex min-h-11 items-center underline', [
+                .text(site.t('policy.$kind')),
+              ]),
+          ],
+        ),
         if (s.phone != null || s.email != null)
           p([
             .text('${site.t('footer.contact')}: '),

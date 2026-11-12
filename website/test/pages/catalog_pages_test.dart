@@ -53,6 +53,8 @@ void main() {
           'limit': 24,
           'total': 30,
         };
+      case '/api/policies/terms':
+        body = {'kind': 'terms', 'body': 'প্রথম <b>লাইন</b>\n\nদ্বিতীয়'};
       case '/api/products/red-rice':
         body = {
           'id': 1,
@@ -190,6 +192,47 @@ void main() {
     testServer('ochena product → 404', (t) async {
       t.pumpComponent(site({}));
       expect((await t.request('/p/nai')).statusCode, 404);
+    });
+  });
+
+  group('Search ar policy (10.1, 10.4)', () {
+    testServer('search: q API te, noindex, filter e q thake; 2 okkhorer kom e API call na', (t) async {
+      requests.clear();
+      t.pumpComponent(site({}));
+      final res = await t.request('/search?q=%20লাল%20&in_stock=1');
+      expect(res.statusCode, 200);
+      final doc = res.document!;
+      expect(doc.querySelector('meta[name="robots"]')!.attributes['content'], 'noindex');
+      expect(doc.querySelector('h1')!.text, '“লাল” এর ফলাফল');
+      expect(doc.querySelector('a[href="/p/red-rice"]'), isNotNull);
+      expect(doc.querySelector('form[action="/search"] input[type="hidden"][name="q"]')!.attributes['value'], 'লাল');
+      expect(requests.singleWhere((u) => u.path == '/api/products').queryParameters, {
+        'q': 'লাল',
+        'in_stock': 'true',
+        'page': '1',
+        'limit': '24',
+      });
+
+      requests.clear();
+      final short = await t.request('/search?q=ল');
+      expect(short.statusCode, 200);
+      expect(short.document!.body!.text, contains('কী খুঁজছেন লিখুন'));
+      expect(requests.where((u) => u.path == '/api/products'), isEmpty);
+    });
+
+    testServer('policy: shironam, plain text escape; footer e link; ochena kind 404', (t) async {
+      t.pumpComponent(site({}));
+      final res = await t.request('/policy/terms');
+      expect(res.statusCode, 200);
+      final doc = res.document!;
+      expect(doc.querySelector('h1')!.text, 'শর্তাবলি');
+      expect(doc.querySelectorAll('article p').map((e) => e.text), ['প্রথম <b>লাইন</b>', 'দ্বিতীয়']);
+      expect(doc.querySelector('article b'), isNull);
+      for (final k in ['terms', 'return', 'refund', 'delivery', 'privacy']) {
+        expect(doc.querySelector('footer a[href="/policy/$k"]'), isNotNull, reason: k);
+      }
+      expect((await t.request('/policy/faq')).statusCode, 404);
+      expect((await t.request('/policy/privacy')).statusCode, 404); // fake API e nai → not_found
     });
   });
 }

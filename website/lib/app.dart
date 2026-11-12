@@ -4,10 +4,12 @@ import 'package:jaspr_router/jaspr_router.dart';
 import 'components/layout.dart';
 import 'pages/category.dart';
 import 'pages/home.dart';
+import 'pages/policy.dart';
 import 'pages/product.dart';
+import 'pages/search.dart';
 import 'pages/status.dart';
 
-/// Route (10.1): protiti route Bangla (root) ar English (`/en`) duitai; baki page M3 er porer step e.
+/// Route (10.1): protiti route Bangla (root) ar English (`/en`) duitai.
 class App extends StatelessComponent {
   const App({super.key});
 
@@ -23,6 +25,9 @@ class App extends StatelessComponent {
           ...both('/', (_) => const Home()),
           ...both('/c/:slug', (s) => CategoryPage(s.params['slug']!, s.queryParams)),
           ...both('/p/:slug', (s) => ProductPage(s.params['slug']!)),
+          ...both('/search', (s) => SearchPage(s.queryParams)),
+          // Ochena kind e API call na, sheshe router er 404.
+          for (final kind in policyKinds) ...both('/policy/$kind', (_) => PolicyPage(kind)),
         ],
         errorBuilder: (context, state) => const _NotFound(),
       ),

@@ -192,6 +192,9 @@ void main() {
               {'id': 1, 'slug': 'c', 'name': 'চাল', 'image_key': null},
             ], 200);
           }
+          if (r.url.path == '/api/policies/terms') {
+            return json({'kind': 'terms', 'body': 'শর্ত'}, 200);
+          }
           if (r.url.path == '/api/products/lal-chal') {
             return json({
               'id': 1,
@@ -237,6 +240,7 @@ void main() {
       });
       expect((await repo.categories()).single.name, 'চাল');
       expect((await repo.product('lal-chal')).variableWeight, isTrue);
+      expect(await repo.policy('terms'), 'শর্ত');
     });
     test('SettingsRepository', () async {
       final api = ApiClient(

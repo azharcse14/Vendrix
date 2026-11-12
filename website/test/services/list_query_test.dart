@@ -28,5 +28,12 @@ void main() {
       expect(q.withPage(3), {'sort': 'newest', 'in_stock': '1', 'min': '100', 'page': '3'});
       expect(q.withPage(1), {'sort': 'newest', 'in_stock': '1', 'min': '100'});
     });
+
+    test('search: q trim, 100 okkhor (API er shima), khali hole null, page link e thake', () {
+      expect(ListQuery.parse({'q': '  লাল চাল '}).q, 'লাল চাল');
+      expect(ListQuery.parse({'q': '   '}).q, isNull);
+      expect(ListQuery.parse({'q': 'চ' * 150}).q!.runes, hasLength(100));
+      expect(ListQuery.parse({'q': 'x', 'page': '2'}).withPage(1), {'q': 'x'});
+    });
   });
 }

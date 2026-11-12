@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–9 shesh, porer step 10; plan [M3](milestones/M3.md). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–10 shesh, porer step 11; plan [M3](milestones/M3.md). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,7 +18,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M3 step 10** ([M3](milestones/M3.md)): search ar policy (10.1, 10.10 item 1/2; Q2 (a)). Search `/search?q=` (`pages/search.dart`: `catalog.products(q:, ...)`, `ListQuery` ar `FilterForm` reuse, card grid, `noindex` (SEO step 11 e meta, ekhon `<meta name=robots>` jodi Document.head lage), `app.dart` e route). Policy: age backend `GET /api/policies/{kind}` (7.2 er row ar Q2 (a): `shop_settings` er `policies` block, `bn` khali hole placeholder, 404 na; Go test age, `docs/features/shop.md`), tarpor `pages/policy.dart` (`plainText`, `components/plain_text.dart`), footer e policy link. Test `catalog_pages_test.dart` e. Local: `make dev-seed`; API `set -a; . backend/env.example; ADDR=127.0.0.1:8090` diye `go build ./cmd/api` er binary `serve` (`backend/.env` nai); website `website/env.example` load kore `jaspr serve`.
+1. **M3 step 11** ([M3](milestones/M3.md)): SEO (10.4), **test age**: `website/test/seo/meta_test.dart` (`group('Meta ar Open Graph (10.4)')`: protiti page e `<title>`, `meta description` (product `seo`, na hole naam/description), OG `property` attribute (`og:type=product`, `og:image` absolute, `product:price:amount`, `product:price:currency=BDT`), `canonical`, `hreflang` bn/en/x-default (`en` bondho hole shudhu bn + x-default), `seo.noindex` hole puro site `noindex`), `json_ld_test.dart` (`group('JSON-LD escape (10.4, 12.2)')`: `<` → `\u003c`, `aggregateRating` shudhu `review_count > 0`), `sitemap_test.dart` (`group('sitemap ar robots (10.4)')`: category, product (`/api/products` paging), policy, duita bhasha, host er nijer; robots 10.4 er path block). Fail commit `test(M3): SEO`; tarpor `lib/seo/` (`meta.dart`, `open_graph.dart`, `json_ld.dart`, `sitemap.dart`, `hreflang.dart`), page gulo te `Document.head` (search e ekhon shudhu `robots noindex`), `/sitemap.xml` ar `/robots.txt` shelf handler (render er age, `main.server.dart`). Commit `feat(M3): meta, OG, JSON-LD, sitemap, hreflang`; `docs/features/seo.md` notun. Local chalano: `make dev-seed`; API `set -a; . backend/env.example; ADDR=127.0.0.1:8090` diye `go build ./cmd/api` er binary `serve` (`backend/.env` nai); website `website/env.example` load kore `jaspr serve`.
 
 ## User er kache proshno
 
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 12 November 2026: M3 step 10: `GET /api/policies/{kind}` (Go test, Postgres e integration), search (`noindex`), policy page, footer link, `ProductListing`; website test 74/74, shared 75/75.
 - 12 November 2026: M3 step 9: product page (gallery `scroll-snap`, variant radio + `@client VariantSwitch`, sticky bar, plain text description, rating); website test 71/71, shared 75/75; local API e `/p/red-rice` 200.
 - 12 November 2026: `QUICK_ALL=1` quick-check e website `dart format` dhorlo (`layout.dart`), thik (`11ce92c`); shob green.
 - 12 November 2026: M3 step 8: home, category page, product card, chobi (`srcset`), filter (`<dialog>` + `@client DialogToggle`), header logo; website test 69/69, shared 74/74.
@@ -67,4 +68,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 10 November 2026: M3 step 2: website `Config.fromEnv`, `localeOf`, `apiHeaders`/`apiFor` (test 12/12), `docs/features/website.md`.
 - 10 November 2026: M3 step 1: `website/` Jaspr 0.23.5 skeleton, `install-skills`, Tailwind v3.4.19 standalone (`scripts/tailwind.sh`, `jaspr_tailwind` Dart 3.13 e chole na, design v1.14), `make web`.
 - 10 November 2026: M3 plan approve (shob recommendation), design v1.13.
-- 10 November 2026: M3 plan likha (13 ta open question), approve er opekkhay.
