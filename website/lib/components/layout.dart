@@ -38,10 +38,7 @@ class _Header extends StatelessComponent {
       div(classes: 'mx-auto flex max-w-screen-xl flex-wrap items-center gap-3 px-4 py-2', [
         a(href: site.href('/'), classes: 'flex min-h-11 items-center font-heading text-xl text-primary', [
           // Logo thakle chobi (alt = naam), na hole naam.
-          if (logo != null)
-            img(src: logo, alt: name, height: 40, classes: 'h-10 w-auto')
-          else
-            .text(name),
+          if (logo != null) img(src: logo, alt: name, height: 40, classes: 'h-10 w-auto') else .text(name),
         ]),
         nav(
           classes: 'ml-auto hidden lg:block',
