@@ -15,10 +15,12 @@ import 'services/bff.dart';
 import 'services/cache_control.dart';
 import 'services/config.dart';
 import 'services/render.dart';
+import 'services/security_headers.dart';
 
 Future<void> main() async {
   Jaspr.initializeApp(options: defaultServerOptions);
   final handler = const Pipeline()
+      .addMiddleware(securityHeaders(config.imageBaseUrl))
       .addMiddleware(cacheControl())
       .addMiddleware(bff(config, httpClient, bffRoutes))
       .addMiddleware(seoFiles(settingsCache.get, (r) => CatalogRepository(apiFor(r.headers, 'bn', config, httpClient))))
