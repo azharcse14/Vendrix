@@ -10,19 +10,19 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **Milestone M0 (Project setup): cholche** (CI e shudhu Go toolchain bump baki, v1.15). Plan ar progress: [M0](milestones/M0.md).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) cholche**: step 1–7 shesh, porer step 8; plan [M3](milestones/M3.md).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
-- M0 er code shesh; baki shudhu push er por CI green (step 6). M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
+- M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
 ## Porer kaj
 
-1. **M0 step 6, CI**: push (`73d9364`) er run e Dart ar Database job green; Go job e `govulncheck` 1.27.3 er `net/http` e GO-2026-6859 dhorechhe. Fix: toolchain `go1.27.4` (`go.mod`, `scripts/`, `ci.yml`, design v1.15), commit hoye user push korle `gh run list --limit 3` abar dekho. **User**: `.claude/settings.json` er `GOTOOLCHAIN` `go1.27.4` korte hobe (shudhu user bodlay).
-2. **M3 step 8** ([M3](milestones/M3.md)): home ar category page (10.1, 10.5; Q4, Q13): `pages/home.dart` (announcement, banner, `featured_*`, category list `id="categories"`), `pages/category.dart` (`/c/{slug}`: sort, `in_stock`, dam filter, `?page=`), `components/product_card.dart`, `price.dart` (`formatTaka`, API er dam), `responsive_image.dart` (`IMAGE_BASE_URL`/`IMAGE_RESIZE`, `srcset` 320–1280, chobi na thakle `tint`), `filter_sheet.dart` (@client, `<dialog>`), header e logo; component test (`jaspr_test`). Local data: `make dev-seed`. Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`, website `jaspr serve` (8081), `curl -H 'Host: sobujbazar.localhost' 127.0.0.1:8081/`.
+1. **M3 step 8** ([M3](milestones/M3.md)): home ar category page (10.1, 10.5; Q4, Q13): `pages/home.dart` (announcement, banner, `featured_*`, category list `id="categories"`), `pages/category.dart` (`/c/{slug}`: sort, `in_stock`, dam filter, `?page=`), `components/product_card.dart`, `price.dart` (`formatTaka`, API er dam), `responsive_image.dart` (`IMAGE_BASE_URL`/`IMAGE_RESIZE`, `srcset` 320–1280, chobi na thakle `tint`), `filter_sheet.dart` (@client, `<dialog>`), header e logo; component test (`jaspr_test`). Local data: `make dev-seed`. Local chalano: `.env` nai, tai `backend/env.example` ar `website/env.example` `set -a; . ./env.example` diye, API `ADDR=127.0.0.1:8090`, website `jaspr serve` (8081), `curl -H 'Host: sobujbazar.localhost' 127.0.0.1:8081/`.
 
 ## User er kache proshno
 
+- **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M4 er age**: OTP SMS er code `jobs.payload` e plain text thake; AES-GCM naki job chhara pathano (16.1).
 - **M4 er age**: `jobs` er purono row: `jobs.cleanup` (30 din) naki done hole payload khali (16.1).
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
@@ -35,7 +35,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 | # | Naam | Obostha | Plan |
 |---|---|---|---|
-| M0 | Project setup | cholche (10 November 2026 theke) | [M0](milestones/M0.md) |
+| M0 | Project setup | shesh (12 November 2026) | [M0](milestones/M0.md) |
 | M1 | Shop, vendor, settings, catalog API | shesh (10 November 2026) | [M1](milestones/M1.md) |
 | M2 | Shared Dart package | shesh (10 November 2026) | [M2](milestones/M2.md) |
 | M3 | Website catalog | cholche (10 November 2026 theke) | [M3](milestones/M3.md) |
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 12 November 2026: CI green (run 43151580056); M0 shesh (`make check` green, go1.27.4).
 - 11 November 2026: CI Go job e govulncheck (GO-2026-6859, `net/http`): toolchain go1.27.4, design v1.15.
 - 11 November 2026: M3 step 7: `make dev-seed` (`scripts/dev-seed.sql`, local catalog data, idempotent).
 - 11 November 2026: CI fix (ci.yml er Dart job naam e `: ` → YAML parse error, quote); M3 step 6 shesh: `Site`, render (404/503), `/en` route, layout, status page, typography, Bangla okkhor check; local e `/`, `/en` 200, ochena path/host 404.
