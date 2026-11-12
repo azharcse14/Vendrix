@@ -46,4 +46,12 @@ void main() {
       expect(numberLocale('en', banglaDigits: false), 'en_IN');
     });
   });
+
+  group('formatCount (9.8)', () {
+    test('locale er digit ar lakh comma', () {
+      expect(formatCount(125000, 'bn'), '১,২৫,০০০');
+      expect(formatCount(3, 'bn'), '৩');
+      expect(formatCount(125000, 'en_IN'), '1,25,000');
+    });
+  });
 }

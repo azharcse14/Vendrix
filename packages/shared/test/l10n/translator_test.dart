@@ -67,6 +67,9 @@ void main() {
         },
       );
       expect(only.plural('x', 1), '1টি');
+      // Dekhano shonkhya (Bangla digit) args e; .one/.other baachai count diye
+      expect(tr('en').plural('cart.items', 1, {'count': '১'}), '১ item');
+      expect(tr('bn').plural('cart.items', 3, {'count': '৩'}), '৩টি পণ্য');
     });
   });
 }
