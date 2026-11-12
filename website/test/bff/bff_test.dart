@@ -96,8 +96,8 @@ void main() {
       expect(res.headers['location'], '/');
     });
 
-    test('boro body (64 KB er beshi) 413, bhul form encoding 400; API te na', () async {
-      final big = await send('POST', '/_/cart/items', headers: same, body: 'x' * (64 * 1024 + 1));
+    test('boro body (Go er MaxBody 1 MB er beshi) 413, bhul form encoding 400; API te na', () async {
+      final big = await send('POST', '/_/cart/items', headers: same, body: 'x' * ((1 << 20) + 1));
       expect(big.statusCode, 413);
       final bad = await send(
         'POST',

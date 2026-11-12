@@ -43,6 +43,9 @@ class SettingsCache {
 
   /// [host] er settings.
   Future<ShopSettings> get(String host) async {
+    // API o eivabe chene (`resolve.go`); na hole ek shop er onek entry ar API call.
+    host = host.toLowerCase().split(':').first;
+    if (host.endsWith('.')) host = host.substring(0, host.length - 1);
     final e = _entries[host];
     if (e == null) {
       return _loading[host] ??= _load(host).whenComplete(() {

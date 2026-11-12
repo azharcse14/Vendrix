@@ -34,7 +34,8 @@ class StatusPage extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     final site = Site.of(context);
-    return main_(classes: 'mx-auto max-w-screen-sm px-4 py-16 text-center', [
+    // Layout er `<main>` er bhetore, tai div (10.7).
+    return div(classes: 'mx-auto max-w-screen-sm px-4 py-16 text-center', [
       SeoHead(title: site.t('${kind.key}.title'), noindex: true),
       h1([.text(site.t('${kind.key}.title'))]),
       p(classes: 'mt-4 text-muted', [.text(site.t('${kind.key}.body'))]),

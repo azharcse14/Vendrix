@@ -95,7 +95,7 @@ void main() {
       t.pumpComponent(site({}));
       final res = await t.request('/p/nai');
       expect(res.statusCode, 404);
-      expect(res.document!.querySelectorAll('main'), hasLength(1)); // Layout er main er bhetore main na (10.7)
+      expect('<main'.allMatches(res.body).length, 1); // Layout er main er bhetore main na (10.7)
     });
   });
 

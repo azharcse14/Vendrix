@@ -30,6 +30,8 @@ Future<void> main() async {
             request,
             render,
             settingsCache.get,
+            cfg: config,
+            client: httpClient,
             log: (e) => stderr.writeln('page: $e'),
           ),
         ),

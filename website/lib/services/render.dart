@@ -1,3 +1,4 @@
+import 'package:http/http.dart' as http;
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
@@ -91,6 +92,8 @@ Future<Response> renderPage(
   Request request,
   RenderFunction render,
   Future<ShopSettings> Function(String host) settingsFor, {
+  required Config cfg,
+  required http.Client client,
   required void Function(Object error) log,
 }) async {
   final page = await resolvePage(
@@ -98,8 +101,8 @@ Future<Response> renderPage(
     '/${request.url.path}',
     settingsFor,
     origin: originOf(request.headers),
-    catalogFor: (locale) => CatalogRepository(apiFor(request.headers, locale, config, httpClient)),
-    images: ImageUrls(config.imageBaseUrl, resize: config.imageResize),
+    catalogFor: (locale) => CatalogRepository(apiFor(request.headers, locale, cfg, client)),
+    images: ImageUrls(cfg.imageBaseUrl, resize: cfg.imageResize),
     log: log,
   );
   final res = await render(

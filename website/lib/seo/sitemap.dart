@@ -64,12 +64,16 @@ Middleware seoFiles(
     (inner) => (request) async {
       final path = '/${request.url.path}';
       if (path != '/sitemap.xml' && path != '/robots.txt') return inner(request);
+      // Query diye Cloudflare er cache bypass kore protiti request e puro catalog fetch na.
+      if (request.url.hasQuery) return Response.notFound('');
       final origin = originOf(request.headers);
       try {
         final shop = await settingsFor(request.headers['host'] ?? '');
         if (path == '/robots.txt') {
           return Response.ok(robotsTxt(origin), headers: {'content-type': 'text/plain; charset=utf-8'});
         }
+        // `noindex` shop e sitemap na (10.4 item 7); robots thake, page er `noindex` crawler ke dekhte hobe.
+        if (shop.settings.noindex) return Response.notFound('');
         final english = shop.settings.enabledLocales.contains('en');
         final xml = await sitemapXml(catalogFor(request), origin: origin, english: english);
         return Response.ok(xml, headers: {'content-type': 'application/xml; charset=utf-8'});

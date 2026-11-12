@@ -2,7 +2,6 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
-import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 import 'package:website/main.server.options.dart';
 import 'package:website/services/config.dart';

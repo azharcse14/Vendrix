@@ -101,7 +101,7 @@ class FilterSheet extends StatelessComponent {
         id: 'filters',
         classes:
             'mb-0 mt-auto w-full max-w-none rounded-t bg-surface p-4 '
-            'pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop:bg-black/40',
+            'pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop:bg-ink backdrop:opacity-40',
         attributes: {'aria-label': site.t('category.filter')},
         [
           div(classes: 'mb-2 flex justify-end', [

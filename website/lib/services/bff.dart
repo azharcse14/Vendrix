@@ -23,6 +23,9 @@ class BffRoute {
   const BffRoute(this.methods, this.path, this.api);
 }
 
+// Go API er `httpx.MaxBody` (12.2): er beshi body memory te pora hoy na.
+const _maxBody = 1 << 20;
+
 /// Asol route: M3 e skeleton, prothom route M4 e (`/_/auth/otp/*`, 10.10).
 const bffRoutes = <BffRoute>[];
 
@@ -47,7 +50,21 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       final cookies = parseCookies(request.headers['cookie']);
       final referer = _sameOriginPath(request.headers['referer'], host);
       final form = (request.headers['content-type'] ?? '').startsWith('application/x-www-form-urlencoded');
-      final raw = await request.readAsString();
+      final bytes = <int>[];
+      await for (final chunk in request.read()) {
+        bytes.addAll(chunk);
+        if (bytes.length > _maxBody) return _error(413, 'validation_failed');
+      }
+      final String raw;
+      final Map<String, String>? fields;
+      try {
+        raw = utf8.decode(bytes);
+        fields = form ? Uri.splitQueryString(raw) : null;
+      } on FormatException {
+        return _error(400, 'validation_failed');
+      } on ArgumentError {
+        return _error(400, 'validation_failed');
+      }
       final api = http.Request(request.method, cfg.apiBaseUrl.resolve(route.api(match!)))
         ..headers.addAll({
           ...apiHeaders(request.headers, cfg),
@@ -58,7 +75,7 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
           'Idempotency-Key': ?request.headers['idempotency-key'],
           if (form || raw.isNotEmpty) 'Content-Type': 'application/json; charset=utf-8',
         })
-        ..body = form ? jsonEncode(Uri.splitQueryString(raw)) : raw;
+        ..body = fields != null ? jsonEncode(fields) : raw;
 
       final http.Response res;
       try {
@@ -82,17 +99,21 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       );
     };
 
-// CSRF (10.9 niyom 1): Origin thakle tar host:port = Host; na thakle Sec-Fetch-Site same-origin.
+// CSRF (10.9 niyom 1): Origin thakle seta hubohu ei site er origin (scheme shoho, [originOf]); na thakle ba
+// `null` (no-referrer page er form, 10.1) hole Sec-Fetch-Site same-origin.
 bool _sameOrigin(Map<String, String> headers, String host) {
   final origin = headers['origin'];
-  if (origin != null) return Uri.tryParse(origin)?.authority == host && host.isNotEmpty;
+  if (origin != null && origin != 'null') return host.isNotEmpty && origin == originOf(headers);
   return headers['sec-fetch-site'] == 'same-origin';
 }
 
 // Nijer page er path+query (redirect ar bhasha); onno host ba nai hole `/` (open redirect na).
 String _sameOriginPath(String? referer, String host) {
   final u = Uri.tryParse(referer ?? '');
-  if (u == null || u.authority != host || host.isEmpty) return '/';
+  // `//evil.com` ba `\` path browser e onno host (protocol-relative).
+  if (u == null || u.authority != host || host.isEmpty || u.path.startsWith('//') || u.path.contains(r'\')) {
+    return '/';
+  }
   return u.hasQuery ? '${u.path}?${u.query}' : (u.path.isEmpty ? '/' : u.path);
 }
 
