@@ -85,9 +85,17 @@ void main() {
 
     test('handler: host er nijer sitemap; ochena shop 404; onno path page e jay', () async {
       final handler = seoFiles(
-        (host) async => host == 'shop.test'
-            ? const ShopSettings(PublicSettings({}), 1, {})
-            : throw const ApiError(404, 'shop_not_found'),
+        (host) async => switch (host) {
+          'shop.test' => const ShopSettings(PublicSettings({}), 1, {}),
+          'noindex.test' => const ShopSettings(
+            PublicSettings({
+              'seo': {'noindex': true},
+            }),
+            1,
+            {},
+          ),
+          _ => throw const ApiError(404, 'shop_not_found'),
+        },
         (request) => catalog,
       )((_) => Response.ok('page'));
       Future<Response> get(String path, String host) async =>
@@ -100,6 +108,10 @@ void main() {
       final robots = await get('/robots.txt', 'shop.test');
       expect(robots.headers['content-type'], startsWith('text/plain'));
       expect((await get('/sitemap.xml', 'nai.test')).statusCode, 404);
+      // Query diye Cloudflare cache bypass kore API te load na.
+      expect((await get('/sitemap.xml?x=1', 'shop.test')).statusCode, 404);
+      // seo.noindex shop e sitemap na (10.4 item 7).
+      expect((await get('/sitemap.xml', 'noindex.test')).statusCode, 404);
       expect(await (await get('/c/chal', 'shop.test')).readAsString(), 'page');
     });
   });

@@ -93,7 +93,9 @@ void main() {
 
     testServer('ochena product → 404', (t) async {
       t.pumpComponent(site({}));
-      expect((await t.request('/p/nai')).statusCode, 404);
+      final res = await t.request('/p/nai');
+      expect(res.statusCode, 404);
+      expect(res.document!.querySelectorAll('main'), hasLength(1)); // Layout er main er bhetore main na (10.7)
     });
   });
 

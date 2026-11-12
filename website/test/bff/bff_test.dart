@@ -38,7 +38,8 @@ void main() {
       Request(
         method,
         Uri.parse('http://shop.example.com$path'),
-        headers: {'host': 'shop.example.com', ...headers},
+        // Caddy https e `X-Forwarded-Proto` dey (Origin er scheme er sathe mele).
+        headers: {'host': 'shop.example.com', 'x-forwarded-proto': 'https', ...headers},
         body: body,
       ),
     );
@@ -55,6 +56,8 @@ void main() {
       ('Origin e onno port', {'origin': 'https://shop.example.com:8443'}),
       ('Sec-Fetch-Site cross-site', {'sec-fetch-site': 'cross-site'}),
       ('Origin null', {'origin': 'null'}),
+      ('Origin e http (site https)', {'origin': 'http://shop.example.com'}),
+      ('Origin null ar cross-site', {'origin': 'null', 'sec-fetch-site': 'cross-site'}),
     ]) {
       test('$name → 403, API te jay na', () async {
         final res = await send('POST', '/_/cart/items', headers: headers);
@@ -67,6 +70,44 @@ void main() {
     test('Origin chhara Sec-Fetch-Site same-origin hole chole', () async {
       final res = await send('POST', '/_/cart/items', headers: {'sec-fetch-site': 'same-origin'}, body: '{}');
       expect(res.statusCode, 201);
+    });
+
+    test('no-referrer page er form: Origin null + Sec-Fetch-Site same-origin chole', () async {
+      final res = await send(
+        'POST',
+        '/_/cart/items',
+        headers: {'origin': 'null', 'sec-fetch-site': 'same-origin'},
+        body: '{}',
+      );
+      expect(res.statusCode, 201);
+    });
+
+    test('Referer er path // diye (protocol-relative) hole redirect / e, onno site e na', () async {
+      final res = await send(
+        'POST',
+        '/_/cart/items',
+        headers: {
+          ...same,
+          'content-type': 'application/x-www-form-urlencoded',
+          'referer': 'https://shop.example.com//evil.com/x',
+        },
+        body: 'variant_id=5',
+      );
+      expect(res.headers['location'], '/');
+    });
+
+    test('boro body (64 KB er beshi) 413, bhul form encoding 400; API te na', () async {
+      final big = await send('POST', '/_/cart/items', headers: same, body: 'x' * (64 * 1024 + 1));
+      expect(big.statusCode, 413);
+      final bad = await send(
+        'POST',
+        '/_/cart/items',
+        headers: {...same, 'content-type': 'application/x-www-form-urlencoded'},
+        body: 'a=%zz',
+      );
+      expect(bad.statusCode, 400);
+      expect(jsonDecode(await bad.readAsString())['error']['code'], 'validation_failed');
+      expect(seen, isEmpty);
     });
 
     test('header forward: shop, IP, cookie → token, Referer theke bhasha; browser er cookie ar bhasha na', () async {
@@ -168,7 +209,7 @@ void main() {
         Request(
           'POST',
           Uri.parse('http://shop.example.com/_/cart/items'),
-          headers: {'host': 'shop.example.com', ...same},
+          headers: {'host': 'shop.example.com', 'x-forwarded-proto': 'https', ...same},
         ),
       );
       expect(res.statusCode, 502);

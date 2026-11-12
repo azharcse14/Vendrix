@@ -114,6 +114,14 @@ void main() {
       expect(calls.where((c) => c.endsWith('/api/settings')), hasLength(1));
     });
 
+    test('host normalize (boro harf, port, sesher .): ekta-i entry, API te chhoto harf', () async {
+      expect((await cache.get('A.Shop:8081')).version, 1);
+      final n = calls.length;
+      expect((await cache.get('a.shop.')).version, 1);
+      expect(calls.length, n);
+      expect(calls.every((c) => c.startsWith('a.shop ')), isTrue);
+    });
+
     test('host onujayi alada', () async {
       expect((await cache.get('a.shop')).version, 1);
       expect((await cache.get('b.shop')).settings.name.of('bn'), 'b.shop v7');
