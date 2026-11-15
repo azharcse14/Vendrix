@@ -40,7 +40,7 @@ Protiti request kon shop er (ar vendor staff hole kon vendor er), sheta Go API t
 | Route | Shop kivabe chena | Na pele |
 |---|---|---|
 | Public (`/api/...`, website ar app) | `X-Shop-Host` header (customer je domain e ache, jemon `sobujbazar.com`) → `shop_domains`. App pathay shop er primary domain | `404 shop_not_found` |
-| Customer login lagbe emon | Upore moto, tarpor session er `shop_id` mile kina | `401` |
+| Customer login lagbe emon | Upore moto, tarpor session er `shop_id` mile kina. v1.28: cart e login optional (`httpx.OptionalCustomer`): Bearer na thakle guest, thakle eki check (8.4) | `401` |
 | Admin (`/api/admin/...`) | Staff session theke (`shop_id`, `vendor_id`, role). Login body te `shop` (slug) | `401` |
 | Payment IPN, return URL | `tran_id` → `payments.shop_id` (request e `X-Shop-Host` thake na) | `404`, log |
 | Courier webhook (Phase 2) | URL e shop: `/api/webhooks/{carrier}/{shop}` + secret | `404` |

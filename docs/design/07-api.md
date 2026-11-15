@@ -13,7 +13,7 @@
 | Shop | Public request e `X-Shop-Host: <domain>` header (Jaspr server customer er `Host` pathay, app pathay shop er primary domain). Staff request e session theke. Bistarito 3.2 |
 | Vendor | Public list e optional `?vendor=<slug>` (marketplace). Admin e vendor staff er vendor session theke; shop staff `?vendor_id=` diye filter korte pare |
 | Login | Customer: `Authorization: Bearer <token>`. Website e token HttpOnly cookie te, Jaspr server API te Bearer hishebe pathay; app (Phase 2) header e. Staff (admin web): api domain er HttpOnly cookie `__Host-asid` (11.3), Dart code token dekhe na |
-| Guest cart | `X-Cart-Key: <random>` header (website e cookie theke) |
+| Guest cart | `X-Cart-Key: <random>` header (website e cookie theke). v1.28: key Go banay (`rand.Text()`, `^[A-Z2-7]{26}$`), notun cart e response e `cart_key`; bhul format er key "nai" dhore (8.4) |
 | Bhasha | `Accept-Language: bn` ba `en`. Public API resolve kora lekha ferot dey (fallback `bn`). Admin API puro `{"bn","en"}` object dey |
 | Order create | `Idempotency-Key` header (max 64 okkhor) bad dile `400` |
 | Paging | `?page=1&limit=24` (max 100). Response: `{"items": [...], "page": 1, "limit": 24, "total": 130}` |
@@ -44,7 +44,7 @@ Error er format shob jaygay ekoi:
 | 405 | Path ache, method na | v1.26: `method_not_allowed` (`Allow` header shoho) |
 | 404 | Pawa jayni | `not_found`, `shop_not_found` (v1.10: `closed` shop o) |
 | 423 | Shop bondho | `shop_suspended` |
-| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken` |
+| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken`, v1.28: `cart_full` (cart e 50 ta alada variant), `out_of_stock` e cart er `details {variant_id, max_quantity}` (8.4) |
 | 422 | Ekoi `Idempotency-Key` e alada body | `idempotency_key_reused` |
 | 429 | Beshi request | `rate_limited` (`Retry-After` header shoho) |
 | 500 | Server er bhul | `internal` (details log e, client e na) |
@@ -95,6 +95,8 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 | GET | `/api/wishlist` | Login kora customer er wishlist |
 | POST, DELETE | `/api/wishlist/{product_id}` | Add/remove (`ON CONFLICT DO NOTHING`) |
 | POST | `/api/wishlist/merge` | `{product_ids}` guest cookie theke account e |
+
+v1.28 (M5): Cart route e Bearer thakle account cart (bhul/expire `401`), na hole `X-Cart-Key` er guest cart (8.4). `GET`, `POST`, `PATCH`, `DELETE` shob puro cart ferot dey: `{items: [{variant_id, product_slug, name, variant_label, image, unit_price, compare_at_price, variable_weight, quantity, max_quantity, in_stock, line_total}], count, subtotal, notices}` (notun guest cart e `cart_key` o); `count` = alada line er shonkhya (qty jog na); `Cache-Control: no-store`. Body te dam/total er field nai (`DisallowUnknownFields` e `400`). `DELETE` e item na thakleo `200`. Wishlist er shob route login chay (`401`), protiti query `user_id` diye (Rule 16); `GET /api/wishlist` = product card er list (catalog er card er moto), bondho product lukano, max 200; merge e max 50 ID, mot 200 (8.4 item 8).
 
 ### 7.5 Checkout ar order
 
@@ -179,7 +181,7 @@ Vendor staff (`vendor_owner`, `vendor_staff`) ekoi endpoint use kore, kintu back
 | `POST /api/complaints` | Ek client IP te ghontay 5 ta |
 | `POST /api/admin/auth/login` | Ek client IP te 15 minute e 10 bar bhul (memory; v1.26: key shudhu IP, shop na: admin domain e request er shop nai, shop body te, tai ek IP theke onek shop e cheshta o ek gona). Account e 5 bar bhul er por protiti bhul e (v1.26: 5 tomo bhul thekei) 1 minute `locked_until` (soft lock: keu owner er email diye barbar bhul dileo owner shudhu 1 minute opekkha kore), 10 ar 50 e owner alert. TOTP: ek temp_token e 5 bar, temp_token jure `staff.failed_mfa` 10 e 30 minute lock ar alert. v1.24: duita lock-i check er age atomic reservation (8.3); account lock e login `401 invalid_credentials` (`429` na, `Retry-After` na; email chena na jay), IP limit e `429`; `failed_mfa` lock e `/auth/totp`, `/auth/recovery` `429` |
 | `POST /api/admin/auth/totp`, `/recovery` | v1.24: ek client IP te minute e 120 (baki public er moto) |
-| Baki public | Ek IP te minute e 120 |
+| Baki public | Ek IP te minute e 120. v1.28: cart ar wishlist o; guest cart toiri te alada limit na (cart e max 50 variant, 8.4) |
 
 IP mane client IP (3.2 Niyom 5): website theke ashle Jaspr er `X-Client-IP` (shudhu loopback + secret), admin ar app er request e Caddy er `X-Real-IP` (Cloudflare range Caddy-i dekhe), na hole connection er IP. Na hole keu nijer header boshiye rate limit edate parbe, ba puro website, admin ar app ek IP hoye atke jabe.
 

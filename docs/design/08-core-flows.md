@@ -31,7 +31,7 @@ Code: [`backend/internal/phone/phone.go`](../../backend/internal/phone/phone.go)
 3. Hash tulona `hmac.Equal` diye (constant time). Mille consume, v1.7: conditional, `UPDATE otp_codes SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL RETURNING id`; kichu na ele already use hoyeche, `400 otp_invalid` (ekoi code e duita parallel verify duita session pay na, 8.3 er TOTP er moto). Purpose `checkout` e consume order er transaction e (8.6 step 9). Na mille, oi phone er 24 ghontar bhul 10 chhuyle 24 ghonta lock ar alert (7.8; v1.19: alert `alert.security` job, 8.17).
 4. `users` e `(shop_id, phone)` diye upsert. Delete kora account er phone `NULL`, tai shei manush notun account pay, purono data ashe na. v1.19: notun user er `locale` = request er `Accept-Language`.
 5. Oi phone er guest order account e jog: `UPDATE orders SET user_id = $1 WHERE shop_id = $2 AND customer_phone = $3 AND user_id IS NULL`. Eta **shudhu OTP verify er por**, kokhono age na.
-6. `X-Cart-Key` thakle guest cart merge (8.4).
+6. `X-Cart-Key` thakle guest cart merge (8.4). v1.28: ei transaction e-i (8.4 item 6), tai verify fail hole merge na.
 7. Session: `token = rand.Text()`, database e `sha256(token)`, `subject_type = 'customer'`, `user_id`, `expires_at = now + 30 din`. `last_used_at` ghontay ekbar-er beshi update na.
 
 Website e cookie: `__Host-sid=<token>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`. Token kokhono JavaScript e (localStorage) rakhbe na.
@@ -56,6 +56,17 @@ Website e cookie: `__Host-sid=<token>; HttpOnly; Secure; SameSite=Lax; Path=/; M
 | Merge | Login e guest cart er item account cart e jog. Ek-i variant hole quantity jog, stock e cap. Tarpor guest cart muche fela |
 | Purono cart | 30 din kono bodol na hole guest cart muche fela (daily job) |
 | Vendor | Marketplace e cart vendor onujayi group kore dekhay (alada parcel; `per_vendor` hole alada delivery charge). Single store e group nai |
+
+v1.28 (M5, user 15 November 2026):
+
+1. **Guest key**: Go banay. Key chhara (ba `^[A-Z2-7]{26}$` na mile emon key) guest `POST /api/cart/items` e notun `rand.Text()` (128 bit), DB te `sha256`, response e `cart_key`; `GET` kokhono row banay na (bot er GET e DB bhore na). Bhul format er key "nai" (notun cart, onner cart na); key er cart onno shop e (`X-Shop-Host`) ochena. Client nijer key diye cart banate pare na. Website er cookie 10.12.
+2. **Login ar key**: Bearer thakle shudhu account cart, key ignore. Bearer bhul ba expire hole `401` (Rule 16 er session check hubohu), guest e fall back na: `httpx.OptionalCustomer` (Bearer na thakle guest, thakle `RequireCustomer` er path). Merge shudhu verify e.
+3. **Quantity ar limit**: add/patch e `quantity` 1..`min(stock, 50)`; 0 ba minus `400 validation_failed`; beshi hole (50 er beshi o) `409 out_of_stock` + `details {variant_id, max_quantity}`, chupchap komay na; stock 0 e add `409 out_of_stock`. Ek cart e max 50 ta alada variant, 51 tomo add e `409 cart_full`. Guest cart toiri te alada limit na (public 120/minute, 7.8; row choto, 30 din e muche).
+4. **Normalize (`GET`)**: qty > stock (stock > 0) hole qty = `min(stock, 50)` (DB te o) + notice `quantity_reduced`; stock 0 er item thake (`in_stock: false`, subtotal e na; checkout M6 e abar dekhe). Item e `max_quantity = min(stock, 50)` (exact stock 50 er niche dekha jay, catalog e shudhu `in_stock`). Product ba variant `is_active = false` (marketplace e vendor `active` na, Rule 13) er item `DELETE ... RETURNING` (ek query) + notice `{code: "item_removed", name}` (naam bortoman bhashay); notice ekbar-i, product abar chalu holeo cart e ferot na. POST/PATCH e bondho ba ochena variant `404 not_found` (public catalog e o nai).
+5. **Dam**: line total `pricing.LineTotal`, subtotal `pricing.Calculate(lines, nil, Zone{}, PerOrder).Subtotal`, shudhu `in_stock` line (Rule 1). Ojon-variable e `WeightG = nominal_weight_g × qty` (website e "approx"); `nominal_weight_g` NULL er ojon-variable variant add e `409 out_of_stock`. Dam bodlale cart e notice na (`seen_price` column na): cart shob shomoy bortoman dam (`compare_at_price` thakle kata dam); order er dam M6 er `expected_total` → `409 price_changed` (8.6) dhore.
+6. **Merge** (8.2 step 6): verify er transaction e dui cart `SELECT ... FOR UPDATE` (account cart na thakle toiri); ekoi variant e qty jog, `min(jog, 50, stock)`; stock 0 hole item thake `min(jog, 50)` (out of stock dekhay, stock ferot ele kena jay); bondho product bad; tarpor guest cart (row) muche. Verify fail hole merge na. Website e `__Host-cart` muche (10.12).
+7. **Purono cart**: item bodlale `carts.updated_at = now()`; `cart.cleanup` (8.17) shudhu guest cart, login cart muche na. `DELETE` e item na thakleo `200` (idempotent).
+8. **Wishlist** (7.4): `GET` e bondho product lukano (row thake, chalu hole ferot); merge e shudhu oi shop er active product, ochena/bhul ID bad, max 50 ID, wishlist e mot 200.
 
 ### 8.5 Dam er hishab (`pricing` package)
 
@@ -321,7 +332,7 @@ v1.19 (M4): `sms.otp` er default lekha Go te (`notify` e bn/en), shop er `transl
 | `payment.reconcile` | Protiti 10 minute | `reconcile_after` er shomoy hoya payment (local `cancelled` o) er status gateway theke (8.9, v1.4) |
 | `inventory.expire`, `inventory.reconcile` | Protidin (shop er timezone) | 8.12 |
 | `data.retention` | Protidin | `orders.ip`, `sessions.ip`, `audit_logs.ip` 180 din por `NULL` (`shop_app` er `audit_logs` e shudhu `ip` column e UPDATE, `001`) |
-| `cart.cleanup` | Protidin | 30 diner purono guest cart |
+| `cart.cleanup` | Protidin | 30 diner purono guest cart. v1.28: `session_key` thaka cart, `updated_at` 30 din er purono (`carts_updated_idx`); login cart na; din er `dedupe_key` (`jobs.cleanup` er moto) |
 | `session.cleanup` | Protidin | Expire hoya session ar OTP |
 | `jobs.cleanup` | Protidin | v1.19: `done_at` 30 din ar `failed_at` 90 din er purono `jobs` row muche (`dedupe_key` shoho); failed beshi din thake jate alert er por dekha jay. `shop_app` er `jobs` e DELETE ache (`001`), migration na |
 | `jobs.sweep` | Protiti 5 minute | Shesh attempt e crash kora job (`attempts = max_attempts`, lock 5 minute er purono) `failed_at` ar admin alert (6.4) |

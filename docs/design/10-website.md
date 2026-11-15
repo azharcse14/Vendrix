@@ -13,7 +13,7 @@ English version e shob route er samne `/en`.
 | `/p/{slug}` | Product | Na | Gallery, variant, review, SEO |
 | `/search?q=` | Search | Na | `noindex` |
 | `/v/{slug}` | Vendor store page | Na | Shudhu marketplace mode e, single e `404` |
-| `/cart` | Cart | Na | Guest cart |
+| `/cart` | Cart | Na | Guest cart. v1.28: SSR, `@client` na, JS chhara form (10.12) |
 | `/checkout` | Checkout | Na | Guest checkout |
 | `/order/{token}` | Order dekha | Na (token) | SMS link; phone/thikana mask, `noindex` |
 | `/order/{token}/done` | Order er por | Na | Payment status check |
@@ -22,7 +22,7 @@ English version e shob route er samne `/en`.
 | `/invoice/{token}` | Printable invoice | Na | Print CSS |
 | `/track` | Order tracking | Na | Order number + phone (POST form) |
 | `/login` | OTP login | | v1.19: `@client LoginForm`, Turnstile (10.11) |
-| `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | v1.19: M4 e shudhu `/account` (naam, bhasha, logout); baki tar milestone e (10.11) |
+| `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | v1.19: M4 e shudhu `/account` (naam, bhasha, logout); baki tar milestone e (10.11). v1.28: `/account/wishlist` M5 e (10.12) |
 | `/policy/{terms,return,refund,delivery,privacy}` | Policy | Na | Bangla badhyotamulok |
 | `/contact`, `/faq`, `/complaint` | Support | Na | DBID, BFSA number footer e |
 | `/print/{kind}?token=` | Staff er packing slip, pick list | Signed token (10 min) | Admin theke khole; `Referrer-Policy: no-referrer` |
@@ -36,7 +36,7 @@ v1.5: token page (`/order/*`, `/confirm/*`, `/invoice/*`, `/print/*`) e Facebook
 |---|---|
 | Page er data | `AsyncStatelessComponent`, server e Go API theke |
 | Title, description, OG | `Document.head` (protiti page e) |
-| Interactive | Shudhu `@client` component: variant picker (dam bodlay), quantity, cart button, filter sheet, checkout form er live hishab, v1.19: login form (10.11) |
+| Interactive | Shudhu `@client` component: variant picker (dam bodlay), quantity, cart button, filter sheet, checkout form er live hishab, v1.19: login form (10.11), v1.28: `AddToCart` (quantity + cart button), `WishlistButton`; `/cart` page e `@client` na (10.12) |
 | Chobi swipe | CSS `scroll-snap`, JavaScript na |
 | Filter sheet | Browser er `<dialog>` |
 | Layout bodlano (mobile/desktop) | Shudhu CSS (Tailwind prefix), server e device detect na |
@@ -49,14 +49,14 @@ Jaspr version 0.23.x e pin (2.1: `^0.23.5`, `pubspec.lock` commit). Update er ag
 | Cookie | Ki | Flag |
 |---|---|---|
 | `__Host-sid` | Customer session token | `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=30 din` |
-| `__Host-cart` | Guest cart key | `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=30 din` |
-| `wl` | Guest wishlist (product ID list) | `Secure; SameSite=Lax` |
+| `__Host-cart` | Guest cart key | `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=30 din`. v1.28: key Go banay, BFF set kore, protiti cart write e abar (sliding 30 din, 10.12) |
+| `wl` | Guest wishlist (product ID list) | `Secure; SameSite=Lax`. v1.28: `Path=/; Max-Age=1 bochor`, HttpOnly na (`@client WishlistButton` lekhe); koma diye decimal ID, max 50 (10.12) |
 | `lang` | `bn`/`en` | `Secure; SameSite=Lax; Max-Age=1 bochor` |
 | `preview` | Admin er draft theme preview token | `HttpOnly; Secure; SameSite=Lax; Max-Age=30 min` |
 
 Jaspr server cookie theke token/key niye Go API te `Authorization: Bearer` ar `X-Cart-Key` header e pathay. Browser kokhono Go API ke shorasori token dey na.
 
-**Cache**: session, cart ba `preview` cookie thaka response e `Cache-Control: private, no-store`; Cloudflare e ei cookie gulo thakle HTML cache bypass rule. Na hole ek customer er page (naam, cart) ba admin er draft theme onno jon pete pare. Public page (product, category) e `Cache-Control: public, max-age=60` shudhu jodi page e personal kichu na thake. Jaspr Go API te `Accept-Language` pathay URL er bhasha theke (`/en/` hole `en`, na hole `bn`), browser er header theke na; na hole ekoi URL e alada bhasha cache hoy. Deploy e `main.dart.js` er naam bodlay na, tai URL e `?v=<git sha>` dao ba deploy e Cloudflare cache purge koro, na hole notun HTML purono JS diye hydrate hoy.
+**Cache**: session, cart ba `preview` cookie thaka response e `Cache-Control: private, no-store`; Cloudflare e ei cookie gulo thakle HTML cache bypass rule. Na hole ek customer er page (naam, cart) ba admin er draft theme onno jon pete pare. v1.28: `wl` er page public thake: server `wl` diye kichu render kore na (10.12). Public page (product, category) e `Cache-Control: public, max-age=60` shudhu jodi page e personal kichu na thake. Jaspr Go API te `Accept-Language` pathay URL er bhasha theke (`/en/` hole `en`, na hole `bn`), browser er header theke na; na hole ekoi URL e alada bhasha cache hoy. Deploy e `main.dart.js` er naam bodlay na, tai URL e `?v=<git sha>` dao ba deploy e Cloudflare cache purge koro, na hole notun HTML purono JS diye hydrate hoy.
 
 ### 10.4 SEO checklist
 
@@ -77,7 +77,7 @@ Jaspr server cookie theke token/key niye Go API te `Authorization: Bearer` ar `X
 | Home | Upore search bar, category side-scroll, 2 column | 3 column | Header e category menu, 4–5 column |
 | Category | Sticky "Filter" ar "Sort", filter bottom sheet e | 3 column | Bame filter sidebar, 3–4 column |
 | Product | Full-width gallery, niche sticky "Cart e add" bar | Pashapashi | 2 column, button inline |
-| Cart | List, niche sticky total + checkout | Mobile er moto | Bame list, dane sticky summary |
+| Cart | List, niche sticky total + checkout (v1.28: checkout button M6 porjonto lukano) | Mobile er moto | Bame list, dane sticky summary |
 | Checkout | Ek column, header e shudhu logo | Mobile er moto | Bame form, dane summary |
 
 ```
@@ -140,11 +140,12 @@ Browser kokhono Go API te jay na (CORS shudhu admin), tai `@client` component ar
 
 | Method | Jaspr path | Go API |
 |---|---|---|
-| POST, PATCH, DELETE | `/_/cart/items`, `/_/cart/items/{variant_id}` | `/api/cart/items...` |
+| POST, PATCH, DELETE | `/_/cart/items`, `/_/cart/items/{variant_id}` | `/api/cart/items...` (v1.28: notun `cart_key` e `__Host-cart` set, body theke muche; JS chhara form e `303 /cart`) |
+| POST | v1.28: `/_/cart/items/{variant_id}/delete` | `DELETE /api/cart/items/{variant_id}` (JS chhara form) |
 | POST | `/_/checkout/quote` | `POST /api/checkout/quote` |
 | POST | `/_/checkout` | `POST /api/orders` (JS e random `Idempotency-Key`; JS chhara form e page render er shomoy hidden field) |
-| POST | `/_/auth/otp/send`, `/_/auth/otp/verify`, `/_/auth/logout` | `/api/auth/...` (verify e `__Host-sid` cookie set; v1.26: logout e cookie `Max-Age=0`, JS chhara form e `303`) |
-| POST, DELETE | `/_/wishlist/{product_id}` | `/api/wishlist/{product_id}` |
+| POST | `/_/auth/otp/send`, `/_/auth/otp/verify`, `/_/auth/logout` | `/api/auth/...` (verify e `__Host-sid` cookie set; v1.26: logout e cookie `Max-Age=0`, JS chhara form e `303`; v1.28: verify `200` e `__Host-cart` `Max-Age=0`, `wl` thakle `POST /api/wishlist/merge` tarpor `wl` `Max-Age=0`, 10.12) |
+| POST, DELETE | `/_/wishlist/{product_id}` | `/api/wishlist/{product_id}` (v1.28: shudhu login e; guest e `wl` cookie) |
 | POST | `/_/orders/{token}/cancel`, `pay` | `/api/orders/{token}/...` |
 | POST | `/_/confirm/{confirm_token}` | `POST /api/confirm/{confirm_token}` (v1.4, 8.10) |
 | POST | `/_/track`, `/_/complaint`, `/_/review` | `POST /api/orders/track`, `/api/complaints`, `/api/reviews` |
@@ -167,7 +168,7 @@ Niyom:
 3. **Chobi**: website env `IMAGE_BASE_URL` (platform er) ar `IMAGE_RESIZE=cloudflare|none`; `srcset` = `<base>/cdn-cgi/image/width=W,format=auto/<key>` (`none` e `<base>/<key>`); chobi na thakle `tint` placeholder (13.5).
 4. **Settings cache** (3.5): host onujayi `{settings, version, translations[bn,en], checkedAt}`; 30 second por prothom request background e version check (request atkay na, ekbar e ekta); version bodlale settings ar duita translation abar; API down hole purono cache ar log; cache faka hole error page; ochena host cache na.
 5. **BFF** M3 e shudhu skeleton (Origin check, cookie → header, forward, `303`, `no-store`) ar test; prothom asol route M4 e (`/_/auth/otp/*`).
-6. **Cart/Account**: page M4/M5 er age link lukano (layout ekoi; v1.19: Account link M4 e abar); product page er sticky bar e dam ar variant, "Cart e add" button M5 e.
+6. **Cart/Account**: page M4/M5 er age link lukano (layout ekoi; v1.19: Account link M4 e abar); product page er sticky bar e dam ar variant, "Cart e add" button M5 e. v1.28: Cart link M5 e abar (badge 10.12).
 7. **Security header** Jaspr middleware e (12.2): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, CSP `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' <IMAGE_BASE_URL> data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. Turnstile/payment domain M4/M10 e; HSTS M12 e (Cloudflare/Caddy).
 8. **Test**: logic (cache, BFF, SEO, locale, header) `package:test`; page `jaspr_test` (title, OG, `srcset`, lekha); 360/1280 ar Lighthouse manual, Report e; Playwright M12 e. CI er Dart job e `jaspr build` ar `main.client.dart.js` er size log e.
 9. **Facebook debugger** M3 e `cloudflared` quick tunnel diye (install na thakle M12 e staging e).
@@ -180,3 +181,12 @@ Niyom:
 3. **CSP**: `script-src` ar `frame-src` e `https://challenges.cloudflare.com` shudhu Turnstile thaka page e (M4 e `/login`); baki page 10.10 item 7.
 4. **BFF auth**: verify e Go er response er `token` theke `__Host-sid` (10.3) set, body theke `token` muche (JS kokhono token dekhe na); `/_/auth/logout` revoke ar cookie `Max-Age=0`. `ApiClient` e optional Bearer (`/account` SSR e `/api/me`).
 5. **Account**: M4 e `/account` (naam, bhasha, logout; login chhara `/login` e `303`); `/account/orders`, `addresses` M6, `wishlist` M5, `privacy` M11 e. Bottom nav/header e Account link abar.
+
+### 10.12 M5 er decision (v1.28)
+
+1. **Guest cart cookie**: key Go banay (8.4 item 1); BFF Go er response er `cart_key` theke `__Host-cart` (`HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000`) set kore, body theke `cart_key` muche (`_login` er moto). Protiti cart write e BFF cookie abar set kore (sliding 30 din, DB er 30 din `updated_at` er sathe mile).
+2. **Merge e cookie**: BFF er verify `200` hole `__Host-cart` `Max-Age=0` (Go already merge koreche, 8.2 step 6).
+3. **Guest wishlist (`wl`)**: koma diye product ID (decimal), max 50, `Path=/; Secure; SameSite=Lax; Max-Age=1 bochor`, HttpOnly na. Guest e `@client WishlistButton` cookie nijei lekhe (server e jay na); login e BFF `/_/wishlist/{id}` (Go). Server `wl` diye kichu render kore na, tai `_personal` e lage na ar product page public cache thake; guest er wishlist page nai (`/account/wishlist` login chay). Merge: verify `200` er por `wl` thakle notun token diye `POST /api/wishlist/merge`, tarpor `wl` `Max-Age=0`; merge fail hole login fail na (log). Login kora user er heart er shuru obostha SSR e `GET /api/wishlist` theke (oi page `__Host-sid` er jonno already `private, no-store`).
+4. **`@client` er poriman**: product page e `@client AddToCart` (quantity stepper + button; JSON e BFF, uttor e badge/lekha; JS chhara `<form method=post action=/_/cart/items>` → `303 /cart`; sticky bar e o). `/cart` page e `@client` na: protiti item e JS chhara form (qty `PATCH`, bad `DELETE`; BFF er `apiMethod` ar `POST /_/cart/items/{id}/delete`), `303` e page abar render, total server er (Rule 1). Checkout button M6 porjonto lukano. Pore dorkar hole `@client CartQty` jog kora shohoj.
+5. **Cart badge**: SSR: `__Host-sid` ba `__Host-cart` cookie thakle Layout `GET /api/cart` er `count` (alada line, 7.4) dekhay (page er data call er shathe parallel); ei page already `private, no-store` (10.3). Cookie chhara page e badge nai, cache thake. JS na.
+6. **Notice**: cart response er `notices` (`item_removed`, `quantity_reduced`, 8.4 item 4) `/cart` e l10n key diye dekhay; ojon-variable line e "approx".
