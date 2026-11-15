@@ -19,15 +19,14 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **M3 step 16** (user Lighthouse LCP proshno er uttor dile, "User er kache proshno" dekho): uttor 16.1 e likho; (a) hole [M3](milestones/M3.md) er Lighthouse row ☑ (devtools number, simulate Report e), (b)/(c) hole age `design-change` (9.6 font) ar abar maap. Tarpor "Report" likho, STATUS e M3 shesh. CI (`ci(M3): website build`) push er por green kina dekho.
-2. **M4 er plan** (`milestone` skill, docs/design/15-milestones.md er M4 row; age plan, user approve; M4 er age 16.1 er OTP payload ar `jobs` cleanup proshno). M3 er acceptance pass na hole M4 er code na (AGENTS.md).
+2. **M4 (Login)**: plan draft [M4](milestones/M4.md) e; user approve (ar Open question 1–10 er uttor) baki. Approve hole M4.md er step 0 (`design-change`: uttor 16.1 ar design e), tarpor step 1. M3 er acceptance pass na hole M4 er code na (AGENTS.md).
 
 ## User er kache proshno
 
 - **M12 er age**: client JS er `?v=<git sha>` (10.10 item 10): Jaspr nijei script tag dey, hook nai; recommendation deploy e Cloudflare purge (16.1).
 - **M3 shesh er age**: Lighthouse LCP: simulate (Lantern) e category/product 2.7s, devtools throttle e 1.7s; kon ta acceptance? Recommendation (a): devtools number accept, font kom M12 er age (16.1).
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
-- **M4 er age**: OTP SMS er code `jobs.payload` e plain text thake; AES-GCM naki job chhara pathano (16.1).
-- **M4 er age**: `jobs` er purono row: `jobs.cleanup` (30 din) naki done hole payload khali (16.1).
+- **M4 er age**: [M4](milestones/M4.md) er Open question 1–10 (OTP payload (a) AES-GCM, `jobs` cleanup (c), phone lock, SMS provider, Turnstile key, login form, `closed` shop, scope, alert, choto niyom); protitir recommendation plan e. 1 ar 2 16.1 e already; baki gulo approve e 16.1/design e.
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
 - **M10 er age**: SSLCommerz validation er HTTP call DB lock er bhetore naki baire (16.1).
 - **M12 er age**: production domain (doc e `tomarshop.com` placeholder), server region, SMS provider (16.1).
@@ -42,7 +41,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | M1 | Shop, vendor, settings, catalog API | shesh (10 November 2026) | [M1](milestones/M1.md) |
 | M2 | Shared Dart package | shesh (10 November 2026) | [M2](milestones/M2.md) |
 | M3 | Website catalog | cholche (10 November 2026 theke) | [M3](milestones/M3.md) |
-| M4 | Login | baki | |
+| M4 | Login | baki (plan draft, approve baki) | [M4](milestones/M4.md) |
 | M5 | Cart ar wishlist | baki | |
 | M6 | Checkout (COD) | baki | |
 | M7 | Admin panel v1 | baki | |
@@ -56,6 +55,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M4 plan draft (`docs/milestones/M4.md`): scope, acceptance → test, 14.2 test 10/18/19, 15 step, 10 ta open question (recommendation shoho); code na.
 - 15 November 2026: M3 step 15: 30 ta responsive page 200, tap target 44px; bug fix `bd32992` (`<base>`/CSP e hydration), `11df782` (favicon); Lighthouse simulate LCP 2.3/2.7/2.7s, devtools 1.3/1.7/1.6s (16.1 e proshno); Facebook Q12 (b).
 - 12 November 2026: M3 step 16: `make check` green; design/security review e high nai; finding fix (BFF Origin null/scheme, open redirect, body limit, host normalize, sitemap, renderPage test); website 93/93. `?v=` 16.1 e.
 - 12 November 2026: M3 step 14: `l10n.md`, `theme.md`, `api-client.md` e website er ongsho.
@@ -70,4 +70,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 11 November 2026: CI Go job e govulncheck (GO-2026-6859, `net/http`): toolchain go1.27.4, design v1.15.
 - 11 November 2026: M3 step 7: `make dev-seed` (`scripts/dev-seed.sql`, local catalog data, idempotent).
 - 11 November 2026: CI fix (ci.yml er Dart job naam e `: ` → YAML parse error, quote); M3 step 6 shesh: `Site`, render (404/503), `/en` route, layout, status page, typography, Bangla okkhor check; local e `/`, `/en` 200, ochena path/host 404.
-- 10 November 2026: M3 step 6 er ardhek: theme CSS, self-host font, shared settings getter ar UI key.
