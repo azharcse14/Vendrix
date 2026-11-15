@@ -116,7 +116,7 @@ Mobile niyom:
      width="640" height="640" loading="lazy" alt="অর্গানিক লাল চাল">
 ```
 
-**Speed er lokkho** (majhari Android phone, slow 4G): LCP 2.5 second er kom, INP 200 ms er kom, CLS 0.1 er kom. Protiti boro bodoler por Lighthouse mobile (Slow 4G + CPU throttling). `build/jaspr/web/main.dart.js` er size protibar maapo, hothat barle karon khojo. `@client` kom rakho.
+**Speed er lokkho** (majhari Android phone, slow 4G): LCP 2.5 second er kom, INP 200 ms er kom, CLS 0.1 er kom. Protiti boro bodoler por Lighthouse mobile (Slow 4G + CPU throttling). v1.18: acceptance er number devtools (asol) throttle e (`--throttling-method=devtools`); simulate (Lantern) er number Report e note; font kom korar kaj M12 er age, Lighthouse CI er sathe (16.1). `build/jaspr/web/main.dart.js` er size protibar maapo, hothat barle karon khojo. `@client` kom rakho.
 
 **Test er device**: sosta Android er Chrome, **Facebook/Messenger er in-app browser** (login, OTP, cart, SSLCommerz redirect shob), iPhone Safari, desktop Chrome. Width: 360, 390, 412, 768, 1280. Duita bhashay-i.
 

@@ -24,7 +24,6 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## User er kache proshno
 
 - **M12 er age**: client JS er `?v=<git sha>` (10.10 item 10): Jaspr nijei script tag dey, hook nai; recommendation deploy e Cloudflare purge (16.1).
-- **M3 shesh er age**: Lighthouse LCP: simulate (Lantern) e category/product 2.7s, devtools throttle e 1.7s; kon ta acceptance? Recommendation (a): devtools number accept, font kom M12 er age (16.1).
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M4 er age**: [M4](milestones/M4.md) er Open question 1–10 (OTP payload (a) AES-GCM, `jobs` cleanup (c), phone lock, SMS provider, Turnstile key, login form, `closed` shop, scope, alert, choto niyom); protitir recommendation plan e. 1 ar 2 16.1 e already; baki gulo approve e 16.1/design e.
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
@@ -55,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: 16.1 M3 Lighthouse LCP er uttor (a) (user): devtools throttle er number acceptance, simulate Report e, font kom + Lighthouse CI M12 er age (10.5, 15); design v1.18.
 - 15 November 2026: M4 plan draft (`docs/milestones/M4.md`): scope, acceptance → test, 14.2 test 10/18/19, 15 step, 10 ta open question (recommendation shoho); code na.
 - 15 November 2026: M3 step 15: 30 ta responsive page 200, tap target 44px; bug fix `bd32992` (`<base>`/CSP e hydration), `11df782` (favicon); Lighthouse simulate LCP 2.3/2.7/2.7s, devtools 1.3/1.7/1.6s (16.1 e proshno); Facebook Q12 (b).
 - 12 November 2026: M3 step 16: `make check` green; design/security review e high nai; finding fix (BFF Origin null/scheme, open redirect, body limit, host normalize, sitemap, renderPage test); website 93/93. `?v=` 16.1 e.

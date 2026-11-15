@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.17, 15 November 2026
+Version 1.18, 15 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -69,3 +69,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.15 | 11 November 2026 | 2.1, 13.6, 15: Go toolchain `go1.27.4` (`go.mod`, script, CI): CI er `govulncheck` 1.27.3 er `net/http` e GO-2026-6859 dhorechhe, 1.27.4 e fix |
 | 1.16 | 12 November 2026 | 16.1: client JS er `?v=<git sha>` (10.10 item 10) er proshno: Jaspr 0.23.5 e script tag er hook nai (M3 review); M12 er age |
 | 1.17 | 15 November 2026 | 16.1: M3 Lighthouse LCP er proshno (simulate 2.7s, devtools throttle 1.7s; kon ta acceptance); M3 step 15 |
+| 1.18 | 15 November 2026 | 16.1 M3 Lighthouse LCP er uttor (a) (user): acceptance devtools throttle er number, simulate Report e; font kom ar Lighthouse CI M12 er age (10.5, 15) |
