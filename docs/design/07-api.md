@@ -44,7 +44,7 @@ Error er format shob jaygay ekoi:
 | 405 | Path ache, method na | v1.26: `method_not_allowed` (`Allow` header shoho) |
 | 404 | Pawa jayni | `not_found`, `shop_not_found` (v1.10: `closed` shop o) |
 | 423 | Shop bondho | `shop_suspended` |
-| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken`, v1.28: `cart_full` (cart e 50 ta alada variant), `out_of_stock` e cart er `details {variant_id, max_quantity}` (8.4) |
+| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken`, v1.28: `cart_full` (cart e 50 ta alada variant), v1.29: `wishlist_full` (wishlist e 200), `out_of_stock` e cart er `details {variant_id, max_quantity}` (8.4) |
 | 422 | Ekoi `Idempotency-Key` e alada body | `idempotency_key_reused` |
 | 429 | Beshi request | `rate_limited` (`Retry-After` header shoho) |
 | 500 | Server er bhul | `internal` (details log e, client e na) |
@@ -96,7 +96,7 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 | POST, DELETE | `/api/wishlist/{product_id}` | Add/remove (`ON CONFLICT DO NOTHING`) |
 | POST | `/api/wishlist/merge` | `{product_ids}` guest cookie theke account e |
 
-v1.28 (M5): Cart route e Bearer thakle account cart (bhul/expire `401`), na hole `X-Cart-Key` er guest cart (8.4). `GET`, `POST`, `PATCH`, `DELETE` shob puro cart ferot dey: `{items: [{variant_id, product_slug, name, variant_label, image, unit_price, compare_at_price, variable_weight, quantity, max_quantity, in_stock, line_total}], count, subtotal, notices}` (notun guest cart e `cart_key` o); `count` = alada line er shonkhya (qty jog na); `Cache-Control: no-store`. Body te dam/total er field nai (`DisallowUnknownFields` e `400`). `DELETE` e item na thakleo `200`. Wishlist er shob route login chay (`401`), protiti query `user_id` diye (Rule 16); `GET /api/wishlist` = product card er list (catalog er card er moto), bondho product lukano, max 200; merge e max 50 ID, mot 200 (8.4 item 8).
+v1.28 (M5): Cart route e Bearer thakle account cart (bhul/expire `401`), na hole `X-Cart-Key` er guest cart (8.4). `GET`, `POST`, `PATCH`, `DELETE` shob puro cart ferot dey: `{items: [{variant_id, product_slug, name, variant_label, image, unit_price, compare_at_price, variable_weight, quantity, max_quantity, in_stock, line_total}], count, subtotal, notices}` (notun guest cart e `cart_key` o); `count` = alada line er shonkhya (qty jog na); `Cache-Control: no-store`. Body te dam/total er field nai (`DisallowUnknownFields` e `400`). `DELETE` e item na thakleo `200`. Wishlist er shob route login chay (`401`), protiti query `user_id` diye (Rule 16); `GET /api/wishlist` = product card er list (catalog er card er moto), bondho product lukano, max 200; merge e max 50 ID, mot 200 (8.4 item 8). v1.29: 200 thakle notun product `409 wishlist_full`.
 
 ### 7.5 Checkout ar order
 
