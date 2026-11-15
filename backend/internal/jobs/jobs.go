@@ -221,7 +221,9 @@ func (w *Worker) finish(j Job, lockedAt time.Time, attempts int, jobErr error) e
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if jobErr == nil {
-		_, err := w.db.ExecContext(ctx, `UPDATE jobs SET done_at = now(), locked_at = NULL, last_error = NULL
+		// sms.send er payload e phone, lekha ba OTP (PII), tai done hole muche (8.17 v1.19)
+		_, err := w.db.ExecContext(ctx, `UPDATE jobs SET done_at = now(), locked_at = NULL, last_error = NULL,
+			  payload = CASE WHEN kind = 'sms.send' THEN '{}' ELSE payload END
 			WHERE id = $1 AND locked_at = $2`, j.ID, lockedAt)
 		return err
 	}

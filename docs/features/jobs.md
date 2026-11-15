@@ -1,6 +1,6 @@
 # Background job ar SMS
 
-Design: 6.4, 8.2, 8.17, 12.2, 13.4 · Milestone: M0 · Code: `backend/internal/jobs`, `backend/internal/notify`
+Design: 6.4, 8.2, 8.17, 12.2, 13.4 · Milestone: M0, M4 · Code: `backend/internal/jobs`, `backend/internal/notify`
 
 ## Ki kore
 
@@ -9,12 +9,12 @@ Request er baire je kaj (SMS, alert, auto-cancel, reconcile) `jobs` table e queu
 ## Kivabe kaj kore
 
 1. Kaj jog: `jobs.Enqueue` (`*sql.DB` ba order er `*sql.Tx`). `DedupeKey` thakle ekoi key e duibar row hoy na. `RunAt` khali hole database er `now()` (app er ghori na).
-2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob`), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
+2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
 3. `Worker.Run`: protiti 2 second e `schedule` (recurring `jobs.sweep`, 5 minute er slot `dedupe_key`), tarpor `RunOnce`. 10 ta pele shathe shathe abar.
 4. `RunOnce`: 6.4 er claim query (`FOR UPDATE SKIP LOCKED`, `attempts + 1`, `locked_at`). Protiti kaj er age lock notun kore (onno worker niye thakle bad), `call` (1 minute timeout; panic o error), tarpor `finish`.
-5. `finish`: shofol hole `done_at`; fail hole `last_error`, `run_at = now + backoff` (1, 5, 15, 60 minute); `attempts = max_attempts` hole `failed_at` ar `alert`. `locked_at` claim er sathe na mille (5 minute por onno worker niyeche) kichu lekhe na.
+5. `finish`: shofol hole `done_at` (`sms.send` hole payload `{}`, PII); fail hole `last_error`, `run_at = now + backoff` (1, 5, 15, 60 minute); `attempts = max_attempts` hole `failed_at` ar `alert`. `locked_at` claim er sathe na mille (5 minute por onno worker niyeche) kichu lekhe na.
 6. `jobs.sweep`: shesh attempt e crash kora job (`attempts >= max_attempts`, lock 5 minute er purono) `failed_at` ar alert.
-7. `notify.NewSMS`: `APP_ENV=local` e log (phone mask, shesh 3 digit); onno env e `ErrNoProvider` (provider M4 e), tai production e kokhono log mode na.
+7. `notify.NewSMS`: `APP_ENV=local` e log (`phone.Mask`, shesh 3 digit); onno env e `ErrNoProvider` (provider M4 e), tai production e kokhono log mode na.
 
 ## Code er map
 
@@ -23,7 +23,7 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/internal/jobs/jobs.go` → `Enqueue`, `NewWorker`, `Run`, `RunOnce`, `release`, `finish`, `sweep`, `backoff` | Queue ar worker |
-| `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `mask` | SMS sender ar `sms.send` handler |
+| `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `OTPSource`, `otpText`, `SecurityAlertJob` | SMS sender, `sms.send` handler (OTP payload shoho), `alert.security` |
 | `backend/cmd/api/main.go` → `runServe` | Worker chalu ar shutdown |
 | `backend/internal/dbtest/dbtest.go` → `New` | Test er database |
 
@@ -41,7 +41,8 @@ Ei kram e poro:
 | Shutdown ba DB error e batch er baki job chere dey, attempt ferot (8.17) | `RunOnce`, `release` | `TestShutdownReleasesIntegration` |
 | `jobs.sweep` protiti 5 minute e ekbar (8.17) | `schedule` | `TestScheduleSweep` |
 | SMS shudhu local e log, production e log mode na (8.2 step 4); log e phone mask (12.2) | `NewSMS` | `TestNewSMS` |
-| `sms.send` payload e phone ar text lage | `SendSMSJob` | `TestSendSMSJob` |
+| `sms.send` payload e phone ar text lage; OTP payload (`{otp_id, nonce, ct}`) e `OTPSource` theke phone ar code (8.2 step 4) | `SendSMSJob` | `TestSendSMSJob` |
+| OTP `sms.send`: `max_attempts` 2 (1 minute por ekbar), done hole payload `{}` (8.17 v1.19) | `auth.sendOTP`, `finish` | `TestOTPJobPayload` |
 
 ## Data
 
@@ -60,7 +61,9 @@ Ei kram e poro:
 - Handler e HTTP call thakle ctx mano; shutdown e ctx bondho hoy.
 - Notun recurring job: `schedule` e slot er `dedupe_key` (din ba ghonta, shop shoho). `dedupe_key` puro table e UNIQUE, tai shop er job er key e shop_id rakho, na hole ek shop er job onno shop er ta atkay.
 - `last_error` ar alert log e handler er error puro jay: provider er error e body, URL, phone ba OTP rakhbe na, shudhu status ar provider er code (12.2).
-- OTP er `sms.send` er alada retry (1 minute por ekbar, 8.17) M4 e.
+- OTP er `sms.send` `max_attempts` 2: `backoff(1)` = 1 minute, tai alada retry niyom nai; backoff bodlale OTP o bodlay.
+- `otpText` ekhon ekta Bangla lekha; `sms.otp` template (locale, shop override) M4 step 9 e.
+- `alert.security` ekhon shudhu `level=WARN` log `security alert`; email/webhook M12 e.
 
 ## Proshno-uttor
 

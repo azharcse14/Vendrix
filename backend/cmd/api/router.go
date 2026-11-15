@@ -8,11 +8,15 @@ import (
 	"net/http"
 	"time"
 
+	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/shop"
 )
+
+// siteverifyURL: Turnstile (test e fake server).
+var siteverifyURL = auth.SiteverifyURL
 
 // pinger: *sql.DB (test e fake).
 type pinger interface {
@@ -40,6 +44,11 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/translations", public(http.HandlerFunc(sh.Translations)))
 	mux.Handle("GET /api/policies/{kind}", public(http.HandlerFunc(sh.Policy)))
 	catalog.NewHandlers(d, log).Routes(mux, public)
+
+	// OTP send e public limit er upore client IP te ghontay 10 (7.8)
+	ah := auth.NewHandlers(d, log, cfg.OTPSecret, auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret})
+	otpIP := httpx.RateLimit(10, time.Hour)
+	mux.Handle("POST /api/auth/otp/send", public(otpIP(http.HandlerFunc(ah.SendOTP))))
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {

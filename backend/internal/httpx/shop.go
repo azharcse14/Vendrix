@@ -15,6 +15,7 @@ type Shop struct {
 	Mode     string // single, marketplace
 	Status   string // active, suspended, closed
 	Timezone string
+	Domain   string // ei request er X-Shop-Host (lowercase, port chhara); Turnstile er hostname (10.11)
 }
 
 // ResolveShop: domain (lowercase, port chhara) → shop; na pele ok false.
@@ -40,6 +41,7 @@ func ShopFromHost(log *slog.Logger, resolve ResolveShop) Middleware {
 			case s.Status == "suspended":
 				WriteError(w, r, http.StatusLocked, ErrorBody{Code: "shop_suspended"})
 			default:
+				s.Domain = hostname(r.Header.Get("X-Shop-Host"))
 				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), shopKey, s)))
 			}
 		})

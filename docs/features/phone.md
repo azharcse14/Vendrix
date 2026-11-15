@@ -18,7 +18,7 @@ Ei kram e poro:
 
 | File → function | Ki kore |
 |---|---|
-| `backend/internal/phone/phone.go` → `Normalize` | Normalize |
+| `backend/internal/phone/phone.go` → `Normalize`, `Mask` | Normalize; log/alert er mask |
 | `backend/internal/phone/phone_test.go` | Thik ar bhul input |
 | `packages/shared/lib/validation/phone.dart` → `normalizePhone` | Ekoi niyom Dart e (form e sathe sathe check; bhul hole `null`), v1.12; Dart er `\s` U+0085 dhore na, tai alada jog |
 
@@ -27,6 +27,7 @@ Ei kram e poro:
 | Niyom (design section) | Code e kothay | Test |
 |---|---|---|
 | E.164 e save (Rule 6, 8.1) | `Normalize` | `TestNormalize` |
+| Log ar alert e phone er shudhu shesh 3 digit (12.2) | `Mask` | `TestMask` |
 | Bhul okkhor chupchap fele na (8.1) | `Normalize` | `TestNormalize` |
 | `+` er por `880`, ekbar-i (8.1) | `Normalize` | `TestNormalize` |
 | Dart er niyom Go er sathe ekoi, ekoi case (8.1, v1.12) | `normalizePhone` | `test/validation/phone_test.dart` → `group('normalizePhone (8.1, Go er sathe ekoi)')` |
@@ -43,7 +44,7 @@ Ei kram e poro:
 
 - Notun operator prefix hole `Normalize`, Dart er `normalizePhone` ar `phone_bd` domain tinta-i (domain er jonno notun migration).
 - Go er `TestNormalize` er case bodlale `packages/shared/test/validation/phone_test.dart` e hubohu copy (v1.12); server sob shomoy Go diye abar check kore, Dart shudhu form er jonno.
-- Log e phone mask (`+88017****5678`, 12.2): mask er function M4 e ashbe (ekhono nai).
+- Log ar alert e phone mask (12.2): `phone.Mask` shesh 3 digit (`***678`); `notify` ar `auth` use kore.
 
 ## Proshno-uttor
 

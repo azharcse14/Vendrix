@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"errors"
 )
 
 // Seal (2.2): AES-256-GCM, random nonce; ad (AAD) bhul hole Open fail, tai ek row er ciphertext onno row e
@@ -23,6 +24,9 @@ func Open(key []byte, ad string, ct, nonce []byte) ([]byte, error) {
 	gcm, err := newGCM(key)
 	if err != nil {
 		return nil, err
+	}
+	if len(nonce) != gcm.NonceSize() {
+		return nil, errors.New("nonce er dairgho bhul") // gcm.Open panic kore
 	}
 	return gcm.Open(nil, nonce, ct, []byte(ad))
 }

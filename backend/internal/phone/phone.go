@@ -52,3 +52,11 @@ func Normalize(in string) (string, error) {
 	}
 	return "+88" + d, nil
 }
+
+// Mask (12.2): log ar alert e phone er shudhu shesh 3 digit.
+func Mask(phone string) string {
+	if len(phone) <= 3 {
+		return "***"
+	}
+	return "***" + phone[len(phone)-3:]
+}

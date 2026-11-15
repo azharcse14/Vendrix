@@ -18,6 +18,7 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/jobs"
@@ -78,7 +79,8 @@ func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog
 		return err
 	}
 	w := jobs.NewWorker(database, log, map[string]jobs.Handler{
-		"sms.send": notify.SendSMSJob(notify.NewSMS(cfg.Env, log)),
+		"sms.send":       notify.SendSMSJob(notify.NewSMS(cfg.Env, log), auth.SMSCode(database, cfg.OTPSecret)),
+		"alert.security": notify.SecurityAlertJob(log),
 	})
 	wctx, stopWorker := context.WithCancel(ctx)
 	done := make(chan struct{})
