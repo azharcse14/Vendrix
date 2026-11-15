@@ -91,7 +91,7 @@ const bn = {
   'login.change_phone': 'নম্বর বদলান',
   'login.noscript': 'লগইন করতে ব্রাউজারে JavaScript চালু করুন।',
   'account.title': 'আমার অ্যাকাউন্ট',
-  'account.phone': 'মোবাইল',
+  'account.phone': 'মোবাইল: {phone}',
   'account.name': 'নাম',
   'account.locale': 'SMS এর ভাষা',
   'account.locale.bn': 'বাংলা',

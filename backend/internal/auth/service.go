@@ -78,7 +78,7 @@ func sendOTP(ctx context.Context, d *sql.DB, secret string, ts Turnstile, in sen
 		if locked {
 			// alert commit hobe, tai error na diye limit
 			limit = limitError{retry}
-			return lockAlert(ctx, tx, in)
+			return lockAlert(ctx, tx, secret, in)
 		}
 		for _, l := range otpSendLimits {
 			if retry, hit, err := sendLimit(ctx, tx, in.ShopID, in.Phone, l.n, l.window); err != nil || hit {
@@ -114,14 +114,15 @@ func cmpErr(dbErr, rule error) error {
 }
 
 // lockAlert (7.8, Q9): alert.security, din e ekbar (dedupe_key e shop er timezone er din); payload e phone mask.
-func lockAlert(ctx context.Context, tx *sql.Tx, in sendInput) error {
+// dedupe_key e phone er HMAC tag (v1.26): jobs row 30 din thake, plain phone PII.
+func lockAlert(ctx context.Context, tx *sql.Tx, secret string, in sendInput) error {
 	loc, err := time.LoadLocation(in.Timezone)
 	if err != nil {
 		loc = time.UTC
 	}
 	day := time.Now().In(loc).Format(time.DateOnly)
 	return jobs.Enqueue(ctx, tx, jobs.New{ShopID: in.ShopID, Kind: "alert.security",
-		DedupeKey: "alert.otp_lock:" + strconv.FormatInt(in.ShopID, 10) + ":" + in.Phone + ":" + day,
+		DedupeKey: "alert.otp_lock:" + strconv.FormatInt(in.ShopID, 10) + ":" + phoneTag(secret, in.Phone) + ":" + day,
 		Payload:   map[string]string{"event": "otp_phone_lock", "phone": phone.Mask(in.Phone)}})
 }
 
@@ -183,7 +184,7 @@ type verifyInput struct {
 // Cart merge M5 e (X-Cart-Key ekhon ignore).
 func verifyOTP(ctx context.Context, d *sql.DB, secret string, in verifyInput) (string, User, error) {
 	const purpose = "login"
-	if err := phoneLocked(ctx, d, in); err != nil {
+	if err := phoneLocked(ctx, d, secret, in); err != nil {
 		return "", User{}, err
 	}
 	id, err := latestOTP(ctx, d, in.ShopID, in.Phone, purpose)
@@ -204,7 +205,7 @@ func verifyOTP(ctx context.Context, d *sql.DB, secret string, in verifyInput) (s
 		return "", User{}, errOTPInvalid // ei majhe expire ba onno request e use
 	}
 	if !CheckOTP(secret, in.Phone, purpose, in.Code, hash) {
-		return "", User{}, cmpErr(phoneLocked(ctx, d, in), errOTPInvalid)
+		return "", User{}, cmpErr(phoneLocked(ctx, d, secret, in), errOTPInvalid)
 	}
 	token, th := newSessionToken()
 	var u User
@@ -226,7 +227,7 @@ func verifyOTP(ctx context.Context, d *sql.DB, secret string, in verifyInput) (s
 }
 
 // phoneLocked (7.8, Q3): 24 ghontay 10 bhul hole limitError, ar alert.security (din e ekbar, lockAlert).
-func phoneLocked(ctx context.Context, d *sql.DB, in verifyInput) error {
+func phoneLocked(ctx context.Context, d *sql.DB, secret string, in verifyInput) error {
 	var limit error
 	err := db.InTx(ctx, d, func(tx *sql.Tx) error {
 		limit = nil
@@ -235,7 +236,7 @@ func phoneLocked(ctx context.Context, d *sql.DB, in verifyInput) error {
 			return err
 		}
 		limit = limitError{retry}
-		return lockAlert(ctx, tx, sendInput{ShopID: in.ShopID, Timezone: in.Timezone, Phone: in.Phone})
+		return lockAlert(ctx, tx, secret, sendInput{ShopID: in.ShopID, Timezone: in.Timezone, Phone: in.Phone})
 	})
 	return cmpErr(err, limit)
 }

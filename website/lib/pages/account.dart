@@ -51,7 +51,7 @@ class AccountPage extends AsyncStatelessComponent {
             .text(site.error(error)),
           ],
         ),
-      p([.text('${site.t('account.phone')}: ${me.phone}')]),
+      p([.text(site.t('account.phone', {'phone': me.phone}))]),
       form(action: '/_/account', method: FormMethod.post, classes: 'space-y-4', [
         label(classes: 'block space-y-1', [
           span(classes: 'text-sm', [.text(site.t('account.name'))]),

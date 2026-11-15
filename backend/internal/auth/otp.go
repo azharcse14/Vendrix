@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 )
@@ -28,4 +29,11 @@ func HashOTP(secret, phone, purpose, code string) []byte {
 // CheckOTP: hmac.Equal (constant time), jate shomoy dekhe code anda na jay.
 func CheckOTP(secret, phone, purpose, code string, hash []byte) bool {
 	return hmac.Equal(HashOTP(secret, phone, purpose, code), hash)
+}
+
+// phoneTag (7.8 v1.26): alert er dedupe_key e phone er bodole HMAC(OTP_SECRET, "otp_lock:"+phone) er 16 hex.
+func phoneTag(secret, phone string) string {
+	m := hmac.New(sha256.New, []byte(secret))
+	m.Write([]byte("otp_lock:" + phone))
+	return hex.EncodeToString(m.Sum(nil)[:8])
 }

@@ -92,7 +92,7 @@ const en = {
   'login.change_phone': 'Change number',
   'login.noscript': 'Turn on JavaScript in your browser to log in.',
   'account.title': 'My account',
-  'account.phone': 'Mobile',
+  'account.phone': 'Mobile: {phone}',
   'account.name': 'Name',
   'account.locale': 'SMS language',
   'account.locale.bn': 'বাংলা',
