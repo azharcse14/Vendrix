@@ -9,6 +9,7 @@ import (
 	"net/mail"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"vendrix/backend/internal/httpx"
@@ -56,8 +57,7 @@ func (h *Handlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 	case err == nil:
 		httpx.WriteJSON(w, http.StatusOK, map[string]bool{"sent": true})
 	case errors.As(err, &limit):
-		w.Header().Set("Retry-After", strconv.Itoa(max(int(math.Ceil(limit.retry.Seconds())), 1)))
-		httpx.WriteError(w, r, http.StatusTooManyRequests, httpx.ErrorBody{Code: "rate_limited"})
+		writeLimit(w, r, limit.retry)
 	case errors.Is(err, errTurnstile):
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "turnstile_failed"})
 	case errors.Is(err, errPhoneBlocked):
@@ -86,19 +86,14 @@ func (h *Handlers) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s, _ := httpx.ShopFrom(r.Context())
-	ua := r.UserAgent()
-	if len(ua) > 512 { // client er lekha, tai shima; table na bare
-		ua = strings.ToValidUTF8(ua[:512], "")
-	}
 	token, u, err := verifyOTP(r.Context(), h.db, h.otpSecret, verifyInput{ShopID: s.ID, Timezone: s.Timezone, Phone: p,
-		Code: in.Code, Locale: httpx.Locale(r), IP: httpx.IP(r.Context()), UserAgent: ua})
+		Code: in.Code, Locale: httpx.Locale(r), IP: httpx.IP(r.Context()), UserAgent: userAgent(r)})
 	var limit limitError
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "user": u})
 	case errors.As(err, &limit):
-		w.Header().Set("Retry-After", strconv.Itoa(max(int(math.Ceil(limit.retry.Seconds())), 1)))
-		httpx.WriteError(w, r, http.StatusTooManyRequests, httpx.ErrorBody{Code: "rate_limited"})
+		writeLimit(w, r, limit.retry)
 	case errors.Is(err, errOTPInvalid):
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "otp_invalid"})
 	case errors.Is(err, errOTPAttempts):
@@ -188,4 +183,19 @@ func (h *Handlers) internal(w http.ResponseWriter, r *http.Request, what string,
 	s, _ := httpx.ShopFrom(r.Context())
 	h.log.ErrorContext(r.Context(), what, append([]any{"request_id", httpx.RequestIDFrom(r.Context()), "shop_id", s.ID, "err", err}, attrs...)...)
 	httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
+}
+
+// writeLimit: 429 rate_limited + Retry-After (kom-poksha 1 second).
+func writeLimit(w http.ResponseWriter, r *http.Request, retry time.Duration) {
+	w.Header().Set("Retry-After", strconv.Itoa(max(int(math.Ceil(retry.Seconds())), 1)))
+	httpx.WriteError(w, r, http.StatusTooManyRequests, httpx.ErrorBody{Code: "rate_limited"})
+}
+
+// userAgent: session er user_agent; client er lekha, tai 512 byte porjonto (table na bare).
+func userAgent(r *http.Request) string {
+	ua := r.UserAgent()
+	if len(ua) > 512 {
+		ua = strings.ToValidUTF8(ua[:512], "")
+	}
+	return ua
 }

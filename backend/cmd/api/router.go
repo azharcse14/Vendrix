@@ -56,6 +56,12 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/me", public(customer(http.HandlerFunc(ah.Me))))
 	mux.Handle("PATCH /api/me", public(customer(http.HandlerFunc(ah.UpdateMe))))
 
+	// staff login (7.7, 8.3): shop context chhara; shop body er slug ba temp_token er session theke
+	adm := auth.NewAdminHandlers(d, log, cfg.TOTPKey, cfg.RecoverySecret)
+	mux.HandleFunc("POST /api/admin/auth/login", adm.Login)
+	mux.HandleFunc("POST /api/admin/auth/totp", adm.TOTP)
+	mux.HandleFunc("POST /api/admin/auth/recovery", adm.Recovery)
+
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
 		if err := cop.AddTrustedOrigin(o); err != nil {

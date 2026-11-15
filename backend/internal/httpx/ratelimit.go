@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"net/netip"
@@ -69,4 +70,26 @@ func clientKey(ip string) string {
 	}
 	p, _ := a.Prefix(64)
 	return p.String()
+}
+
+// FailLimit (7.8 staff login): ek client IP te window e limit ta bhul. Take age gone (parallel e-o limit par
+// hoy na), bhul na hole Refund; tai shudhu bhul gona thake.
+type FailLimit struct{ l *rateLimiter }
+
+func NewFailLimit(limit int, window time.Duration) *FailLimit {
+	return &FailLimit{newRateLimiter(limit, window)}
+}
+
+// Take: request er client IP (ctx) er slot; na pele false ar koto second por.
+func (f *FailLimit) Take(ctx context.Context) (bool, int) {
+	return f.l.allow(rateKey{ip: clientKey(IP(ctx))})
+}
+
+// Refund: Take er slot ferot (thik login, lock ba server er bhul).
+func (f *FailLimit) Refund(ctx context.Context) {
+	f.l.mu.Lock()
+	defer f.l.mu.Unlock()
+	if k := (rateKey{ip: clientKey(IP(ctx))}); f.l.counts[k] > 0 {
+		f.l.counts[k]--
+	}
 }

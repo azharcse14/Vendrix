@@ -30,8 +30,10 @@ Ei kram e poro:
 | `backend/internal/httpx/log.go` → `Log`, `statusWriter` | Request log |
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
 | `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
-| `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha (`invalid_phone`, `turnstile_failed`, `phone_blocked`, `otp_invalid`, `otp_too_many_attempts`, `session_expired` shoho); `Locale` public lekha er bhasha (catalog) |
+| `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha (`invalid_phone`, `turnstile_failed`, `phone_blocked`, `otp_invalid`, `otp_too_many_attempts`, `session_expired`, `invalid_credentials`, `mfa_invalid`, `mfa_too_many_attempts` shoho); `Locale` public lekha er bhasha (catalog) |
 | `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow`, `clientKey` | Public rate limit |
+| `backend/internal/httpx/ratelimit.go` → `FailLimit`, `NewFailLimit`, `Take`, `Refund` | Staff login er client IP limit: shudhu bhul gone (Take age, bhul na hole Refund; 7.8) |
+| `backend/internal/httpx/cookie.go` → `AdminCookie` | Admin session cookie `__Host-asid` (`HttpOnly; Secure; SameSite=Strict; Path=/`, Max-Age; 11.3) |
 | `backend/internal/httpx/staff.go` → `Staff`, `WithStaff`, `StaffFrom`, `RequireStaff`, `RequireRole` | Admin er staff ar role |
 | `backend/internal/httpx/session.go` → `Customer`, `LookupCustomer`, `RequireCustomer`, `CustomerFrom` | Customer route er Bearer session (lookup `auth` e) |
 | `backend/internal/httpx/httpx_test.go`, `page_test.go`, `message_test.go`, `staff_test.go`, `ratelimit_test.go` | Test |

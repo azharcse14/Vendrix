@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/pbkdf2"
 	"crypto/rand"
 	"crypto/sha256"
@@ -48,4 +49,22 @@ func CheckPassword(stored, password string) bool {
 	}
 	got, err := pbkdf2.Key(sha256.New, password, salt, iter, len(want))
 	return err == nil && subtle.ConstantTimeCompare(got, want) == 1
+}
+
+// dummyHash (8.3 step 1): ochena email e-o ekta 600000 iteration er tulona, jate response er shomoy dekhe
+// email ache kina bojha na jay. Password random, kono password e mile na.
+const dummyHash = "pbkdf2-sha256$600000$sbcxGh7BiclZnlK3brM2rw==$ojvMPx6ZlYTD6Oyu+YkcBLCVZUx/QR5DqHcQAnGYYqw="
+
+// pbkdfSem (8.3 step 1): ek shathe 4 tar beshi PBKDF2 na; na hole login er dhel e CPU bhore baki API atke.
+var pbkdfSem = make(chan struct{}, 4)
+
+// checkPasswordSem: semaphore er slot niye CheckPassword; opekkhay request bondho hole ctx er error.
+func checkPasswordSem(ctx context.Context, stored, password string) (bool, error) {
+	select {
+	case pbkdfSem <- struct{}{}:
+	case <-ctx.Done():
+		return false, ctx.Err()
+	}
+	defer func() { <-pbkdfSem }()
+	return CheckPassword(stored, password), nil
 }

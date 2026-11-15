@@ -4,7 +4,7 @@ Design: 8.2, 8.3, 7.3, 7.8, 8.17, 10.11, 12.2 · Milestone: M4 · Code: `backend
 
 ## Ki kore
 
-Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekhon ache primitive (staff password er hash, OTP er code ar hash, TOTP (RFC 6238) ar tar secret er encryption, recovery code) ar `POST /api/auth/otp/send`: Turnstile, phone er limit ar lock, shop er SMS cap par hole OTP SMS job e jay. `POST /api/auth/otp/verify` code mile gele customer account (notun hole banay), oi phone er guest order account e jog ar 30 diner session token dey; `GET`/`PATCH /api/me` profile (naam, email, bhasha), `POST /api/auth/logout`. Staff login, TOTP setup ar recovery er endpoint M4 er porer step e ([M4](../milestones/M4.md)).
+Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekhon ache primitive (staff password er hash, OTP er code ar hash, TOTP (RFC 6238) ar tar secret er encryption, recovery code) ar `POST /api/auth/otp/send`: Turnstile, phone er limit ar lock, shop er SMS cap par hole OTP SMS job e jay. `POST /api/auth/otp/verify` code mile gele customer account (notun hole banay), oi phone er guest order account e jog ar 30 diner session token dey; `GET`/`PATCH /api/me` profile (naam, email, bhasha), `POST /api/auth/logout`. Staff `POST /api/admin/auth/login` (shop slug, email, password) e TOTP thakle 5 minuter `temp_token` pay, tarpor `/auth/totp` ba `/auth/recovery` e 12 ghontar admin session (`__Host-asid` cookie); TOTP na thakle 15 minuter `setup_pending` session. Setup endpoint (`/auth/password`, `/auth/totp/setup`, `/auth/totp/enable`) ar admin session middleware M4 step 7 e ([M4](../milestones/M4.md)).
 
 ## Kivabe kaj kore
 
@@ -26,6 +26,18 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 10. Customer route: `httpx.RequireCustomer` + `LookupSession` (`session.go`): `sessionByHash` (ei shop, `customer`, `active`, revoke na, user delete na); expire `401 session_expired`, baki `401 unauthenticated`; `last_used_at` 1 ghontar beshi purono hole `touchSession`.
 11. `Logout` (`revokeSession`, `204`), `Me` (`getUser`), `UpdateMe` (`updateUser`: field na dile bodlay na, `name`/`email` `""` hole NULL; naam max 100 okkhor, email `net/mail` er ekta thikana max 254, `locale` `bn`/`en`).
 12. Recovery: `recovery.go` → `NewRecoveryCodes` 10 ta `XXXXX-XXXXX`; `HashRecoveryCode(RECOVERY_SECRET, staff_id, code)` `-`/space bad, boro haat kore `HMAC-SHA256(secret, staff_id:CODE)`. DB te hash diye khoja (PK `staff_id, code_hash`), tai alada tulona function nai.
+13. Staff login (`POST /api/admin/auth/login {shop, email, password}`, shop context chhara): `admin_handler.go` → `Login`: age `httpx.FailLimit.Take` (client IP te 15 minute e 10 bhul; bhul chhara shob e `Refund`), tarpor `staff.go` → `staffLogin`:
+   - `staffForLogin` (slug er shop, status jai hok (closed o, Q7), `lower(email)`). Ochena shop/email ba inactive: `checkPasswordSem(dummyHash)` (600000 iteration, timing ekoi), `401 invalid_credentials`; audit `staff.login_failed` (ochena email e `staff_id` NULL, `email` choto haat; ochena shop e audit nai, shop nai).
+   - `locked_until` baki thakle `429` + `Retry-After` (PBKDF2 er age, audit `reason: locked`).
+   - `checkPasswordSem` (`password.go`: `pbkdfSem` chan, ek shathe 4; opekkhay request bondho hole ctx error). Bhul: `bumpFailed` (`failed_logins + 1`; notun gona 5 ba beshi hole `locked_until = now + 1 minute`), 10 ar 50 e `securityAlert` (`alert.security` `{event: staff_login_failed, staff_id, count}`), audit; `401 invalid_credentials`.
+   - Thik: `resetFailedLogins` (conditional: majhe lock hole `429`), `newSessionToken`, `insertStaffSession`: TOTP thakle `mfa_pending` (5 minute) → `{totp_required: true, temp_token}` (body te, cookie na); na hole `setup_pending` (15 minute) → `httpx.AdminCookie` (Max-Age 900) + `{setup_required: true}`. Audit `staff.login` (`stage`).
+14. TOTP ar recovery (`POST /api/admin/auth/totp` ba `/recovery {temp_token, code}`): `admin_handler.go` → `TOTP`/`Recovery` → `staff.go` → `verifyMFA`:
+   - `mfaSession` (token hash e `mfa_pending`, revoke na, staff active; shop session er row theke); na pele `401 unauthenticated`, expire `401 session_expired`; staff `locked_until` e `429`.
+   - `countMFAAttempt` (autocommit, conditional `mfa_attempts < 5`); na hole `400 mfa_too_many_attempts`.
+   - TOTP: `OpenTOTPSecret` (row er `totp_key_version`) → `CheckTOTP`; recovery: `HashRecoveryCode`.
+   - `db.InTx`: `useTOTPStep` (`totp_last_step` conditional, replay atkay) ba `useRecoveryCode` (`used_at` conditional) → `activateSession` (oi row-i `active` 12 ghonta, `must_change_password` hole `setup_pending` 15 minute; `token_hash` notun) → `mfaSucceeded` (`failed_mfa = 0`, `last_login_at`) → audit `staff.login_mfa`.
+   - Bhul (ba replay/use kora code): `mfaFailed`: `bumpFailed` (`failed_mfa + 1`, 10 ba beshi hole 30 minute lock ar `429`), 10 e alert (`staff_mfa_lock`), audit `staff.login_mfa_failed`; na hole `400 mfa_invalid`.
+   - Thik hole `httpx.AdminCookie` (43200 ba 900) + `{setup_required}`.
 
 ## Code er map
 
@@ -46,6 +58,11 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 | `backend/internal/auth/handler.go` → `VerifyOTP`, `Logout`, `Me`, `UpdateMe`, `writeUser`, `internal` | Verify, logout, `/api/me` er HTTP |
 | `backend/internal/auth/service.go` → `verifyOTP`, `phoneLocked`, `User`, `UserPatch` | Verify er niyom (attempt, lock, consume, user, order, session) |
 | `backend/internal/auth/session.go` → `newSessionToken`, `tokenHash`, `LookupSession` | Session token ar `RequireCustomer` er lookup |
+| `backend/internal/auth/password.go` → `checkPasswordSem`, `pbkdfSem`, `dummyHash` | Ek shathe 4 PBKDF2, ochena email er dummy tulona |
+| `backend/internal/auth/admin_handler.go` → `NewAdminHandlers`, `Login`, `TOTP`, `Recovery` | Staff login er HTTP, IP limit, cookie, error code |
+| `backend/internal/auth/staff.go` → `staffLogin`, `verifyMFA`, `mfaFailed`, `securityAlert` | Staff login, TOTP/recovery er niyom (lock, alert, audit) |
+| `backend/internal/auth/staff_store.go` → `staffForLogin`, `bumpFailed`, `resetFailedLogins`, `insertStaffSession`, `mfaSession`, `countMFAAttempt`, `useTOTPStep`, `useRecoveryCode`, `activateSession`, `mfaSucceeded`, `insertAudit` | Staff login er SQL |
+| `backend/internal/auth/handler.go` → `writeLimit`, `userAgent` | `429` + `Retry-After`, session er user_agent (512 byte) |
 | `backend/internal/auth/store.go` → `latestOTP`, `countAttempt`, `attemptsUsed`, `consumeOTP`, `upsertUser`, `linkGuestOrders`, `insertSession`, `sessionByHash`, `touchSession`, `revokeSession`, `getUser`, `updateUser` | Verify ar session er SQL |
 
 ## Niyom ar tar test
@@ -70,11 +87,18 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 | Guest order jog shudhu thik verify er por, `user_id IS NULL`, ei shop (8.2 step 5) | `linkGuestOrders` | `TestGuestOrdersLinkIntegration` |
 | Session: `rand.Text`, DB te `sha256`, 30 din, ip/user_agent; notun user er locale `Accept-Language`; logout revoke; expire `session_expired`; staff token customer route e `401`; `last_used_at` ghontay ekbar; `/api/me` validate (8.2 step 4, 7, 12.2, Rule 16, Q10 iii) | `verifyOTP`, `LookupSession`, `Logout`, `UpdateMe` | `TestCustomerSessionIntegration` |
 | Onno shop er token `401` (logout o na); OTP ar user shop onujayi (3.2, Rule 3) | `sessionByHash`, `latestOTP`, `upsertUser` | `TestSessionShopIsolationIntegration` |
+| Staff login: ochena shop/email ba inactive e dummy hash, shob `401 invalid_credentials`; `failed_logins`, 5 er por protiti bhul e 1 minute lock (`429`), thik hole 0; 10 ar 50 e alert; TOTP thakle `mfa_pending` temp_token (body, 5 minute), na hole `setup_pending` + `__Host-asid` 900; shob login audit; closed/suspended shop e chole; onno shop er slug e na (8.3 step 1-4, 7.7, Q7, Q9) | `staffLogin`, `bumpFailed`, `resetFailedLogins` | `TestStaffLoginIntegration` |
+| Ek shathe 4 tar beshi PBKDF2 na (8.3 step 1) | `checkPasswordSem` | `TestPBKDFSemaphore` |
+| Client IP te 15 minute e 10 bhul login, shudhu bhul gone (7.8) | `Login`, `httpx.FailLimit` | `TestLoginIPLimit` |
+| Ek temp_token e 5 bar (parallel e o); expire `session_expired`; thik hole oi row active 12 ghonta, token notun, cookie 43200; `must_change_password` e TOTP er por `setup_pending` (8.3 step 2-4) | `verifyMFA`, `countMFAAttempt`, `activateSession` | `TestMFAAttemptsIntegration` |
+| TOTP ekoi code ba purono step duibar na (parallel o) (8.3 step 2 v1.5, 14.2 test 10) | `useTOTPStep` | `TestTOTPReplayIntegration` |
+| `failed_mfa` temp_token jure 10 e 30 minute lock + alert, lock e login o na, thik hole 0 (8.3 step 2, 14.2 test 10) | `mfaFailed`, `bumpFailed` | `TestFailedMFAAcrossTokensIntegration` |
+| Recovery code ekbar (parallel o), `-`/space/case bad, onno staff er na (8.3 step 3) | `useRecoveryCode` | `TestRecoveryCodeIntegration` |
 | Recovery: 10 ta, `crypto/rand` 10 okkhor base32, `XXXXX-XXXXX`; hash `HMAC-SHA256(RECOVERY_SECRET, staff_id:code)`, `-`/space/case bad (8.3 step 5, 6) | `NewRecoveryCodes`, `HashRecoveryCode` | `TestRecoveryCode` |
 
 ## Data
 
-`staff.password_hash`; `otp_codes.code_hash` (`BYTEA`, 32 byte) — migration `001_init.sql`. `staff.totp_secret_enc`, `totp_nonce`, `totp_key_version` (`staff_totp_check`: tinta ekshathe NULL ba na), `totp_last_step`; `staff_recovery_codes.code_hash`. OTP verify `otp_codes.attempts`, `consumed_at` bodlay, `users` e row (upsert), `orders.user_id` (guest), `sessions` e customer row (`token_hash`, `expires_at`, `last_used_at`, `revoked_at`). OTP send `otp_codes` e row (`expires_at` 5 minute) ar `jobs` e `sms.send` (ba lock e `alert.security`) lekhe, `blocked_phones` pore, `shop_settings.published` er `checkout.sms_daily_cap` ar `shops.timezone` pore; index `otp_phone_idx`. TOTP, recovery er table e lekha step 6-7 e.
+`staff.password_hash`; `otp_codes.code_hash` (`BYTEA`, 32 byte) — migration `001_init.sql`. `staff.totp_secret_enc`, `totp_nonce`, `totp_key_version` (`staff_totp_check`: tinta ekshathe NULL ba na), `totp_last_step`; `staff_recovery_codes.code_hash`. OTP verify `otp_codes.attempts`, `consumed_at` bodlay, `users` e row (upsert), `orders.user_id` (guest), `sessions` e customer row (`token_hash`, `expires_at`, `last_used_at`, `revoked_at`). OTP send `otp_codes` e row (`expires_at` 5 minute) ar `jobs` e `sms.send` (ba lock e `alert.security`) lekhe, `blocked_phones` pore, `shop_settings.published` er `checkout.sms_daily_cap` ar `shops.timezone` pore; index `otp_phone_idx`. Staff login `staff.failed_logins`, `failed_mfa`, `locked_until`, `totp_last_step`, `last_login_at`, `staff_recovery_codes.used_at` bodlay; `sessions` e staff row (`stage` `mfa_pending` → `active`/`setup_pending`, `mfa_attempts`, `token_hash` active hole notun); `audit_logs` (`staff.login`, `staff.login_failed`, `staff.login_mfa`, `staff.login_mfa_failed`, `after` e `reason`/`stage`/`method`); `jobs` e `alert.security`. TOTP setup ar recovery code toiri step 7 e.
 
 ## Bhul hole ki hoy
 
@@ -86,6 +110,8 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 - OTP send: bhul JSON ba `purpose` `400 validation_failed`; bhul phone `400 invalid_phone`; Turnstile fail `400 turnstile_failed`; Cloudflare e jete na parle ba DB error `500 internal` (log e phone mask); blocked `403 phone_blocked`; limit, lock ba cap `429 rate_limited` + `Retry-After`.
 - OTP verify: bhul JSON `400 validation_failed`, bhul phone `400 invalid_phone`; OTP nai, expire, use hoye geche ba bhul code `400 otp_invalid`; 5 attempt shesh `400 otp_too_many_attempts`; lock `429 rate_limited` + `Retry-After`; DB error `500 internal` (log e phone mask).
 - Customer route: token nai/bhul/onno shop/revoke/staff `401 unauthenticated`, expire `401 session_expired`; user delete hole `/api/me` `401`. `PATCH /api/me` bhul field e `400 validation_failed` (`fields` e kon ta).
+- Staff login: bhul JSON `400 validation_failed`; ochena shop/email, inactive, bhul password `401 invalid_credentials`; account lock ba IP limit `429 rate_limited` + `Retry-After`; DB error `500`.
+- TOTP/recovery: temp_token nai/bhul/customer/active hoye geche `401 unauthenticated`, expire `401 session_expired`; 5 attempt shesh `400 mfa_too_many_attempts`; bhul, replay ba use kora code `400 mfa_invalid`; lock `429`; `OpenTOTPSecret` fail (bhul `TOTP_KEY`) `500`.
 - `SMSCode`: onno shop, onno otp id ba onno `OTP_SECRET` e error (job retry, shesh e failed ar alert).
 - `NewOTPCode`: `crypto/rand` fail korle panic (Go te rand fail kore na; korle chalano nirapod na).
 
@@ -99,6 +125,8 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 - OTP send er limit er number `service.go` er `otpSendLimits`, `otpLockWrong`; bodlate 7.8 age (`design-change`).
 - `otpSMSKey` er info ba AAD bodlale queue te thaka OTP job decrypt hoy na (5 minute e mullohin, tai shudhu deploy er muhurter OTP).
 - Session token er hash (`tokenHash`) ba TTL bodlale website er `__Host-sid` Max-Age (10.3) o; hash bodlale chalu shob session batil.
+- Staff login er lock er number `staff.go` er const (`loginLockAfter`, `mfaLockAfter` ...); bodlate 8.3/7.8 age. `dummyHash` er iteration `HashPassword` er shoman rakho, na hole timing e email chena jay.
+- `__Host-asid` er flag shudhu `httpx.AdminCookie` e; Max-Age `adminTTL`/`setupTTL` er sathe mile (11.3).
 - Verify er attempt `countAttempt` transaction er baire-i thakbe (8.2 step 2); transaction e nile `ROLLBACK` e attempt muche jay.
 - Recovery hash er input (normalize, `staff_id:code`) ba `RECOVERY_SECRET` bodlale shob staff er code batil; `TestRecoveryCode` er vector o bodlao.
 
@@ -108,6 +136,10 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 - **Verify e Turnstile na keno?** OTP nijei 5 attempt ar 24 ghontar lock e bandha; Turnstile send e (14.2 test 23).
 - **Lock er 10 tomo bhul e `429`, `otp_invalid` na keno?** Tokhon theke lock chalu; client `Retry-After` dekhe opekkha kore, lock ache bole na (7.8).
 - **Response e user id nai keno?** Client er lage na; serial id baire dei na (Rule 11 er moto).
+
+- **TOTP er por token bodlay keno?** Temp_token response body te JS dekhe; oi token-i HttpOnly cookie hole XSS e pawa temp_token pore admin session hoto. Row ekoi (8.3 step 3), shudhu `token_hash` notun.
+- **TOTP thakle `must_change_password` holeo age TOTP keno?** 8.3 step 4 "password (ar TOTP thakle TOTP)": na hole shudhu password e `setup_pending` pele `/auth/totp/setup` e TOTP bodle dewa jeto.
+- **Alert e `dedupe_key` nai keno?** Gona thik 10/50 te ekbar pouchay (conditional `UPDATE`), thik login e 0; dedupe key unique chirokal, tai porer bar alert atkato.
 
 - **Code `string` keno, `int` na?** Samne zero (`012345`) thakte hobe; SMS, hash ar input shob ekoi lekha.
 - **TOTP library keno na?** 2.2: stdlib + pgx chhara dependency na; RFC 6238 20 line, appendix B vector diye test.
