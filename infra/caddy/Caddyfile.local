@@ -1,0 +1,22 @@
+# Local https (13.1, v1.27): `make https`. `__Host-sid`/`__Host-asid` browser e shudhu https e thake,
+# tai production er moto ekoi cookie naam, local e Caddy er nijer CA (`tls internal`).
+# Browser e warning na chaile ekbar `caddy trust` (keychain e Caddy er local root CA; user nije chalay).
+# Shop host: LOCAL_SHOP_HOSTS (space diye), default sobujbazar.localhost.
+{
+  local_certs
+  skip_install_trust                 # system trust e nije hat dey na; `caddy trust` user er command
+  auto_https disable_redirects       # :80 e listen na
+  https_port 8443
+  default_bind 127.0.0.1             # shudhu ei machine theke
+}
+(app_proxy) {                        # Caddyfile er moto: X-Forwarded-Proto https Caddy nijei dey
+  header_up X-Real-IP {client_ip}
+  header_up -X-Client-IP             # client nije boshate parbe na (3.2)
+  header_up -X-Internal-Auth
+}
+{$LOCAL_SHOP_HOSTS:sobujbazar.localhost} {
+  reverse_proxy 127.0.0.1:8081 {     # make web (Jaspr)
+    import app_proxy
+  }
+}
+# M7: admin.localhost (Flutter web admin ar /api), admin er code ashle ekhane block.

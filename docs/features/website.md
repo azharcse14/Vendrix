@@ -111,7 +111,7 @@ Nai (website database dhore na; shob Go API theke).
 - Notun personal cookie (jemon M4/M5 e) hole `_personal` e jog ar test.
 - `Document(base: null)` (`render.dart`): `<base>` CSP `base-uri 'none'` e atke, tokhon client script relative path e `/c/...`, `/p/...` page e 404 hoy ar hydration (filter dialog, variant) chole na; base na thakle Jaspr `/main.client.dart.js` dey.
 - Jaspr update hole `jaspr install-skills --agent claude-code` abar ar `*.options.dart` (`dart run build_runner build`).
-- `__Host-sid` e `Secure` ar `__Host-` prefix: browser shudhu https e rakhe, tai local `make web` (http) e login er cookie thake na (Chromium `InvalidPrefix`); browser e login dekhte local https proxy lage (16.1 v1.23 er proshno, M7 er age).
+- `__Host-sid` e `Secure` ar `__Host-` prefix: browser shudhu https e rakhe, tai local `make web` (http) e login er cookie thake na (Chromium `InvalidPrefix`); browser e login `make https` diye `https://sobujbazar.localhost:8443` e (Caddy `tls internal`, 13.1 v1.27). Cookie naam env onujayi bodlabe na.
 
 ## Proshno-uttor
 

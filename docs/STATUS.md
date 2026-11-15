@@ -23,7 +23,6 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## User er kache proshno
 
-- **M7 er age**: local http e `__Host-sid`/`__Host-asid` Chromium e thake na (https lage), tai `make web` e browser login hoy na; (a) local https (Caddy `tls internal`) recommendation, (b) local e prefix chhara naam, (c) kichu na (16.1, v1.23).
 - **M12 er age**: client JS er `?v=<git sha>` (10.10 item 10): Jaspr nijei script tag dey, hook nai; recommendation deploy e Cloudflare purge (16.1).
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
@@ -55,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: 16.1 local `__Host-` cookie: user (a), design v1.27 `bf33e68` (13.1, 13.3); `make https` (Caddy `tls internal`, `infra/caddy/Caddyfile.local`, `scripts/https.sh`); Chromium e `https://sobujbazar.localhost:8443` OTP login → `/account` e `__Host-sid` thake. User: `brew install caddy`, ekbar `caddy trust`.
 - 15 November 2026: M4 step 15 design review baki finding: design v1.26 `bb57e10` (error code, response, rate limit note, audit action, 16.1 SMS cap DoS), test `7f765fe`, fix `4bc4b88` (OTP lock alert key HMAC, account phone placeholder), feature doc `868f489`; M4.md test 23 ☑.
 - 15 November 2026: M4 step 15 TOTP pending (user decision, security-reviewer M2): design v1.25 `d35a877`, test `aea4dcb` (fail dekhe), fix `2cf0ede` (setup er secret `totp_pending_*` e, enable e live; TOTP live + `must_change_password` e password bodlale session `active`); `make db-test` 85/85, `-race` green. `TestStaffLockRaceIntegration` er flake: shombhoboto Mac sleep (wall clock 5 minute er beshi agay), code race na; 22 bar `-race` pass.
 - 15 November 2026: M4 step 15 review fix: design v1.24 `8d61dfe` (staff lock atomic reservation, account lock e `401` user decision), test `b7d95fa` (fail dekhe), fix `d3b2c72` (`reserveFailed`, purono temp_token revoke, `/auth/password` gona, audit e `email_domain`, auth `no-store`, totp/recovery IP limit, alert `dedupe_key` din); asol Postgres e `-race` green. Step 15 er baki: `make check`, acceptance, report.
@@ -69,4 +69,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 15 November 2026: 16.1 Turnstile test secret er hostname: user (a), design v1.22 `c559ca6` (10.11, 13.5); test `1f86d07`, code `9b03b5b` (`config.TurnstileTestSecret`, test secret e `Turnstile.Verify` hostname check na).
 - 15 November 2026: M4 step 5: test `67aa30c` (OTP attempt/expire/parallel verify, guest order jog, customer session, shop isolation; build fail dekhe), code `12aad8b` (`POST /api/auth/otp/verify`, `RequireCustomer` + `LookupSession`, logout, `GET`/`PATCH /api/me`); asol Postgres e `-race` pass.
 - 15 November 2026: M4 step 4 (ar 8): test `3681ea1`, code `453dae4` (`POST /api/auth/otp/send`: Turnstile, phone limit/lock, SMS cap, payload AES-GCM, IP limit); asol Postgres e pass; 16.1 e Turnstile test secret er hostname proshno (v1.21).
-- 15 November 2026: M4 step 3: AES-GCM helper `auth.Seal`/`Open` e `08023df`, test `3384d7a` (`TestTOTP`, `TestTOTPSecretAAD`, `TestRecoveryCode`), code `d8ea20c` (`totp.go`, `recovery.go`).

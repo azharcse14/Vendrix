@@ -1,5 +1,5 @@
 # Asol kaj scripts/ e (Windows/Git Bash e make na thakle sorasori chalao).
-.PHONY: quick-check check db-test rules db-up db-down migrate run web dev-seed
+.PHONY: quick-check check db-test rules db-up db-down migrate run web https dev-seed
 quick-check:
 	@bash scripts/quick-check.sh
 check:
@@ -24,3 +24,6 @@ run:
 # Website (Jaspr + Tailwind): website/.env lage (cp website/env.example website/.env)
 web:
 	@bash scripts/web.sh
+# Local https (__Host- cookie er jonno): make web er sathe alada terminal e; https://sobujbazar.localhost:8443
+https:
+	@bash scripts/https.sh
