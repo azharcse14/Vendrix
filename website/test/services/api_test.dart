@@ -10,6 +10,7 @@ void main() {
     'JASPR_INTERNAL_SECRET': 's3cret',
     'IMAGE_BASE_URL': 'https://img.example.com',
     'IMAGE_RESIZE': 'cloudflare',
+    'TURNSTILE_SITE_KEY': '1x00000000000000000000AA',
   });
 
   group('API header (3.2, 10.3)', () {
@@ -53,6 +54,19 @@ void main() {
         }),
         throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('IMAGE_RESIZE'))),
       );
+    });
+
+    test('TURNSTILE_SITE_KEY na thakle FormatException (10.11 item 2)', () {
+      expect(
+        () => Config.fromEnv({
+          'API_BASE_URL': 'http://127.0.0.1:8090',
+          'JASPR_INTERNAL_SECRET': 'x',
+          'IMAGE_BASE_URL': 'https://img.example.com',
+          'IMAGE_RESIZE': 'none',
+        }),
+        throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('TURNSTILE_SITE_KEY'))),
+      );
+      expect(cfg.turnstileSiteKey, '1x00000000000000000000AA');
     });
 
     test('IMAGE_RESIZE: cloudflare → true', () {

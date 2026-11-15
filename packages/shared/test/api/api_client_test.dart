@@ -261,4 +261,44 @@ void main() {
       expect(await repo.translations('en'), {'cart.add': 'Add'});
     });
   });
+
+  group('Account (7.3, 10.11 item 4)', () {
+    test('token thakle Authorization: Bearer; me() → User', () async {
+      late http.Request seen;
+      final api = ApiClient(
+        Uri.parse('http://api.test'),
+        MockClient((r) async {
+          seen = r;
+          return json({
+            'phone': '01712345678',
+            'name': 'রহিম',
+            'email': null,
+            'locale': 'bn',
+          }, 200);
+        }),
+        token: 'TOK2ABC',
+      );
+      final u = await AccountRepository(api).me();
+      expect(seen.url.path, '/api/me');
+      expect(seen.headers['Authorization'], 'Bearer TOK2ABC');
+      expect([u.phone, u.name, u.email, u.locale], [
+        '01712345678',
+        'রহিম',
+        null,
+        'bn',
+      ]);
+    });
+    test('token na thakle Authorization nai; shape bhul hole FormatException', () async {
+      late http.Request seen;
+      final api = ApiClient(
+        Uri.parse('http://api.test'),
+        MockClient((r) async {
+          seen = r;
+          return json({'phone': 1}, 200);
+        }),
+      );
+      await expectLater(AccountRepository(api).me(), throwsFormatException);
+      expect(seen.headers.containsKey('Authorization'), isFalse);
+    });
+  });
 }

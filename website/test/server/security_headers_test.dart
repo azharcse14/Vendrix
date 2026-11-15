@@ -28,5 +28,28 @@ void main() {
         'frame-ancestors': "'none'",
       });
     });
+
+    test('Turnstile shudhu /login ar /en/login e: script-src ar frame-src (10.11 item 3)', () async {
+      final handler = securityHeaders(Uri.parse('https://img.example.com'))((_) => Response.ok(''));
+      Future<Map<String, String>> csp(String path) async {
+        final h = (await handler(Request('GET', Uri.parse('http://shop.test$path')))).headers;
+        return {
+          for (final d in h['content-security-policy']!.split(';').map((s) => s.trim()))
+            d.split(' ').first: d.split(' ').skip(1).join(' '),
+        };
+      }
+
+      for (final path in ['/login', '/en/login', '/login?next=/account']) {
+        final c = await csp(path);
+        expect(c['script-src'], "'self' https://challenges.cloudflare.com", reason: path);
+        expect(c['frame-src'], 'https://challenges.cloudflare.com', reason: path);
+        expect(c['frame-ancestors'], "'none'", reason: path);
+      }
+      for (final path in ['/', '/account', '/p/login', '/login/x', '/_/auth/otp/send']) {
+        final c = await csp(path);
+        expect(c['script-src'], "'self'", reason: path);
+        expect(c.containsKey('frame-src'), isFalse, reason: path);
+      }
+    });
   });
 }

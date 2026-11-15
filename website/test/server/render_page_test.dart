@@ -16,6 +16,7 @@ void main() {
     'JASPR_INTERNAL_SECRET': 's',
     'IMAGE_BASE_URL': 'https://img.test',
     'IMAGE_RESIZE': 'none',
+    'TURNSTILE_SITE_KEY': '1x00000000000000000000AA',
   });
   // Catalog API down (500): page er API bhul.
   final api = MockClient((_) async => http.Response('', 500));

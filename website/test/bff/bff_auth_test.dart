@@ -13,6 +13,7 @@ void main() {
     'JASPR_INTERNAL_SECRET': 's3cret',
     'IMAGE_BASE_URL': 'https://img.example.com',
     'IMAGE_RESIZE': 'none',
+    'TURNSTILE_SITE_KEY': '1x00000000000000000000AA',
   });
   const sid = '__Host-sid=TOK2ABC; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000';
   const cleared = '__Host-sid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
@@ -163,6 +164,28 @@ void main() {
       expect(res.statusCode, 303);
       expect(res.headers['location'], '/account');
       expect(res.headers['set-cookie'], cleared);
+    });
+
+    test('JS chhara account form: POST → PATCH /api/me (JSON), 303 Referer e', () async {
+      apiResponse = http.Response('{"phone":"01712345678","name":"Rahim","locale":"en"}', 200);
+      final res = await send(
+        'POST',
+        '/_/account',
+        headers: {
+          'origin': 'https://shop.example.com',
+          'cookie': '__Host-sid=TOK2ABC',
+          'content-type': 'application/x-www-form-urlencoded',
+          'referer': 'https://shop.example.com/en/account',
+        },
+        body: 'name=Rahim&locale=en',
+      );
+      final r = seen.single;
+      expect(r.method, 'PATCH');
+      expect(r.url.path, '/api/me');
+      expect(r.headers['Authorization'], 'Bearer TOK2ABC');
+      expect(jsonDecode(r.body), {'name': 'Rahim', 'locale': 'en'});
+      expect(res.statusCode, 303);
+      expect(res.headers['location'], '/en/account');
     });
 
     for (final path in ['/_/auth/otp/send', '/_/auth/otp/verify', '/_/auth/logout']) {

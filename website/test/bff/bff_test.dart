@@ -13,6 +13,7 @@ void main() {
     'JASPR_INTERNAL_SECRET': 's3cret',
     'IMAGE_BASE_URL': 'https://img.example.com',
     'IMAGE_RESIZE': 'none',
+    'TURNSTILE_SITE_KEY': '1x00000000000000000000AA',
   });
   // Fake route: /_/cart/items/{id} → /api/cart/items/{id}
   final routes = [
