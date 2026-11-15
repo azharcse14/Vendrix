@@ -65,7 +65,7 @@ Vendrix: ekoi code e single store, marketplace ar multi-tenant ecommerce (Bangla
 ## Command
 - `make quick-check` (ba `bash scripts/quick-check.sh`): gofmt, go vet, go test (docsync shoho), rule check; Dart/Flutter shudhu je folder e `pubspec.yaml` ache ar bodleche (`packages/shared` bodlale shob app). Protiti kaj shesh e; Claude Code er Stop hook o chalay.
 - `make check`: upore (shob part) + `make db-test` + `go test -race` asol Postgres shoho (`TEST_DATABASE_URL` PG env theke; PG env na thakle local `make db-up`, 5433). C compiler lage. Milestone shesh e ar CI te.
-- `make db-test`: notun C.UTF-8 database e `001_init.sql` + `tests/001_init_test.sql` (83/83). Lage: Postgres 16+ er `psql`, `createdb`, `dropdb`; libpq env (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`); role ar database banano onumoti.
+- `make db-test`: notun C.UTF-8 database e `001_init.sql` + `tests/001_init_test.sql` (85/85). Lage: Postgres 16+ er `psql`, `createdb`, `dropdb`; libpq env (`PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`); role ar database banano onumoti.
 - `make db-up` / `make db-down`: local Postgres 16 (`infra/docker-compose.yml`; `shop_owner`, `shop_app` role ar `shop` database).
 - `make migrate`, `make run`: `backend/.env` (`cp backend/env.example backend/.env`) diye migration ar API (`127.0.0.1:8080`, `GET /healthz`).
 - DB lage emon Go test `TEST_DATABASE_URL` na thakle `t.Skip` kore, tai `quick-check` DB chhara chole.

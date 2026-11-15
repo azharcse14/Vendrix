@@ -39,7 +39,7 @@
 22. **Edit**: item bad e fixed coupon onupate kome (৳900 + ৳100 → ৳100 er item free na); prepaid e total bare na.
 23. **Turnstile**: OTP resubmit e notun token lage na; retry (ekoi key, Turnstile token bodlaleo) ager order pay, karon hash e token nai. `otp_code` thakle shob shomoy verify, tai bhul code diye Turnstile edano jay na.
 24. **Cache**: cookie thaka page e `Cache-Control: private, no-store`.
-25. **Database**: `tests/001_init_test.sql` shob pass (83/83), protiti reject nirdishto constraint er karone.
+25. **Database**: `tests/001_init_test.sql` shob pass (85/85), protiti reject nirdishto constraint er karone.
 26. **Cancel cascade**: customer cancel, staff cancel (packed shoho), `auto_cancel_unconfirmed` ar `auto_cancel_unpaid` er por kono cancelled order e `open` ba `packed` fulfillment thake na; stock, batch, coupon ferot.
 27. **Pricing input**: ojon-variable e `WeightG` 0, quantity 0 ba minus, coupon kind er bhul banan → `ErrInvalidInput`; edit e quantity barano → error.
 28. **Doc sync**: `backend/internal/docsync` test pass (v1.6: doc er link er file ache, protiti doc file 60 KB er niche, 80 line er beshi code block nai, section thik file e, README ar AGENTS.md e protiti file).

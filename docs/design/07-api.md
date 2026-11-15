@@ -142,7 +142,7 @@ v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff cont
 
 | Bhag | Endpoint |
 |---|---|
-| Login | `POST /auth/login {shop, email, password}` (`shop` = slug) → `{totp_required, temp_token}`, ba `{setup_required}` ar `setup_pending` session cookie (8.3); `POST /auth/totp {temp_token, code}` → session cookie; `POST /auth/recovery {temp_token, code}`; `POST /auth/password {old, new}`; `POST /auth/totp/setup` → `{otpauth_url, secret}` (v1.19); `POST /auth/totp/enable {code}` → `{recovery_codes}`, session `active`; `POST /auth/logout`; `GET /me` |
+| Login | `POST /auth/login {shop, email, password}` (`shop` = slug) → `{totp_required, temp_token}`, ba `{setup_required}` ar `setup_pending` session cookie (8.3); `POST /auth/totp {temp_token, code}` → session cookie; `POST /auth/recovery {temp_token, code}`; `POST /auth/password {old, new}` (v1.25: TOTP live ar `must_change_password` hole session `active`, notun cookie); `POST /auth/totp/setup` → `{otpauth_url, secret}` (v1.19; v1.25: pending secret, live na); `POST /auth/totp/enable {code}` → `{recovery_codes}`, pending → live, session `active` (v1.25: live TOTP thakle setup/enable `403`); `POST /auth/logout`; `GET /me` |
 | Dashboard | `GET /dashboard` (ajker order, bikri, pending, low stock, expiry kache, deadline kache) |
 | Product | `GET, POST /products`; `GET, PATCH /products/{id}`; `POST /products/{id}/variants`; `PATCH /variants/{id}`; `POST /products/{id}/images` (multipart); `PATCH /products/{id}/images/order`; `DELETE /images/{id}` |
 | Category | `GET, POST /categories`; `PATCH, DELETE /categories/{id}` |

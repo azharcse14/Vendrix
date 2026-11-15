@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.24, 15 November 2026
+Version 1.25, 15 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -17,7 +17,7 @@ Ei design er shathe ready file. v1.6 theke egulo-i asol spec: doc e copy nai, sh
 | File | Section |
 |---|---|
 | [`backend/migrations/001_init.sql`](../../backend/migrations/001_init.sql) | 6.7 (puro schema) |
-| [`backend/migrations/tests/001_init_test.sql`](../../backend/migrations/tests/001_init_test.sql) | 6, 14.2 er test 25 (83 ta constraint test; `make db-test`, M0 theke CI te) |
+| [`backend/migrations/tests/001_init_test.sql`](../../backend/migrations/tests/001_init_test.sql) | 6, 14.2 er test 25 (85 ta constraint test; `make db-test`, M0 theke CI te) |
 | [`backend/internal/phone`](../../backend/internal/phone/phone.go) | 8.1 |
 | [`backend/internal/pricing`](../../backend/internal/pricing/pricing.go) | 8.5 |
 | [`backend/internal/order`](../../backend/internal/order/order.go) | 8.8 |
@@ -76,3 +76,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.22 | 15 November 2026 | 10.11, 13.5, 16.1: Turnstile secret Cloudflare er test secret hole siteverify er `hostname` check bad, asol secret e local eo check (user decision (a); test secret `example.com` dey, ar local chhara config e atke) |
 | 1.23 | 15 November 2026 | 16.1: local http e `__Host-` cookie Chromium e thake na (https scheme lage), tai `make web` e browser login hoy na; proshno M7 er age (M4 step 13) |
 | 1.24 | 15 November 2026 | 8.3, 7.8, 8.17, 12.2, 16.1 (M4 step 15 review): password ar `failed_mfa` lock check er age atomic reservation (parallel e lock edano jeto); account lock e `401` (user decision, enumeration); `GREATEST` diye lock choto hoy na; `/auth/password` e bhul purono password gona; audit e ochena email er shudhu domain; auth response e `no-store`; `/auth/totp`, `/recovery` e IP limit; staff alert er `dedupe_key` (din); password bodlale "ekhon er session chhara" |
+| 1.25 | 15 November 2026 | 8.3, 6.4, 6.7, 7.7, 16.1 (M4 step 15 review, user decision): TOTP setup er secret pending column e (`staff.totp_pending_*`), `/auth/totp/enable` e thik code e live; login shudhu live dekhe, tai setup kore enable na korle staff atke na; TOTP live ar `must_change_password` e password bodlale session `active`; live TOTP e setup/enable `403` |

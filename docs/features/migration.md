@@ -15,7 +15,7 @@ Design: 6.1, 6.6, 6.7, 13.5, 13.6 · Milestone: M0 · Code: `backend/internal/db
    2. `db.Pending`: applied file er hash mile kina, applied file ache kina, notun file shesh applied er porer number kina.
    3. Protiti notun file nijer transaction e: lock → abar dekha (onno runner chaliye thakle skip) → `set_config('app.env', $1, true)` → file → `schema_migrations` e insert.
 4. `001_init.sql` er shesh block: `shop_app` role er onumoti (history te DELETE nai, `schema_migrations` e shudhu SELECT); role na thakle `app.env` `local` chhara fail.
-5. `scripts/db-test.sh`: notun C.UTF-8 database e `001` ar `tests/001_init_test.sql` (83 ta constraint test).
+5. `scripts/db-test.sh`: notun C.UTF-8 database e `001` ar `tests/001_init_test.sql` (85 ta constraint test).
 
 ## Code er map
 
@@ -46,7 +46,7 @@ Ei kram e poro:
 | `shop_app` `schema_migrations` e shudhu SELECT (6.1) | `001_init.sql` | `TestMigrateIntegration` |
 | Deadlock ba serialization e ekbar retry (8.6) | `InTx`, `retryable` | `TestRetryable` |
 | pgx chhara spashto error | `Open` | `TestOpenWithoutDriver` |
-| Schema er constraint (6.4) | `001_init.sql` | `tests/001_init_test.sql` (`make db-test`, 83/83) |
+| Schema er constraint (6.4) | `001_init.sql` | `tests/001_init_test.sql` (`make db-test`, 85/85) |
 
 ## Data
 

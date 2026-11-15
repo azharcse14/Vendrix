@@ -2,7 +2,7 @@
 
 ## 6. Database design
 
-Puro schema PostgreSQL 16 e chaliye test kora hoyeche (table, constraint, index, niche-r query gulo, ar 6.4 er bhul atkano). File ta `backend/migrations/001_init.sql` e rakho; test `backend/migrations/tests/001_init_test.sql` (83 ta test, protiti reject test e constraint er naam, shesh e `ROLLBACK`) M0 theke CI te chalao. Puro SQL file e-i (6.7 e link); v1.6 theke doc e copy nai.
+Puro schema PostgreSQL 16 e chaliye test kora hoyeche (table, constraint, index, niche-r query gulo, ar 6.4 er bhul atkano). File ta `backend/migrations/001_init.sql` e rakho; test `backend/migrations/tests/001_init_test.sql` (85 ta test, protiti reject test e constraint er naam, shesh e `ROLLBACK`) M0 theke CI te chalao. Puro SQL file e-i (6.7 e link); v1.6 theke doc e copy nai.
 
 ### 6.1 Database er niyom
 
@@ -232,6 +232,7 @@ Database nijei ei bhul gulo atkay (protiti ta Postgres 16 e test kora):
 | Removed item e taka baki (v1.5) | `CHECK` (`order_items_removed_zero_check`) |
 | Coupon chhara discount, ba coupon chhara coupon er vendor/max (v1.5) | `CHECK` (`orders_discount_coupon_check`, `orders_coupon_snapshot_check`) |
 | TOTP secret ache kintu key version nai (v1.5) | `CHECK` (`staff_totp_check`) |
+| Setup er pending TOTP secret ache kintu key version nai (v1.25) | `CHECK` (`staff_totp_pending_check`) |
 | Ek shop e ekoi coupon code boro/choto hater duibar (`EID`, `eid`; v1.7 test) | Unique index `coupons_code_uniq` (`upper(code)`) |
 
 ### 6.5 JSONB column er format
@@ -267,6 +268,6 @@ Number gulo naam hishebe. MVP te hotfix migration lagle (jemon `002_fix_...`) po
 
 ### 6.7 Puro schema: `001_init.sql`
 
-Puro schema: [`backend/migrations/001_init.sql`](../../backend/migrations/001_init.sql). Constraint test: [`backend/migrations/tests/001_init_test.sql`](../../backend/migrations/tests/001_init_test.sql) (83 ta, `make db-test`).
+Puro schema: [`backend/migrations/001_init.sql`](../../backend/migrations/001_init.sql). Constraint test: [`backend/migrations/tests/001_init_test.sql`](../../backend/migrations/tests/001_init_test.sql) (85 ta, `make db-test`).
 
 v1.6: ei section e ar schema er copy nai, file-i asol. Schema bodlate age 6.1–6.6 er niyom, table ba query te likho (version, README), tarpor file; deploy er por notun `00N_*.sql` (6.6).
