@@ -31,6 +31,8 @@ var otpSendLimits = []struct {
 var (
 	errTurnstile    = errors.New("turnstile failed")
 	errPhoneBlocked = errors.New("phone blocked")
+	errOTPInvalid   = errors.New("otp invalid")   // 400 otp_invalid
+	errOTPAttempts  = errors.New("otp 5 attempt") // 400 otp_too_many_attempts
 )
 
 // limitError: 429 rate_limited, Retry-After shoho.
@@ -151,4 +153,86 @@ func SMSCode(d *sql.DB, secret string) func(ctx context.Context, shopID, otpID i
 		}
 		return phone, string(code), nil
 	}
+}
+
+// User: /api/auth/otp/verify ar /api/me er profile (7.3). ID dey na (Rule 11 er moto, client er lage na).
+type User struct {
+	Phone  string  `json:"phone"`
+	Name   *string `json:"name"`
+	Email  *string `json:"email"`
+	Locale string  `json:"locale"`
+}
+
+// UserPatch: PATCH /api/me; nil = bodlabe na.
+type UserPatch struct {
+	Name, Email, Locale *string
+}
+
+type verifyInput struct {
+	ShopID                int64
+	Timezone              string
+	Phone, Code           string // Phone E.164
+	Locale, IP, UserAgent string // notun user er locale (Accept-Language), session er ip, user_agent
+}
+
+// verifyOTP (8.2 verify step 1-7): lock → shesh OTP → attempt (nijer commit e) → hmac.Equal → ek transaction
+// e consume, user upsert, guest order jog, session. Bhul code e 24 ghontar bhul 10 hole lock (429) ar alert.
+// Cart merge M5 e (X-Cart-Key ekhon ignore).
+func verifyOTP(ctx context.Context, d *sql.DB, secret string, in verifyInput) (string, User, error) {
+	const purpose = "login"
+	if err := phoneLocked(ctx, d, in); err != nil {
+		return "", User{}, err
+	}
+	id, err := latestOTP(ctx, d, in.ShopID, in.Phone, purpose)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", User{}, errOTPInvalid
+	}
+	if err != nil {
+		return "", User{}, err
+	}
+	hash, ok, err := countAttempt(ctx, d, in.ShopID, id)
+	if err != nil {
+		return "", User{}, err
+	}
+	if !ok {
+		if used, err := attemptsUsed(ctx, d, in.ShopID, id); err != nil || used {
+			return "", User{}, cmpErr(err, errOTPAttempts)
+		}
+		return "", User{}, errOTPInvalid // ei majhe expire ba onno request e use
+	}
+	if !CheckOTP(secret, in.Phone, purpose, in.Code, hash) {
+		return "", User{}, cmpErr(phoneLocked(ctx, d, in), errOTPInvalid)
+	}
+	token, th := newSessionToken()
+	var u User
+	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
+		if ok, err := consumeOTP(ctx, tx, in.ShopID, id); err != nil || !ok {
+			return cmpErr(err, errOTPInvalid)
+		}
+		userID, user, err := upsertUser(ctx, tx, in.ShopID, in.Phone, in.Locale)
+		if err != nil {
+			return err
+		}
+		u = user
+		if err := linkGuestOrders(ctx, tx, in.ShopID, userID, in.Phone); err != nil {
+			return err
+		}
+		return insertSession(ctx, tx, in.ShopID, userID, th, in.IP, in.UserAgent, customerSessionTTL)
+	})
+	return token, u, err
+}
+
+// phoneLocked (7.8, Q3): 24 ghontay 10 bhul hole limitError, ar alert.security (din e ekbar, lockAlert).
+func phoneLocked(ctx context.Context, d *sql.DB, in verifyInput) error {
+	var limit error
+	err := db.InTx(ctx, d, func(tx *sql.Tx) error {
+		limit = nil
+		retry, locked, err := phoneLock(ctx, tx, in.ShopID, in.Phone, otpLockWrong)
+		if err != nil || !locked {
+			return err
+		}
+		limit = limitError{retry}
+		return lockAlert(ctx, tx, sendInput{ShopID: in.ShopID, Timezone: in.Timezone, Phone: in.Phone})
+	})
+	return cmpErr(err, limit)
 }

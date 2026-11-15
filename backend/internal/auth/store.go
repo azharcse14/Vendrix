@@ -82,3 +82,119 @@ func otpPhone(ctx context.Context, d *sql.DB, shopID, otpID int64) (string, erro
 func seconds(s sql.NullFloat64) time.Duration {
 	return time.Duration(s.Float64 * float64(time.Second))
 }
+
+// latestOTP (8.2 verify step 1): oi phone ar purpose er shesh, use na hoya, expire na hoya OTP.
+func latestOTP(ctx context.Context, d *sql.DB, shopID int64, phone, purpose string) (int64, error) {
+	var id int64
+	err := d.QueryRowContext(ctx, `SELECT id FROM otp_codes
+		WHERE shop_id = $1 AND phone = $2 AND purpose = $3 AND consumed_at IS NULL AND expires_at > now()
+		ORDER BY created_at DESC, id DESC LIMIT 1`, shopID, phone, purpose).Scan(&id)
+	return id, err
+}
+
+// countAttempt (8.2 verify step 2): autocommit e (verify er transaction er baire), jate porer bhul ba
+// ROLLBACK eo gona thake; conditional, tai parallel e-o 5 er beshi na. Kichu na ele ok false.
+func countAttempt(ctx context.Context, d *sql.DB, shopID, id int64) ([]byte, bool, error) {
+	var hash []byte
+	err := d.QueryRowContext(ctx, `UPDATE otp_codes SET attempts = attempts + 1
+		WHERE id = $1 AND shop_id = $2 AND attempts < 5 AND consumed_at IS NULL AND expires_at > now()
+		RETURNING code_hash`, id, shopID).Scan(&hash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	return hash, err == nil, err
+}
+
+func attemptsUsed(ctx context.Context, d *sql.DB, shopID, id int64) (bool, error) {
+	var used bool
+	err := d.QueryRowContext(ctx, `SELECT attempts >= 5 FROM otp_codes WHERE id = $1 AND shop_id = $2`, id, shopID).Scan(&used)
+	return used, err
+}
+
+// consumeOTP (8.2 verify step 3 v1.7): conditional, tai ekoi code e duita verify duita session pay na.
+func consumeOTP(ctx context.Context, tx *sql.Tx, shopID, id int64) (bool, error) {
+	res, err := tx.ExecContext(ctx, `UPDATE otp_codes SET consumed_at = now()
+		WHERE id = $1 AND shop_id = $2 AND consumed_at IS NULL`, id, shopID)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n == 1, err
+}
+
+func scanUser(row *sql.Row) (int64, User, error) {
+	var id int64
+	var u User
+	err := row.Scan(&id, &u.Phone, &u.Name, &u.Email, &u.Locale)
+	return id, u, err
+}
+
+// upsertUser (8.2 verify step 4): (shop_id, phone) e user; notun hole locale request theke, purono user er
+// kichu bodlay na. Delete kora account er phone NULL, tai conflict hoy na, notun account.
+func upsertUser(ctx context.Context, tx *sql.Tx, shopID int64, phone, locale string) (int64, User, error) {
+	return scanUser(tx.QueryRowContext(ctx, `INSERT INTO users (shop_id, phone, locale) VALUES ($1, $2, $3)
+		ON CONFLICT (shop_id, phone) DO UPDATE SET phone = EXCLUDED.phone RETURNING id, phone, name, email, locale`, shopID, phone, locale))
+}
+
+// linkGuestOrders (8.2 verify step 5): shudhu OTP verify er por; onno user er order chhoy na.
+func linkGuestOrders(ctx context.Context, tx *sql.Tx, shopID, userID int64, phone string) error {
+	_, err := tx.ExecContext(ctx, `UPDATE orders SET user_id = $1 WHERE shop_id = $2 AND customer_phone = $3 AND user_id IS NULL`,
+		userID, shopID, phone)
+	return err
+}
+
+func insertSession(ctx context.Context, tx *sql.Tx, shopID, userID int64, hash []byte, ip, ua string, ttl time.Duration) error {
+	_, err := tx.ExecContext(ctx, `INSERT INTO sessions (shop_id, token_hash, subject_type, user_id, ip, user_agent, expires_at)
+		VALUES ($1, $2, 'customer', $3, $4, $5, now() + make_interval(secs => $6))`, shopID, hash, userID, ip, ua, ttl.Seconds())
+	return err
+}
+
+type sessionRow struct {
+	id, userID     int64
+	expired, stale bool
+}
+
+// sessionByHash: ei shop er active customer session (user delete na); expire holeo row ashe (session_expired).
+func sessionByHash(ctx context.Context, d *sql.DB, shopID int64, hash []byte) (sessionRow, error) {
+	var s sessionRow
+	err := d.QueryRowContext(ctx, `SELECT s.id, s.user_id, s.expires_at <= now(), s.last_used_at < now() - interval '1 hour'
+		FROM sessions s JOIN users u ON u.shop_id = s.shop_id AND u.id = s.user_id AND u.deleted_at IS NULL
+		WHERE s.token_hash = $1 AND s.shop_id = $2 AND s.subject_type = 'customer' AND s.stage = 'active'
+		  AND s.revoked_at IS NULL`, hash, shopID).Scan(&s.id, &s.userID, &s.expired, &s.stale)
+	return s, err
+}
+
+func touchSession(ctx context.Context, d *sql.DB, shopID, id int64) error {
+	_, err := d.ExecContext(ctx, `UPDATE sessions SET last_used_at = now()
+		WHERE id = $1 AND shop_id = $2 AND last_used_at < now() - interval '1 hour'`, id, shopID)
+	return err
+}
+
+func revokeSession(ctx context.Context, d *sql.DB, shopID, id int64) error {
+	_, err := d.ExecContext(ctx, `UPDATE sessions SET revoked_at = now() WHERE id = $1 AND shop_id = $2 AND revoked_at IS NULL`, id, shopID)
+	return err
+}
+
+func getUser(ctx context.Context, d *sql.DB, shopID, userID int64) (User, error) {
+	_, u, err := scanUser(d.QueryRowContext(ctx, `SELECT id, phone, name, email, locale FROM users
+		WHERE shop_id = $1 AND id = $2 AND deleted_at IS NULL`, shopID, userID))
+	return u, err
+}
+
+// updateUser (7.3): nil field bodlay na; name/email "" hole NULL.
+func updateUser(ctx context.Context, d *sql.DB, shopID, userID int64, p UserPatch) (User, error) {
+	_, u, err := scanUser(d.QueryRowContext(ctx, `UPDATE users SET
+		  name = CASE WHEN $3 THEN NULLIF($4, '') ELSE name END,
+		  email = CASE WHEN $5 THEN NULLIF($6, '') ELSE email END,
+		  locale = coalesce(NULLIF($7, ''), locale)
+		WHERE shop_id = $1 AND id = $2 AND deleted_at IS NULL RETURNING id, phone, name, email, locale`,
+		shopID, userID, p.Name != nil, deref(p.Name), p.Email != nil, deref(p.Email), deref(p.Locale)))
+	return u, err
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}

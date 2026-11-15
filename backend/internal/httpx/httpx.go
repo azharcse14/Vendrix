@@ -34,6 +34,7 @@ const (
 	clientIPKey
 	shopKey
 	staffKey
+	customerKey
 )
 
 // RequestID: protiti request e notun random id, X-Request-Id response header ar log e. Client er pathano

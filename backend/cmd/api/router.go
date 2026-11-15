@@ -49,6 +49,12 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	ah := auth.NewHandlers(d, log, cfg.OTPSecret, auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret})
 	otpIP := httpx.RateLimit(10, time.Hour)
 	mux.Handle("POST /api/auth/otp/send", public(otpIP(http.HandlerFunc(ah.SendOTP))))
+	mux.Handle("POST /api/auth/otp/verify", public(http.HandlerFunc(ah.VerifyOTP)))
+	// customer route: oi shop er customer session (3.2, Rule 16)
+	customer := httpx.RequireCustomer(log, auth.LookupSession(d))
+	mux.Handle("POST /api/auth/logout", public(customer(http.HandlerFunc(ah.Logout))))
+	mux.Handle("GET /api/me", public(customer(http.HandlerFunc(ah.Me))))
+	mux.Handle("PATCH /api/me", public(customer(http.HandlerFunc(ah.UpdateMe))))
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
