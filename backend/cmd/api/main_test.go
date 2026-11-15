@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -228,6 +229,89 @@ func TestOTPSendIPLimit(t *testing.T) {
 			if i == 10 && code != c.last {
 				t.Errorf("%s: 11 tomo send %d, chai %d", name, code, c.last)
 			}
+		}
+	}
+}
+
+// TestSessionRouteKind (14.2 test 19, 3.2 Niyom 3, Rule 16): router diye session er dhoron. Customer token admin
+// route e (Bearer ba cookie) 401; mfa_pending temp_token admin API te 401; setup_pending e setup route chole,
+// baki admin API 403 setup_required; active staff cookie admin e chole kintu customer route e (cookie ba Bearer) 401.
+func TestSessionRouteKind(t *testing.T) {
+	d := dbtest.New(t)
+	shopID, _, err := shop.Create(context.Background(), d, shop.Params{Slug: "a", Prefix: "SA", Domain: "a.com",
+		NameBn: "দোকান", OwnerEmail: "o@a.com", OwnerName: "O", Preset: "organic"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var userID, staffID int64
+	if err := d.QueryRow(`INSERT INTO users (shop_id, phone) VALUES ($1, '+8801711000001') RETURNING id`, shopID).Scan(&userID); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.QueryRow(`SELECT id FROM staff WHERE shop_id = $1`, shopID).Scan(&staffID); err != nil {
+		t.Fatal(err)
+	}
+	session := func(tok, kind, stage string) {
+		h := sha256.Sum256([]byte(tok))
+		var user, staff any
+		if kind == "customer" {
+			user = userID
+		} else {
+			staff = staffID
+		}
+		if _, err := d.Exec(`INSERT INTO sessions (shop_id, token_hash, subject_type, user_id, staff_id, stage, expires_at)
+			VALUES ($1, $2, $3, $4, $5, $6, now() + interval '1 hour')`, shopID, h[:], kind, user, staff, stage); err != nil {
+			t.Fatal(err)
+		}
+	}
+	session("cust-token", "customer", "active")
+	session("mfa-token", "staff", "mfa_pending")
+	session("setup-token", "staff", "setup_pending")
+	session("staff-token", "staff", "active")
+
+	cfg := testConfig()
+	cfg.TOTPKey = bytes.Repeat([]byte{7}, 32)
+	h, err := newHandler(cfg, quiet(), d, fakeDB{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	do := func(method, path, bearer, cookie string) (int, string) {
+		r := httptest.NewRequest(method, path, nil)
+		r.Header.Set("X-Shop-Host", "a.com")
+		if bearer != "" {
+			r.Header.Set("Authorization", "Bearer "+bearer)
+		}
+		if cookie != "" {
+			r.AddCookie(&http.Cookie{Name: "__Host-asid", Value: cookie})
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec.Code, rec.Body.String()
+	}
+	for _, c := range []struct {
+		name, method, path, bearer, cookie string
+		status                             int
+		code                               string
+	}{
+		{"customer Bearer admin e", "GET", "/api/admin/me", "cust-token", "", 401, "unauthenticated"},
+		{"customer token cookie te", "GET", "/api/admin/products", "", "cust-token", 401, "unauthenticated"},
+		{"mfa_pending cookie te", "GET", "/api/admin/me", "", "mfa-token", 401, "unauthenticated"},
+		{"mfa_pending Bearer", "GET", "/api/admin/products", "mfa-token", "", 401, "unauthenticated"},
+		{"mfa_pending setup route e", "POST", "/api/admin/auth/totp/setup", "", "mfa-token", 401, "unauthenticated"},
+		{"setup_pending product", "GET", "/api/admin/products", "", "setup-token", 403, "setup_required"},
+		{"setup_pending category", "POST", "/api/admin/categories", "", "setup-token", 403, "setup_required"},
+		{"setup_pending /me", "GET", "/api/admin/me", "", "setup-token", 403, "setup_required"},
+		{"setup_pending setup route", "POST", "/api/admin/auth/totp/setup", "", "setup-token", 200, ""},
+		{"active staff /me", "GET", "/api/admin/me", "", "staff-token", 200, ""},
+		{"active staff product", "GET", "/api/admin/products", "", "staff-token", 200, ""},
+		{"staff cookie customer route e", "GET", "/api/me", "", "staff-token", 401, "unauthenticated"},
+		{"staff token Bearer customer route e", "GET", "/api/me", "staff-token", "", 401, "unauthenticated"},
+		{"customer route", "GET", "/api/me", "cust-token", "", 200, ""},
+		{"setup_pending logout", "POST", "/api/admin/auth/logout", "", "setup-token", 204, ""},
+		{"logout er por", "POST", "/api/admin/auth/totp/setup", "", "setup-token", 401, "unauthenticated"},
+	} {
+		status, body := do(c.method, c.path, c.bearer, c.cookie)
+		if status != c.status || (c.code != "" && !strings.Contains(body, `"code":"`+c.code+`"`)) {
+			t.Errorf("%s: %d %s, chai %d %s", c.name, status, body, c.status, c.code)
 		}
 	}
 }

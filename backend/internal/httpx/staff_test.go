@@ -9,7 +9,8 @@ import (
 
 func ok204(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }
 
-// TestRequireStaff (3.2, v1.10): staff context na thakle shob shomoy 401 unauthenticated (fail-closed; login M4 e).
+// TestRequireStaff (3.2, v1.10, 8.3 step 4): staff context na thakle shob shomoy 401 unauthenticated (fail-closed);
+// setup_pending session e 403 setup_required.
 func TestRequireStaff(t *testing.T) {
 	h := RequireStaff(http.HandlerFunc(ok204))
 	rec := httptest.NewRecorder()
@@ -22,6 +23,12 @@ func TestRequireStaff(t *testing.T) {
 	h.ServeHTTP(rec, r.WithContext(WithStaff(r.Context(), Staff{ID: 1, ShopID: 1, Role: "owner"})))
 	if rec.Code != 204 {
 		t.Errorf("staff shoho: %d", rec.Code)
+	}
+	// 8.3 step 4: setup_pending session shudhu setup route e; baki admin route 403 setup_required
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, r.WithContext(WithStaff(r.Context(), Staff{ID: 1, ShopID: 1, Role: "owner", Setup: true})))
+	if rec.Code != 403 || errCode(t, rec) != "setup_required" {
+		t.Errorf("setup_pending: %d %s", rec.Code, rec.Body.String())
 	}
 	if _, ok := StaffFrom(context.Background()); ok {
 		t.Error("context chhara staff ache")

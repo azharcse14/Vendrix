@@ -56,6 +56,13 @@ func newStaffFixture(t *testing.T) *staffFixture {
 	mux.HandleFunc("POST /api/admin/auth/login", h.Login)
 	mux.HandleFunc("POST /api/admin/auth/totp", h.TOTP)
 	mux.HandleFunc("POST /api/admin/auth/recovery", h.Recovery)
+	// setup ar admin session (8.3 step 4, 11.3): __Host-asid cookie theke staff
+	sess := httpx.AdminSession(slog.New(slog.DiscardHandler), auth.LookupStaffSession(f.d))
+	mux.Handle("POST /api/admin/auth/password", sess(http.HandlerFunc(h.Password)))
+	mux.Handle("POST /api/admin/auth/totp/setup", sess(http.HandlerFunc(h.TOTPSetup)))
+	mux.Handle("POST /api/admin/auth/totp/enable", sess(http.HandlerFunc(h.TOTPEnable)))
+	mux.Handle("POST /api/admin/auth/logout", sess(http.HandlerFunc(h.Logout)))
+	mux.Handle("GET /api/admin/me", sess(httpx.RequireStaff(http.HandlerFunc(h.Me))))
 	f.admin = httpx.ClientIP("")(httpx.JSONErrors(mux))
 	return f
 }
