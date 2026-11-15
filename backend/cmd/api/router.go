@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"vendrix/backend/internal/auth"
+	"vendrix/backend/internal/cart"
 	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/httpx"
@@ -71,6 +72,9 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/admin/me", staff(httpx.RequireStaff(http.HandlerFunc(adm.Me))))
 
 	catalog.NewHandlers(d, log).Routes(mux, public, staff)
+	// cart (7.4, 8.4 item 2): Bearer thakle account cart (bhul/expire 401), na hole X-Cart-Key er guest cart
+	optCustomer := httpx.OptionalCustomer(log, auth.LookupSession(d))
+	cart.NewHandlers(d, log).Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {

@@ -17,7 +17,7 @@ Router (`cmd/api/router.go`) bairer theke ei kram e mure:
 5. `CORS`: shudhu `ADMIN_ORIGINS`, credentials shoho.
 6. `http.CrossOriginProtection` (router e): onno site er browser theke POST 403.
 
-Handler `WriteJSON`, `WriteError` (7.1) ar `DecodeJSON` (1 MB, ochena field e error) use kore. Customer route (`/api/me`, logout) e `ShopFromHost` er pore `RequireCustomer`: `Authorization: Bearer` token `LookupCustomer` (`auth.LookupSession`) diye oi shop er session e khoje, `CustomerFrom(ctx)` e `UserID`, `SessionID`. Admin route e `AdminSession`: cookie `__Host-asid` (`AdminCookieName`) `LookupStaff` (`auth.LookupStaffSession`) diye staff session e khoje (shop session theke, `X-Shop-Host` na; Bearer dekhe na), `WithStaff` e `Staff` (`SessionID`, `VendorID`, `Setup`); tarpor `RequireStaff`/`RequireRole` (`setup_pending` e `403 setup_required`).
+Handler `WriteJSON`, `WriteError` (7.1) ar `DecodeJSON` (1 MB, ochena field e error) use kore. Customer route (`/api/me`, logout) e `ShopFromHost` er pore `RequireCustomer`: `Authorization: Bearer` token `LookupCustomer` (`auth.LookupSession`) diye oi shop er session e khoje, `CustomerFrom(ctx)` e `UserID`, `SessionID`. Cart route e `OptionalCustomer`: `Authorization` header na thakle guest (Customer nai), thakle `RequireCustomer` hubohu (bhul/expire `401`, guest e fall back na; 8.4 item 2). Admin route e `AdminSession`: cookie `__Host-asid` (`AdminCookieName`) `LookupStaff` (`auth.LookupStaffSession`) diye staff session e khoje (shop session theke, `X-Shop-Host` na; Bearer dekhe na), `WithStaff` e `Staff` (`SessionID`, `VendorID`, `Setup`); tarpor `RequireStaff`/`RequireRole` (`setup_pending` e `403 setup_required`).
 
 ## Code er map
 
@@ -30,12 +30,12 @@ Ei kram e poro:
 | `backend/internal/httpx/log.go` → `Log`, `statusWriter` | Request log |
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
 | `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
-| `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha (`invalid_phone`, `turnstile_failed`, `phone_blocked`, `otp_invalid`, `otp_too_many_attempts`, `session_expired`, `invalid_credentials`, `mfa_invalid`, `mfa_too_many_attempts`, `setup_required`, `password_change_required` shoho); `Locale` public lekha er bhasha (catalog) |
+| `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha (`invalid_phone`, `turnstile_failed`, `phone_blocked`, `otp_invalid`, `otp_too_many_attempts`, `session_expired`, `invalid_credentials`, `mfa_invalid`, `mfa_too_many_attempts`, `setup_required`, `password_change_required`, `out_of_stock`, `cart_full` shoho); `Locale` public lekha er bhasha (catalog) |
 | `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow`, `clientKey` | Public rate limit |
 | `backend/internal/httpx/ratelimit.go` → `FailLimit`, `NewFailLimit`, `Take`, `Refund` | Staff login er client IP limit: shudhu bhul gone (Take age, bhul na hole Refund; 7.8) |
 | `backend/internal/httpx/cookie.go` → `AdminCookie`, `AdminCookieName` | Admin session cookie `__Host-asid` (`HttpOnly; Secure; SameSite=Strict; Path=/`, Max-Age; 11.3) |
 | `backend/internal/httpx/staff.go` → `Staff`, `WithStaff`, `StaffFrom`, `RequireStaff`, `RequireRole` | Admin er staff ar role, setup gate |
-| `backend/internal/httpx/session.go` → `Customer`, `LookupCustomer`, `RequireCustomer`, `CustomerFrom` | Customer route er Bearer session (lookup `auth` e) |
+| `backend/internal/httpx/session.go` → `Customer`, `LookupCustomer`, `RequireCustomer`, `OptionalCustomer`, `CustomerFrom` | Customer route er Bearer session (lookup `auth` e); cart e optional |
 | `backend/internal/httpx/session.go` → `LookupStaff`, `AdminSession` | Admin route er `__Host-asid` session (lookup `auth` e) |
 | `backend/internal/httpx/httpx_test.go`, `page_test.go`, `message_test.go`, `staff_test.go`, `ratelimit_test.go` | Test |
 
@@ -56,6 +56,7 @@ Ei kram e poro:
 | Admin session: customer token (Bearer ba cookie) ar `mfa_pending` temp_token admin e `401`; `setup_pending` e shudhu setup route; staff cookie/token customer route e `401` (3.2 Niyom 3, Rule 16, 14.2 test 19) | `AdminSession`, `auth.LookupStaffSession`, `RequireCustomer` | `TestSessionRouteKind` |
 | `__Host-asid` flag: `HttpOnly; Secure; SameSite=Strict; Path=/`, Domain na; Max-Age 43200/900, logout e 0 (11.3) | `AdminCookie` | `TestAdminCookie` |
 | Customer route: Bearer na, bhul, onno shop er, staff er ba revoke kora token `401 unauthenticated`, expire `401 session_expired` (3.2, Rule 16) | `RequireCustomer`, `auth.LookupSession` | `TestCustomerSessionIntegration`, `TestSessionShopIsolationIntegration` |
+| Cart route: Bearer na thakle guest; thakle `RequireCustomer` er path, bhul/expire `401` (8.4 item 2) | `OptionalCustomer` | `TestOptionalCustomer`, `TestCartKeyIntegration` |
 | Public: ek shop e ek client IP te minute e 120, tarpor `429 rate_limited` + `Retry-After`; key `shop_id:ip`, IPv6 e /64 (address ghuriye edano na) (7.8) | `RateLimit`, `clientKey` | `TestRateLimit` |
 | Paging `page`/`limit` (default 24, limit max 100, page max 10000: OFFSET overflow na), bhul e `400 validation_failed`; response `{"items","page","limit","total"}`, items `[]` (7.1) | `Page`, `NewPaged` | `TestPage` |
 | Client er pathano request id mane na | `RequestID` | `TestRequestID` |

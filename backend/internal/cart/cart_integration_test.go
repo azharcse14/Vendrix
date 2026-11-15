@@ -121,8 +121,11 @@ type cartJSON struct {
 
 type errJSON struct {
 	Error struct {
-		Code    string         `json:"code"`
-		Details map[string]any `json:"details"`
+		Code    string `json:"code"`
+		Details struct {
+			VariantID   int64 `json:"variant_id"`
+			MaxQuantity int   `json:"max_quantity"`
+		} `json:"details"`
 	} `json:"error"`
 }
 
@@ -213,7 +216,7 @@ func find(c cartJSON, variant int64) *item {
 
 func wantOutOfStock(t *testing.T, e errJSON, variant int64, max int) {
 	t.Helper()
-	if e.Error.Details["variant_id"] != float64(variant) || e.Error.Details["max_quantity"] != float64(max) {
+	if d := e.Error.Details; d.VariantID != variant || d.MaxQuantity != max {
 		t.Errorf("details %v, chai variant_id %d max_quantity %d", e.Error.Details, variant, max)
 	}
 }
@@ -448,7 +451,7 @@ func TestCartKeyIntegration(t *testing.T) {
 	if n := f.id(t, `SELECT count(*) FROM carts WHERE session_key = $1 AND user_id IS NULL`, sum[:]); n != 1 {
 		t.Fatal("DB te sha256 chai")
 	}
-	if n := f.id(t, `SELECT count(*) FROM carts WHERE convert_from(session_key, 'LATIN1') LIKE '%' || $1 || '%'`, key); n != 0 {
+	if n := f.id(t, `SELECT count(*) FROM carts WHERE position(convert_to($1, 'UTF8') in session_key) > 0`, key); n != 0 {
 		t.Fatal("plain key DB te")
 	}
 	c = f.ok(t, add("a.com", "", key, v, 2))

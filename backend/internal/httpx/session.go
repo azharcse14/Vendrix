@@ -49,6 +49,22 @@ func RequireCustomer(log *slog.Logger, lookup LookupCustomer) Middleware {
 	}
 }
 
+// OptionalCustomer (8.4 v1.28 item 2): cart route. Authorization header na thakle guest (Customer nai);
+// thakle RequireCustomer hubohu, tai bhul/expire token 401, chupchap guest cart e jay na.
+func OptionalCustomer(log *slog.Logger, lookup LookupCustomer) Middleware {
+	require := RequireCustomer(log, lookup)
+	return func(next http.Handler) http.Handler {
+		req := require(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			req.ServeHTTP(w, r)
+		})
+	}
+}
+
 // CustomerFrom: RequireCustomer er Customer; na thakle ok false.
 func CustomerFrom(ctx context.Context) (Customer, bool) {
 	c, ok := ctx.Value(customerKey).(Customer)
