@@ -42,6 +42,19 @@ void main() {
       expect(await run('/_/auth/otp/verify', response: res), 'private, no-store');
     });
 
+    test('cart ar wishlist (10.12): cart cookie ba notun __Host-cart, login er wishlist → private, no-store', () async {
+      expect(await run('/cart', cookie: '__Host-cart=k1'), 'private, no-store');
+      expect(await run('/en/cart', cookie: '__Host-sid=abc'), 'private, no-store');
+      expect(await run('/account/wishlist', cookie: '__Host-sid=abc'), 'private, no-store');
+      final res = Response.ok('', headers: {'set-cookie': '__Host-cart=k1'});
+      expect(await run('/_/cart/items', response: res), 'private, no-store');
+      expect(await run('/_/wishlist/5', cookie: '__Host-sid=abc'), 'private, no-store');
+    });
+
+    test('shudhu wl (guest wishlist, JS e) page public thake (10.12 item 3)', () async {
+      expect(await run('/p/lal-chal', cookie: 'wl=3,5'), 'public, max-age=60');
+    });
+
     test('page nije dile (503 error page) thake', () async {
       final res = Response(503, headers: {'cache-control': 'no-store'});
       expect(await run('/', response: res), 'no-store');

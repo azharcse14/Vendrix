@@ -111,6 +111,7 @@ void main() {
       expect(seen, isEmpty);
     });
 
+    // Cart key (format, login e na) bff_cart_test e (10.12, 8.4).
     test('header forward: shop, IP, cookie → token, Referer theke bhasha; browser er cookie ar bhasha na', () async {
       await send(
         'POST',
@@ -118,7 +119,7 @@ void main() {
         headers: {
           ...same,
           'x-real-ip': '203.0.113.7',
-          'cookie': '__Host-sid=tok1; __Host-cart=cart9; lang=bn',
+          'cookie': '__Host-sid=tok1; lang=bn',
           'referer': 'https://shop.example.com/en/p/lal-chal',
           'accept-language': 'bn-BD',
           'content-type': 'application/json',
@@ -133,7 +134,6 @@ void main() {
       expect(r.headers['X-Client-IP'], '203.0.113.7');
       expect(r.headers['X-Internal-Auth'], 's3cret');
       expect(r.headers['Authorization'], 'Bearer tok1');
-      expect(r.headers['X-Cart-Key'], 'cart9');
       expect(r.headers['Accept-Language'], 'en');
       expect(r.headers['Idempotency-Key'], 'k-1');
       expect(r.headers.keys.map((k) => k.toLowerCase()), isNot(contains('cookie')));
