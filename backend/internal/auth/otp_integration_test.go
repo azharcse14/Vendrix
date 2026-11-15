@@ -556,7 +556,8 @@ func TestOTPAttemptsIntegration(t *testing.T) {
 	}
 	limited(t, f.verify(t, "a.com", "01711000003", "000000"), "10 tomo bhul")
 	limited(t, f.verify(t, "a.com", "01711000003", "123456"), "lock e thik code")
-	if n := f.count(t, `SELECT count(*) FROM jobs WHERE kind = 'alert.security' AND dedupe_key LIKE '%:+8801711000003:%'`); n != 1 {
+	if n := f.count(t, `SELECT count(*) FROM jobs WHERE kind = 'alert.security' AND dedupe_key LIKE 'alert.otp_lock:%'
+		  AND dedupe_key NOT LIKE '%1711000003%'`); n != 1 { // key e phone na, HMAC tag (7.8 v1.26)
 		t.Errorf("lock alert %d bar, chai ekbar", n)
 	}
 	if n := f.count(t, `SELECT count(*) FROM sessions`); n != 0 {
