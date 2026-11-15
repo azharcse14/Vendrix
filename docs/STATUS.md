@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) cholche** (plan approve 15 November 2026, design v1.22; step 0-11 shesh: OTP send/verify, customer session, `/api/me`, staff login + TOTP/recovery, setup + admin session, `sms.otp` template, `jobs.cleanup`, `staff reset-2fa` CLI, BFF auth route). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) cholche** (plan approve 15 November 2026, design v1.22; step 0-12 shesh: OTP send/verify, customer session, `/api/me`, staff login + TOTP/recovery, setup + admin session, `sms.otp` template, `jobs.cleanup`, `staff reset-2fa` CLI, BFF auth route, website `/login` + `/account`). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,7 +18,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M4 step 12, Website login ar account** ([M4](milestones/M4.md), 10.1, 10.11; Q5, Q6, Q8): shared `User`/`me` (`ApiClient` e optional Bearer), l10n key, `/login` (`@client LoginForm` → `/_/auth/otp/send`, `/_/auth/otp/verify`, Turnstile), `/account` (`PATCH /_/account`, logout `/_/auth/logout`), Account link, Turnstile CSP; `client_components_test.dart`, `login_test.dart`; commit `feat(M4): login ar account page`.
+1. **M4 step 13, Manual proman** ([M4](milestones/M4.md)): age `website/.env` e `TURNSTILE_SITE_KEY=1x00000000000000000000AA` (notun badhyotamulok, `website/env.example`), `backend/.env` e step 1 er 4 line. Local e `make db-up`, `make run`, `make web` (host `sobujbazar.localhost:8081`): `/login` → phone → Turnstile (test key) → API log er OTP → `/account` (naam/bhasha save) → logout; DevTools e `__Host-sid` flag, `/login` er CSP e `challenges.cloudflare.com`; staff: `shop create` er owner → `/api/admin/auth/login` → password → TOTP (authenticator app) → recovery code; Report e.
 2. Push er por CI green kina dekho (`ci(M3): website build` ar Go job; Linux e `TestSearchRankingIntegration` green howa uchit).
 
 ## User er kache proshno
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M4 step 12: test `ed916bd` (`login_test.dart`, Turnstile CSP, `client_components_test` e `login_form.dart`, account form `POST` → `PATCH`, `TURNSTILE_SITE_KEY`, shared `Account`; fail dekhe), code `1697328` (shared `User`/`AccountRepository.me()`/`ApiClient(token:)`, l10n `login.*`/`account.*`/M4 `error.*`; `/login` + `@client LoginForm`, `/account`, Account link, `/login` e Turnstile CSP, `BffRoute.apiMethod`); `jaspr build` `main.client.dart.js` 172,552 byte (login part 96,486 alada); `make quick-check` green.
 - 15 November 2026: M4 step 11: test `588ea32` (`bff_auth_test.dart`, `cache_control_test.dart` e BFF case; fail dekhe), code `8a216dd` (BFF `/_/auth/otp/send`, `verify` (`__Host-sid` set, token body theke muche), `logout` (`Max-Age=0`), `PATCH /_/account` → `/api/me`; `Retry-After`; `private, no-store`); `make quick-check` green.
 - 15 November 2026: M4 step 10: test `69ddbc5` (`TestStaffReset2FAIntegration`, `TestRun` er usage; fail dekhe), code `7d319e7` (`shop-api staff reset-2fa`, `auth.ResetStaff2FA`: TOTP/recovery muche, session revoke, audit `staff.reset_2fa` actor CLI); asol Postgres e `-race` pass.
 - 15 November 2026: M4 step 9: test `39d824e` (`TestOTPTemplateLength`, `TestJobsCleanupIntegration`; fail dekhe), code `5986261` (`notify.OTPText` bn/en + shop override + customer locale, `auth.otpSMS`, `jobs.cleanup` protidin); asol Postgres e `-race` pass.
@@ -67,4 +68,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 15 November 2026: M4 plan approve (shob recommendation), design v1.19; M4 step 0.
 - 15 November 2026: M3 shesh: Lighthouse row ☑, step 16, Report; `bd32992`/`11df782` choto review (finding nai); `make check`: quick-check, DB 83/83 green, race e shudhu `TestSearchRankingIntegration` (macOS `C.UTF-8`, Linux e green).
 - 15 November 2026: 16.1 M3 Lighthouse LCP er uttor (a) (user): devtools throttle er number acceptance, simulate Report e, font kom + Lighthouse CI M12 er age (10.5, 15); design v1.18.
-- 15 November 2026: M4 plan draft (`docs/milestones/M4.md`): scope, acceptance → test, 14.2 test 10/18/19, 15 step, 10 ta open question (recommendation shoho); code na.
