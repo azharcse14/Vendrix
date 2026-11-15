@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -14,6 +15,8 @@ import (
 	"time"
 
 	"vendrix/backend/internal/config"
+	"vendrix/backend/internal/dbtest"
+	"vendrix/backend/internal/shop"
 )
 
 type fakeDB struct{ err error }
@@ -164,5 +167,67 @@ func TestRun(t *testing.T) {
 	args := []string{"credentials", "set", "--shop", "x", "--provider", "sms"}
 	if err := run(ctx, args, noEnv, strings.NewReader("{}"), &out); err == nil || !strings.Contains(err.Error(), "CREDENTIALS_KEY") {
 		t.Errorf("env chhara credentials: %v", err)
+	}
+}
+
+// TestOTPSendIPLimit (7.8, 3.2 Niyom 5, 14.2 test 18 er OTP ongsho): router diye OTP send e client IP te
+// ghontay 10. Website (loopback + X-Internal-Auth) theke alada X-Client-IP e 11 ta 429 na, ekoi IP te 11 tomo
+// 429; secret chhara X-Client-IP mane na (shob ek IP).
+func TestOTPSendIPLimit(t *testing.T) {
+	d := dbtest.New(t)
+	if _, _, err := shop.Create(context.Background(), d, shop.Params{Slug: "a", Prefix: "SA", Domain: "a.com",
+		NameBn: "দোকান", OwnerEmail: "o@a.com", OwnerName: "O", Preset: "organic"}); err != nil {
+		t.Fatal(err)
+	}
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"success":true,"hostname":"a.com"}`))
+	}))
+	defer fake.Close()
+	old := siteverifyURL
+	siteverifyURL = fake.URL
+	defer func() { siteverifyURL = old }()
+	cfg := testConfig()
+	cfg.OTPSecret, cfg.TurnstileSecret = "otp-secret-0123456789abcdef012345", "ts-secret"
+
+	n := 0
+	send := func(h http.Handler, ip, secret string) int {
+		n++ // protibar notun phone, jate phone er 3/15 minute limit na lage
+		r := httptest.NewRequest(http.MethodPost, "/api/auth/otp/send", strings.NewReader(
+			`{"phone":"0171100`+fmt.Sprintf("%04d", n)+`","purpose":"login","turnstile_token":"x"}`))
+		r.RemoteAddr = "127.0.0.1:40000"
+		r.Header.Set("X-Shop-Host", "a.com")
+		r.Header.Set("X-Client-IP", ip)
+		r.Header.Set("X-Internal-Auth", secret)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec.Code
+	}
+	for name, c := range map[string]struct {
+		sameIP bool
+		secret string
+		last   int
+	}{
+		"alada IP":      {false, cfg.JasprInternalSecret, http.StatusOK},
+		"ekoi IP":       {true, cfg.JasprInternalSecret, http.StatusTooManyRequests},
+		"secret chhara": {false, "", http.StatusTooManyRequests},
+		"bhul secret":   {false, "bhul", http.StatusTooManyRequests},
+	} {
+		h, err := newHandler(cfg, quiet(), d, fakeDB{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range 11 {
+			ip := "203.0.113.1"
+			if !c.sameIP {
+				ip = fmt.Sprintf("203.0.113.%d", i+1)
+			}
+			code := send(h, ip, c.secret)
+			if i < 10 && code != http.StatusOK {
+				t.Fatalf("%s: %d tomo send %d", name, i+1, code)
+			}
+			if i == 10 && code != c.last {
+				t.Errorf("%s: 11 tomo send %d, chai %d", name, code, c.last)
+			}
+		}
 	}
 }

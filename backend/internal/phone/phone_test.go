@@ -32,3 +32,12 @@ func TestNormalize(t *testing.T) {
 		}
 	}
 }
+
+// TestMask (12.2): log ar alert e phone er shudhu shesh 3 digit.
+func TestMask(t *testing.T) {
+	for in, want := range map[string]string{"+8801711111234": "***234", "12": "***", "": "***"} {
+		if got := Mask(in); got != want {
+			t.Errorf("Mask(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

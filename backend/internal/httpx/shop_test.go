@@ -9,7 +9,8 @@ import (
 	"testing"
 )
 
-// TestShopFromHost (3.2, v1.10): X-Shop-Host (lowercase, port bad) → shop context e; nai, ochena ba
+// TestShopFromHost (3.2, v1.10): X-Shop-Host (lowercase, port bad) → shop context e (Domain shoho, Turnstile
+// er hostname 10.11); nai, ochena ba
 // closed → 404 shop_not_found; suspended → 423 shop_suspended; resolver er error → 500.
 func TestShopFromHost(t *testing.T) {
 	shops := map[string]Shop{
@@ -55,7 +56,7 @@ func TestShopFromHost(t *testing.T) {
 		if rec.Code != c.status || (c.code != "" && errCode(t, rec) != c.code) {
 			t.Errorf("%q: %d %s", c.host, rec.Code, rec.Body.String())
 		}
-		if c.status == 204 && (got.ID != 1 || asked != "sobujbazar.com") {
+		if c.status == 204 && (got.ID != 1 || asked != "sobujbazar.com" || got.Domain != "sobujbazar.com") {
 			t.Errorf("%q: shop %+v, resolver e %q", c.host, got, asked)
 		}
 	}
