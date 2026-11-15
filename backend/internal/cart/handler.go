@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/httpx"
 )
 
@@ -57,6 +58,8 @@ func (h *Handlers) fail(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.WriteError(w, r, http.StatusNotFound, httpx.ErrorBody{Code: "not_found"})
 	case errors.Is(err, ErrCartFull):
 		httpx.WriteError(w, r, http.StatusConflict, httpx.ErrorBody{Code: "cart_full"})
+	case errors.Is(err, ErrWishlistFull):
+		httpx.WriteError(w, r, http.StatusConflict, httpx.ErrorBody{Code: "wishlist_full"})
 	default:
 		h.log.ErrorContext(r.Context(), "cart handler", "request_id", httpx.RequestIDFrom(r.Context()), "err", err)
 		httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
@@ -146,4 +149,86 @@ func (h *Handlers) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.reply(w, r, o, "")
+}
+
+// WishlistRoutes (7.4): wrap = public + RequireCustomer (shob route login chay, Rule 16).
+func (h *Handlers) WishlistRoutes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/wishlist", wrap(http.HandlerFunc(h.GetWishlist)))
+	mux.Handle("POST /api/wishlist/merge", wrap(http.HandlerFunc(h.MergeWishlist)))
+	mux.Handle("POST /api/wishlist/{product_id}", wrap(http.HandlerFunc(h.AddWishlist)))
+	mux.Handle("DELETE /api/wishlist/{product_id}", wrap(http.HandlerFunc(h.DeleteWishlist)))
+}
+
+func userID(r *http.Request) int64 {
+	c, _ := httpx.CustomerFrom(r.Context())
+	return c.UserID
+}
+
+// GetWishlist: GET /api/wishlist (catalog.Card list); POST/DELETE/merge o ei uttor dey (cart er moto puro list), no-store.
+func (h *Handlers) GetWishlist(w http.ResponseWriter, r *http.Request) {
+	cards, err := wishCards(r.Context(), h.db, shopID(r), userID(r))
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	locale := httpx.Locale(r)
+	items := make([]catalog.Card, 0, len(cards))
+	for _, c := range cards {
+		items = append(items, catalog.Card{ID: c.ID, Slug: c.Slug, Name: c.Name.In(locale), Unit: c.Unit,
+			VariableWeight: c.VariableWeight, Price: c.Price, CompareAtPrice: c.CompareAt, InStock: c.InStock,
+			Rating: catalog.Rating(c.RatingSum, c.ReviewCount), ReviewCount: c.ReviewCount, Image: c.Image})
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func productPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("product_id"), 10, 64)
+	if err != nil || id <= 0 {
+		invalid(w, r, "product_id")
+		return 0, false
+	}
+	return id, true
+}
+
+// AddWishlist: POST /api/wishlist/{product_id}.
+func (h *Handlers) AddWishlist(w http.ResponseWriter, r *http.Request) {
+	id, ok := productPath(w, r)
+	if !ok {
+		return
+	}
+	if err := AddWish(r.Context(), h.db, shopID(r), userID(r), id); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.GetWishlist(w, r)
+}
+
+// DeleteWishlist: DELETE /api/wishlist/{product_id}; na thakleo 200.
+func (h *Handlers) DeleteWishlist(w http.ResponseWriter, r *http.Request) {
+	id, ok := productPath(w, r)
+	if !ok {
+		return
+	}
+	if err := RemoveWish(r.Context(), h.db, shopID(r), userID(r), id); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.GetWishlist(w, r)
+}
+
+// MergeWishlist: POST /api/wishlist/merge {product_ids}; product_ids na thakle 400, ID gulo service e chhake.
+func (h *Handlers) MergeWishlist(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		ProductIDs []int64 `json:"product_ids"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil || in.ProductIDs == nil {
+		invalid(w, r, "product_ids")
+		return
+	}
+	if err := MergeWish(r.Context(), h.db, shopID(r), userID(r), in.ProductIDs); err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	h.GetWishlist(w, r)
 }

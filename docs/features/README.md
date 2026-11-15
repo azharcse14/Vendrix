@@ -25,7 +25,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec) |
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4 | chalu (OTP send/verify, customer session, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
-| Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API) |
+| Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
@@ -45,7 +45,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/jobs` | Job queue, worker, sweep, cleanup | [jobs.md](jobs.md) |
 | `backend/internal/notify` | SMS sender, `sms.send` (OTP template), `alert.security` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
-| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API | [cart.md](cart.md) |
+| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist | [cart.md](cart.md) |
 | `backend/internal/order` | Status er state machine (pure) | [order-status.md](order-status.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |

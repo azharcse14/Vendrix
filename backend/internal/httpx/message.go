@@ -30,6 +30,7 @@ var messages = map[string][2]string{
 	"session_expired":          {"সেশনের মেয়াদ শেষ, আবার লগইন করুন", "Session expired, please log in again"},
 	"out_of_stock":             {"এই পরিমাণ স্টকে নেই", "Not enough in stock"},
 	"cart_full":                {"কার্টে ৫০টির বেশি পণ্য রাখা যাবে না", "Your cart can hold up to 50 items"},
+	"wishlist_full":            {"উইশলিস্টে ২০০টির বেশি পণ্য রাখা যাবে না", "Your wishlist can hold up to 200 items"},
 	"rate_limited":             {"অনেক বেশি অনুরোধ, একটু পরে চেষ্টা করুন", "Too many requests, try again later"},
 	"db_unavailable":           {"সার্ভারে সমস্যা, একটু পরে চেষ্টা করুন", "Service unavailable, try again later"},
 	"internal":                 {"সার্ভারে সমস্যা হয়েছে", "Something went wrong"},

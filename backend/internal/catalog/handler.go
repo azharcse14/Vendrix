@@ -63,7 +63,8 @@ func tree(rows []categoryRow, parent *int64, locale string) []category {
 
 var sorts = map[string]bool{"newest": true, "price_asc": true, "price_desc": true, "popular": true}
 
-type productCardJSON struct {
+// Card: product card (7.2); wishlist (cart) o eta dey, jate website ekoi card dekhay.
+type Card struct {
 	ID             int64   `json:"id"`
 	Slug           string  `json:"slug"`
 	Name           string  `json:"name"`
@@ -77,8 +78,8 @@ type productCardJSON struct {
 	Image          *string `json:"image"`
 }
 
-// rating: rating_sum/review_count, ek dosomik (review nai = 0).
-func rating(sum, count int64) float64 {
+// Rating: rating_sum/review_count, ek dosomik (review nai = 0).
+func Rating(sum, count int64) float64 {
 	if count == 0 {
 		return 0
 	}
@@ -136,11 +137,11 @@ func (h *Handlers) Products(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	locale := httpx.Locale(r)
-	items := make([]productCardJSON, 0, len(cards))
+	items := make([]Card, 0, len(cards))
 	for _, c := range cards {
-		items = append(items, productCardJSON{ID: c.ID, Slug: c.Slug, Name: c.Name.In(locale), Unit: c.Unit,
+		items = append(items, Card{ID: c.ID, Slug: c.Slug, Name: c.Name.In(locale), Unit: c.Unit,
 			VariableWeight: c.VariableWeight, Price: c.Price, CompareAtPrice: c.CompareAt, InStock: c.InStock,
-			Rating: rating(c.RatingSum, c.ReviewCount), ReviewCount: c.ReviewCount, Image: c.Image})
+			Rating: Rating(c.RatingSum, c.ReviewCount), ReviewCount: c.ReviewCount, Image: c.Image})
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaged(items, page, limit, total))
 }
@@ -193,7 +194,7 @@ func (h *Handlers) Product(w http.ResponseWriter, r *http.Request) {
 	locale := httpx.Locale(r)
 	out := productJSON{ID: p.ID, Slug: p.Slug, Name: p.Name.In(locale), Description: p.Description.In(locale),
 		Unit: p.Unit, VariableWeight: p.VariableWeight, Category: p.Category, Attributes: p.Attributes,
-		SEO: seoIn(p.SEO, locale), Rating: rating(p.RatingSum, p.ReviewCount), ReviewCount: p.ReviewCount,
+		SEO: seoIn(p.SEO, locale), Rating: Rating(p.RatingSum, p.ReviewCount), ReviewCount: p.ReviewCount,
 		Variants: []variantJSON{}, Images: []imageJSON{}}
 	for _, v := range vs {
 		opts := map[string]string{}

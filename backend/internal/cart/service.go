@@ -83,7 +83,7 @@ func NormalizeQuantity(qty, stock int) (int, bool) {
 	return qty, false
 }
 
-// ErrNotFound: variant ochena/bondho/onno shop er, ba PATCH e cart e nai (404 not_found).
+// ErrNotFound: variant (wishlist e product) ochena/bondho/onno shop er, ba PATCH e cart e nai (404 not_found).
 var ErrNotFound = errors.New("cart: variant nai")
 
 // OutOfStockError: 409 out_of_stock er details (8.4 item 3); errors.Is(err, ErrOutOfStock).
@@ -336,4 +336,65 @@ func Merge(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale st
 		}
 	}
 	return notices, deleteCart(ctx, tx, shopID, guestID)
+}
+
+// 8.4 item 8: wishlist e mot 200, merge e max 50 ID (guest cookie `wl` er limit, 10.12).
+const (
+	MaxWishlist  = 200
+	MaxWishMerge = 50
+)
+
+var ErrWishlistFull = errors.New("cart: wishlist e 200") // 409 wishlist_full
+
+// AddWish (POST, 7.4): ager product e kichu na (200); notun e oi shop er active product (na hole ErrNotFound,
+// onno shop er ID o) ar 200 er kom (na hole ErrWishlistFull). Limit e bondho product er row o gona hoy.
+func AddWish(ctx context.Context, d *sql.DB, shopID, userID, productID int64) error {
+	return db.InTx(ctx, d, func(tx *sql.Tx) error {
+		have, err := lockWishlist(ctx, tx, shopID, userID)
+		if err != nil || have[productID] {
+			return err
+		}
+		active, err := activeProducts(ctx, tx, shopID, []int64{productID})
+		if err != nil {
+			return err
+		}
+		if !active[productID] {
+			return ErrNotFound
+		}
+		if len(have) >= MaxWishlist {
+			return ErrWishlistFull
+		}
+		return insertWish(ctx, tx, shopID, userID, productID)
+	})
+}
+
+// RemoveWish (DELETE): idempotent; query te user_id, tai onner row e hat na (Rule 16).
+func RemoveWish(ctx context.Context, d *sql.DB, shopID, userID, productID int64) error {
+	return deleteWish(ctx, d, shopID, userID, productID)
+}
+
+// MergeWish (POST merge, 8.4 item 8): guest er prothom 50 ID theke shudhu oi shop er active product, kram e,
+// wishlist mot 200 porjonto; ochena/bhul ID chupchap bad (login er pore BFF dake, fail korle kaj nai).
+func MergeWish(ctx context.Context, d *sql.DB, shopID, userID int64, ids []int64) error {
+	ids = ids[:min(len(ids), MaxWishMerge)]
+	return db.InTx(ctx, d, func(tx *sql.Tx) error {
+		have, err := lockWishlist(ctx, tx, shopID, userID)
+		if err != nil {
+			return err
+		}
+		active, err := activeProducts(ctx, tx, shopID, ids)
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			if !active[id] || have[id] || len(have) >= MaxWishlist {
+				continue
+			}
+			if err := insertWish(ctx, tx, shopID, userID, id); err != nil {
+				return err
+			}
+			have[id] = true
+		}
+		return nil
+	})
 }

@@ -260,3 +260,105 @@ func deleteCart(ctx context.Context, tx *sql.Tx, shopID, cartID int64) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM carts WHERE shop_id = $1 AND id = $2`, shopID, cartID)
 	return err
 }
+
+type wishCard struct {
+	ID, RatingSum, ReviewCount int64
+	Slug, Unit                 string
+	Name                       catalog.Text
+	VariableWeight, InStock    bool
+	Price                      int64
+	CompareAt                  *int64
+	Image                      *string
+}
+
+// wishCards (8.4 item 8): user er wishlist er card, catalog er card er moto; bondho product, active variant
+// nai ba vendor active na hole lukano (row thake). Notun age, max 200.
+func wishCards(ctx context.Context, q querier, shopID, userID int64) ([]wishCard, error) {
+	rows, err := q.QueryContext(ctx, `SELECT p.id, p.slug, p.name, p.unit, p.variable_weight, p.rating_sum,
+		  p.review_count, v.price, v.compare_at, v.in_stock,
+		  (SELECT storage_key FROM product_images i WHERE i.shop_id = p.shop_id AND i.product_id = p.id
+		   ORDER BY sort_order, id LIMIT 1)
+		FROM wishlists w
+		JOIN products p ON p.shop_id = w.shop_id AND p.id = w.product_id
+		JOIN vendors vd ON vd.shop_id = p.shop_id AND vd.id = p.vendor_id
+		JOIN LATERAL (
+		  SELECT min(price) AS price, (array_agg(compare_at_price ORDER BY price, sort_order, id))[1] AS compare_at,
+		         bool_or(stock > 0) AS in_stock
+		  FROM product_variants WHERE shop_id = p.shop_id AND product_id = p.id AND is_active
+		) v ON v.price IS NOT NULL
+		WHERE w.shop_id = $1 AND w.user_id = $2 AND p.is_active AND vd.status = 'active'
+		ORDER BY w.created_at DESC, w.product_id DESC
+		LIMIT $3`, shopID, userID, MaxWishlist)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []wishCard
+	for rows.Next() {
+		var c wishCard
+		if err := rows.Scan(&c.ID, &c.Slug, &c.Name, &c.Unit, &c.VariableWeight, &c.RatingSum, &c.ReviewCount,
+			&c.Price, &c.CompareAt, &c.InStock, &c.Image); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// lockWishlist: user row lock (FOR NO KEY UPDATE, onno table er FK atkay na), jate parallel add/merge e
+// 200 er limit na bhange. User er wishlist er product ID ferot.
+func lockWishlist(ctx context.Context, tx *sql.Tx, shopID, userID int64) (map[int64]bool, error) {
+	if _, err := tx.ExecContext(ctx, `SELECT 1 FROM users WHERE shop_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+		shopID, userID); err != nil {
+		return nil, err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT product_id FROM wishlists WHERE shop_id = $1 AND user_id = $2`,
+		shopID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	have := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		have[id] = true
+	}
+	return have, rows.Err()
+}
+
+// activeProducts: ids er moddhe oi shop er active product (active variant ache, vendor active; card e dekhay).
+func activeProducts(ctx context.Context, q querier, shopID int64, ids []int64) (map[int64]bool, error) {
+	rows, err := q.QueryContext(ctx, `SELECT p.id FROM products p
+		JOIN vendors vd ON vd.shop_id = p.shop_id AND vd.id = p.vendor_id
+		WHERE p.shop_id = $1 AND p.id = ANY($2) AND p.is_active AND vd.status = 'active'
+		  AND EXISTS (SELECT 1 FROM product_variants v WHERE v.shop_id = p.shop_id AND v.product_id = p.id AND v.is_active)`,
+		shopID, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
+}
+
+func insertWish(ctx context.Context, tx *sql.Tx, shopID, userID, productID int64) error {
+	_, err := tx.ExecContext(ctx, `INSERT INTO wishlists (shop_id, user_id, product_id) VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING`, shopID, userID, productID)
+	return err
+}
+
+func deleteWish(ctx context.Context, q querier, shopID, userID, productID int64) error {
+	_, err := q.ExecContext(ctx, `DELETE FROM wishlists WHERE shop_id = $1 AND user_id = $2 AND product_id = $3`,
+		shopID, userID, productID)
+	return err
+}

@@ -108,7 +108,7 @@ func (f *fixture) get(t *testing.T, host, path, lang string, want int, out any) 
 }
 
 type list struct {
-	Items []productCardJSON
+	Items []Card
 	Page  int
 	Limit int
 	Total int64

@@ -74,7 +74,9 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	catalog.NewHandlers(d, log).Routes(mux, public, staff)
 	// cart (7.4, 8.4 item 2): Bearer thakle account cart (bhul/expire 401), na hole X-Cart-Key er guest cart
 	optCustomer := httpx.OptionalCustomer(log, auth.LookupSession(d))
-	cart.NewHandlers(d, log).Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
+	ch := cart.NewHandlers(d, log)
+	ch.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
+	ch.WishlistRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
