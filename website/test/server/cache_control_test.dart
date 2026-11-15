@@ -36,6 +36,12 @@ void main() {
       expect(await run('/_/auth/otp/send'), 'no-store');
     });
 
+    test('BFF e session cookie ba Set-Cookie (verify, logout) → private, no-store', () async {
+      expect(await run('/_/account', cookie: '__Host-sid=abc'), 'private, no-store');
+      final res = Response.ok('', headers: {'set-cookie': '__Host-sid=x'});
+      expect(await run('/_/auth/otp/verify', response: res), 'private, no-store');
+    });
+
     test('page nije dile (503 error page) thake', () async {
       final res = Response(503, headers: {'cache-control': 'no-store'});
       expect(await run('/', response: res), 'no-store');
