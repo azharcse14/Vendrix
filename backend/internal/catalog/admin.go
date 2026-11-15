@@ -16,15 +16,16 @@ import (
 	"vendrix/backend/internal/httpx"
 )
 
-// Routes: public route (public = ShopFromHost → RateLimit) ar admin route (staff ar role check ekhanei, 11.2).
-func (h *Handlers) Routes(mux *http.ServeMux, public httpx.Middleware) {
+// Routes: public route (public = ShopFromHost → RateLimit) ar admin route (staff = AdminSession; role check
+// ekhanei, 11.2).
+func (h *Handlers) Routes(mux *http.ServeMux, public, staff httpx.Middleware) {
 	pub := func(f http.HandlerFunc) http.Handler { return public(f) }
 	mux.Handle("GET /api/categories", pub(h.Categories))
 	mux.Handle("GET /api/products", pub(h.Products))
 	mux.Handle("GET /api/products/{slug}", pub(h.Product))
 
 	admin := func(f http.HandlerFunc, roles ...string) http.Handler {
-		return httpx.RequireStaff(httpx.RequireRole(roles...)(f))
+		return staff(httpx.RequireRole(roles...)(f))
 	}
 	cat := []string{"owner", "admin"}
 	mux.Handle("GET /api/admin/categories", admin(h.AdminCategories, cat...))

@@ -13,7 +13,7 @@ Website/app shop er category tree, product list (filter, sort, paging, search) a
 3. `GET /api/products` (`Handlers.Products`): `httpx.Page`, query check (`min_price`/`max_price` poisha ≥ 0, `in_stock` bool, `sort` `newest|price_asc|price_desc|popular`, `q` max 100 okkhor) → `searchTerm` → `listProducts`. Shudhu active product jar ontoto ekta active variant ache; card er `price` sobcheye kom active variant er dam, `in_stock` kono active variant e `stock > 0`.
 4. Search (6.4): `q` 2 okkhorer kom hole search na (list cholbe). Go te `\ % _` escape kore `ILIKE '%' || normalize(q, NFC) || '%'` (`search_text` generated, NFC); `q` thakle ar `sort` na dile `word_similarity` diye relevance; puro shobdo ba shobder shuru r mil age ashe (`TestSearchRankingIntegration`), tai 6.4 er alada prefix order lage nai. Hasanta er karone juktakkhor er majher tukro (`গানিক`) o puro mil pay (6.4 v1.7).
 5. `GET /api/products/{slug}` (`Handlers.Product`): `productBySlug`: active product, active variant (`sort_order`), chobi (`sort_order`); `seo` locale er ongsho; `rating` = `rating_sum/review_count` (ek dosomik).
-6. Admin route (`Handlers.Routes`): `httpx.RequireStaff` → `httpx.RequireRole` (category: owner, admin; product, variant: owner, admin, vendor_owner; 11.2). Shop staff er `ShopID` theke, host theke na. Lekhar kaj `write` e: `db.InTx`, kaj, `audit.Log`; response `to_jsonb(row) - 'shop_id'`.
+6. Admin route (`Handlers.Routes`): `staff` (router er `httpx.AdminSession`) → `httpx.RequireRole` (`RequireStaff` shoho) (category: owner, admin; product, variant: owner, admin, vendor_owner; 11.2). Shop staff er `ShopID` theke, host theke na. Lekhar kaj `write` e: `db.InTx`, kaj, `audit.Log`; response `to_jsonb(row) - 'shop_id'`.
 7. Category (`CreateCategory`, `UpdateCategory`, `DeleteCategory`): `categoryInput.check` (slug, `name.bn`); PATCH e shudhu je key ache (`opt` diye `null` = muche dao); parent bodlale `changeCategory` (service): `lockCategoryParents` (shop er category `FOR UPDATE`) → `makesCycle`. Delete e FK error → `409 category_not_empty`.
 8. Product (`AdminProducts`, `AdminProduct`, `CreateProduct`, `UpdateProduct`; owner, admin, vendor_owner): `vendorScope` vendor staff er query te `vendor_id` (Rule 13), onno vendor/shop er id `404`. Create e `productVendor` (service): `vendor_id` na dile shop staff e house vendor, vendor staff e nijer; onno vendor `404`. UPDATE er SQL e o vendor filter. PATCH e `vendor_id` na (`400 read_only`), `updated_at = now()`; hard delete nai, `is_active` (6.1). `unit`/`variable_weight` er mil DB CHECK dhore.
 9. Variant (`CreateVariant`, `UpdateVariant`): `variantInput.check` (`sku`, `price` poisha ≥ 0, `options` er lekha); `stock` field nai (ochena field `400`; stock M7 er batch/adjust e, 8.12). `createVariant` `shop_id` ar `vendor_id` product theke ney (Rule 13).
@@ -68,7 +68,7 @@ Ei kram e poro:
 - `total` `count(*) OVER ()` theke, tai shesh page er porer page e `total` 0 (`listProducts` er `ponytail:` comment).
 - Stock er sonkhya public e jay na, shudhu `in_stock`.
 - `search_text` e notun field lagle migration (generated column), ar `TestSearchIntegration` e case.
-- Router (`cmd/api/router.go` → `newHandler`) `Routes(mux, public)` dake; notun route `Routes` e, `TestRouterBuild` conflict dhore.
+- Router (`cmd/api/router.go` → `newHandler`) `Routes(mux, public, staff)` dake; notun route `Routes` e, `TestRouterBuild` conflict dhore.
 
 ## Proshno-uttor
 

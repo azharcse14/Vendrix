@@ -48,3 +48,26 @@ func LookupSession(d *sql.DB) httpx.LookupCustomer {
 		return httpx.Customer{UserID: s.userID, SessionID: s.id}, nil
 	}
 }
+
+// LookupStaffSession (3.2 Niyom 3, 11.3): httpx.AdminSession er lookup. Shudhu active ba setup_pending staff
+// session, staff active; mfa_pending, customer, revoke ba onno token ErrNoSession, expire ErrSessionExpired.
+// Shop session er row theke; last_used_at ghontay ekbar.
+func LookupStaffSession(d *sql.DB) httpx.LookupStaff {
+	return func(ctx context.Context, token string) (httpx.Staff, error) {
+		s, err := staffSessionByHash(ctx, d, tokenHash(token))
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return httpx.Staff{}, httpx.ErrNoSession
+		case err != nil:
+			return httpx.Staff{}, err
+		case s.expired:
+			return httpx.Staff{}, httpx.ErrSessionExpired
+		}
+		if s.stale {
+			if err := touchSession(ctx, d, s.staff.ShopID, s.staff.SessionID); err != nil {
+				return httpx.Staff{}, err
+			}
+		}
+		return s.staff, nil
+	}
+}

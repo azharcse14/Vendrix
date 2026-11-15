@@ -58,13 +58,32 @@ const dummyHash = "pbkdf2-sha256$600000$sbcxGh7BiclZnlK3brM2rw==$ojvMPx6ZlYTD6Oy
 // pbkdfSem (8.3 step 1): ek shathe 4 tar beshi PBKDF2 na; na hole login er dhel e CPU bhore baki API atke.
 var pbkdfSem = make(chan struct{}, 4)
 
-// checkPasswordSem: semaphore er slot niye CheckPassword; opekkhay request bondho hole ctx er error.
-func checkPasswordSem(ctx context.Context, stored, password string) (bool, error) {
+// pbkdfSlot: semaphore er slot (release ferot); opekkhay request bondho hole ctx er error.
+func pbkdfSlot(ctx context.Context) (func(), error) {
 	select {
 	case pbkdfSem <- struct{}{}:
+		return func() { <-pbkdfSem }, nil
 	case <-ctx.Done():
-		return false, ctx.Err()
+		return nil, ctx.Err()
 	}
-	defer func() { <-pbkdfSem }()
+}
+
+// checkPasswordSem: semaphore er slot niye CheckPassword.
+func checkPasswordSem(ctx context.Context, stored, password string) (bool, error) {
+	release, err := pbkdfSlot(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer release()
 	return CheckPassword(stored, password), nil
+}
+
+// hashPasswordSem: semaphore er slot niye HashPassword (notun password o 600000 iteration).
+func hashPasswordSem(ctx context.Context, password string) (string, error) {
+	release, err := pbkdfSlot(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer release()
+	return HashPassword(password)
 }

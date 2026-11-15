@@ -25,7 +25,7 @@ type pinger interface {
 
 // newHandler: shob route ekhane (4.2). Notun route: method shoho pattern ("GET /api/products/{slug}");
 // public route e public middleware (ShopFromHost → RateLimit 120/minute, 3.2, 7.8); admin route
-// RequireStaff → RequireRole (staff session M4 e, tar age fail-closed 401, v1.10). health = healthz er ping
+// AdminSession → RequireRole (RequireStaff shoho; cookie na thakle 401, setup_pending e 403). health = healthz er ping
 // (test e fake). ServeMux pattern conflict e panic
 // kore, tai TestRouterBuild protibar puro router banay (12.2 Server 7).
 //
@@ -43,7 +43,6 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/settings/version", public(http.HandlerFunc(sh.SettingsVersion)))
 	mux.Handle("GET /api/translations", public(http.HandlerFunc(sh.Translations)))
 	mux.Handle("GET /api/policies/{kind}", public(http.HandlerFunc(sh.Policy)))
-	catalog.NewHandlers(d, log).Routes(mux, public)
 
 	// OTP send e public limit er upore client IP te ghontay 10 (7.8)
 	ah := auth.NewHandlers(d, log, cfg.OTPSecret, auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret})
@@ -61,6 +60,15 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.HandleFunc("POST /api/admin/auth/login", adm.Login)
 	mux.HandleFunc("POST /api/admin/auth/totp", adm.TOTP)
 	mux.HandleFunc("POST /api/admin/auth/recovery", adm.Recovery)
+	// admin session (3.2 Niyom 3, 11.3): __Host-asid → staff; setup route setup_pending eo, baki RequireStaff (active)
+	staff := httpx.AdminSession(log, auth.LookupStaffSession(d))
+	mux.Handle("POST /api/admin/auth/password", staff(http.HandlerFunc(adm.Password)))
+	mux.Handle("POST /api/admin/auth/totp/setup", staff(http.HandlerFunc(adm.TOTPSetup)))
+	mux.Handle("POST /api/admin/auth/totp/enable", staff(http.HandlerFunc(adm.TOTPEnable)))
+	mux.Handle("POST /api/admin/auth/logout", staff(http.HandlerFunc(adm.Logout)))
+	mux.Handle("GET /api/admin/me", staff(httpx.RequireStaff(http.HandlerFunc(adm.Me))))
+
+	catalog.NewHandlers(d, log).Routes(mux, public, staff)
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {

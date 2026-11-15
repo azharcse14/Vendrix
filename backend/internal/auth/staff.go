@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/url"
 	"strings"
 	"time"
 
@@ -162,7 +163,7 @@ func verifyMFA(ctx context.Context, d *sql.DB, totpKey []byte, recoverySecret st
 		if used = ok; err != nil || !ok {
 			return err
 		}
-		if ok, err := activateSession(ctx, tx, s.shopID, s.id, th, stage, ttl); err != nil || !ok {
+		if ok, err := activateSession(ctx, tx, s.shopID, s.id, "mfa_pending", th, stage, ttl); err != nil || !ok {
 			return cmpErr(err, httpx.ErrNoSession)
 		}
 		if err := mfaSucceeded(ctx, tx, s.shopID, s.staffID); err != nil {
@@ -217,4 +218,116 @@ func clip(s string, n int) string {
 		return s[:n]
 	}
 	return s
+}
+
+// totpKeyVersion (8.3 step 5): ekhon ekta TOTP_KEY; rotation e notun version.
+const totpKeyVersion = 1
+
+// Password er dairgho (8.3 step 6, Q10 ii): okkhor gone; max PBKDF2 er CPU er jonno.
+const (
+	minPassword = 12
+	maxPassword = 128
+)
+
+var (
+	errWrongPassword          = errors.New("purono password bhul")      // 400 validation_failed (old)
+	errPasswordChangeRequired = errors.New("age password bodlate hobe") // 403 password_change_required
+)
+
+// changePassword (8.3 step 4, 6): purono password thik hole notun hash (semaphore e), must_change_password
+// false, ei session chhara staff er shob session revoke, audit. Dairgho ar "purono na" handler e.
+func changePassword(ctx context.Context, d *sql.DB, st httpx.Staff, old, pw, ip string) error {
+	hash, err := staffPasswordHash(ctx, d, st.ShopID, st.ID)
+	if err != nil {
+		return err
+	}
+	if ok, err := checkPasswordSem(ctx, hash, old); err != nil || !ok {
+		return cmpErr(err, errWrongPassword)
+	}
+	if hash, err = hashPasswordSem(ctx, pw); err != nil {
+		return err
+	}
+	return db.InTx(ctx, d, func(tx *sql.Tx) error {
+		if err := setPassword(ctx, tx, st.ShopID, st.ID, hash); err != nil {
+			return err
+		}
+		if err := revokeOtherSessions(ctx, tx, st.ShopID, st.ID, st.SessionID); err != nil {
+			return err
+		}
+		return insertAudit(ctx, tx, audit{shopID: st.ShopID, staffID: st.ID, action: "staff.password_changed", ip: ip})
+	})
+}
+
+// totpSetup (8.3 step 4, 6): password bodlanor por; notun secret (purono replace) AES-GCM e staff e, ferot
+// base32 ar otpauth URL (issuer shop er slug, label slug:email).
+func totpSetup(ctx context.Context, d *sql.DB, key []byte, st httpx.Staff, ip string) (secret, otpauth string, err error) {
+	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
+		r, err := staffTOTP(ctx, tx, st.ShopID, st.ID)
+		if err != nil {
+			return err
+		}
+		if r.mustChange {
+			return errPasswordChangeRequired
+		}
+		raw, b32 := NewTOTPSecret()
+		ct, nonce, err := SealTOTPSecret(key, st.ShopID, st.ID, totpKeyVersion, raw)
+		if err != nil {
+			return err
+		}
+		if err := setTOTPSecret(ctx, tx, st.ShopID, st.ID, ct, nonce, totpKeyVersion); err != nil {
+			return err
+		}
+		secret = b32
+		otpauth = (&url.URL{Scheme: "otpauth", Host: "totp", Path: "/" + r.slug + ":" + r.email,
+			RawQuery: url.Values{"secret": {b32}, "issuer": {r.slug}, "algorithm": {"SHA1"}, "digits": {"6"},
+				"period": {"30"}}.Encode()}).String()
+		return insertAudit(ctx, tx, audit{shopID: st.ShopID, staffID: st.ID, action: "staff.totp_setup", ip: ip})
+	})
+	return secret, otpauth, err
+}
+
+// totpEnable (8.3 step 4, 6): ekhon er secret er code (±1 step, totp_last_step er beshi) thik hole notun 10
+// recovery code (purono muche), setup_pending row-i active 12 ghonta, token notun (setup token JS dekhe na,
+// tobu stage bodlale notun, verifyMFA er moto). Bhul code e failed_mfa na: setup session password e pawa,
+// TOTP er lock er dorkar nai.
+func totpEnable(ctx context.Context, d *sql.DB, key []byte, recoverySecret string, st httpx.Staff, code, ip string) (string, []string, error) {
+	codes := NewRecoveryCodes()
+	hashes := make([][]byte, len(codes))
+	for i, c := range codes {
+		hashes[i] = HashRecoveryCode(recoverySecret, st.ID, c)
+	}
+	token, th := newSessionToken()
+	err := db.InTx(ctx, d, func(tx *sql.Tx) error {
+		r, err := staffTOTP(ctx, tx, st.ShopID, st.ID)
+		switch {
+		case err != nil:
+			return err
+		case r.mustChange:
+			return errPasswordChangeRequired
+		case r.totpCT == nil:
+			return errMFAInvalid
+		}
+		secret, err := OpenTOTPSecret(key, st.ShopID, st.ID, r.keyVersion, r.totpCT, r.totpNon)
+		if err != nil {
+			return err
+		}
+		step, ok := CheckTOTP(secret, code, time.Now())
+		if !ok {
+			return errMFAInvalid
+		}
+		if ok, err := useTOTPStep(ctx, tx, st.ShopID, st.ID, step); err != nil || !ok {
+			return cmpErr(err, errMFAInvalid)
+		}
+		if err := replaceRecoveryCodes(ctx, tx, st.ShopID, st.ID, hashes); err != nil {
+			return err
+		}
+		if ok, err := activateSession(ctx, tx, st.ShopID, st.SessionID, "setup_pending", th, "active", adminTTL); err != nil || !ok {
+			return cmpErr(err, httpx.ErrNoSession)
+		}
+		return insertAudit(ctx, tx, audit{shopID: st.ShopID, staffID: st.ID, action: "staff.totp_enabled", ip: ip})
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	return token, codes, nil
 }

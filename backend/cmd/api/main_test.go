@@ -247,7 +247,8 @@ func TestSessionRouteKind(t *testing.T) {
 	if err := d.QueryRow(`INSERT INTO users (shop_id, phone) VALUES ($1, '+8801711000001') RETURNING id`, shopID).Scan(&userID); err != nil {
 		t.Fatal(err)
 	}
-	if err := d.QueryRow(`SELECT id FROM staff WHERE shop_id = $1`, shopID).Scan(&staffID); err != nil {
+	// must_change_password false: setup_pending e totp/setup sora-sori chole (password er age 403 na)
+	if err := d.QueryRow(`UPDATE staff SET must_change_password = false WHERE shop_id = $1 RETURNING id`, shopID).Scan(&staffID); err != nil {
 		t.Fatal(err)
 	}
 	session := func(tok, kind, stage string) {

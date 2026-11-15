@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	"unicode/utf8"
 
 	"vendrix/backend/internal/httpx"
 )
@@ -102,6 +103,127 @@ func (h *AdminHandlers) mfa(w http.ResponseWriter, r *http.Request, recovery boo
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "mfa_too_many_attempts"})
 	default:
 		h.internal(w, r, "staff mfa", err)
+	}
+}
+
+// Password: POST /api/admin/auth/password {old, new} (AdminSession er pore; active ba setup_pending) → 204
+// (8.3 step 4, 6). new 12–128 okkhor, old er sathe ekoi na; bhul old e 400 (fields.old).
+func (h *AdminHandlers) Password(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Old string `json:"old"`
+		New string `json:"new"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed"})
+		return
+	}
+	bad := ""
+	switch n := utf8.RuneCountInString(in.New); {
+	case n < minPassword:
+		bad = "too_short"
+	case n > maxPassword:
+		bad = "too_long"
+	case in.New == in.Old:
+		bad = "same_as_old"
+	}
+	if bad != "" {
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed", Fields: map[string]string{"new": bad}})
+		return
+	}
+	st, _ := httpx.StaffFrom(r.Context())
+	err := changePassword(r.Context(), h.db, st, in.Old, in.New, httpx.IP(r.Context()))
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, errWrongPassword):
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed", Fields: map[string]string{"old": "wrong"}})
+	default:
+		h.internal(w, r, "staff password", err)
+	}
+}
+
+// TOTPSetup: POST /api/admin/auth/totp/setup (shudhu setup_pending) → {otpauth_url, secret} (8.3 step 4, 6).
+func (h *AdminHandlers) TOTPSetup(w http.ResponseWriter, r *http.Request) {
+	st, ok := h.setupOnly(w, r)
+	if !ok {
+		return
+	}
+	secret, u, err := totpSetup(r.Context(), h.db, h.totpKey, st, httpx.IP(r.Context()))
+	if err != nil {
+		h.setupErr(w, r, "totp setup", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"otpauth_url": u, "secret": secret})
+}
+
+// TOTPEnable: POST /api/admin/auth/totp/enable {code} (shudhu setup_pending) → {recovery_codes} + __Host-asid
+// (43200), session active (8.3 step 4, 6).
+func (h *AdminHandlers) TOTPEnable(w http.ResponseWriter, r *http.Request) {
+	st, ok := h.setupOnly(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Code string `json:"code"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed"})
+		return
+	}
+	token, codes, err := totpEnable(r.Context(), h.db, h.totpKey, h.recoverySecret, st, in.Code, httpx.IP(r.Context()))
+	if err != nil {
+		h.setupErr(w, r, "totp enable", err)
+		return
+	}
+	httpx.AdminCookie(w, token, int(adminTTL.Seconds()))
+	httpx.WriteJSON(w, http.StatusOK, map[string][]string{"recovery_codes": codes})
+}
+
+// setupOnly: TOTP setup/enable shudhu setup_pending e; active session e 403 forbidden, jate churi kora
+// cookie diye TOTP bodle dewa na jay (TOTP reset staff er reset-2fa diye).
+func (h *AdminHandlers) setupOnly(w http.ResponseWriter, r *http.Request) (httpx.Staff, bool) {
+	st, _ := httpx.StaffFrom(r.Context())
+	if !st.Setup {
+		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "forbidden"})
+	}
+	return st, st.Setup
+}
+
+func (h *AdminHandlers) setupErr(w http.ResponseWriter, r *http.Request, what string, err error) {
+	switch {
+	case errors.Is(err, errPasswordChangeRequired):
+		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "password_change_required"})
+	case errors.Is(err, errMFAInvalid):
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "mfa_invalid"})
+	case errors.Is(err, httpx.ErrNoSession):
+		httpx.WriteError(w, r, http.StatusUnauthorized, httpx.ErrorBody{Code: "unauthenticated"})
+	default:
+		h.internal(w, r, what, err)
+	}
+}
+
+// Logout: POST /api/admin/auth/logout (active ba setup_pending) → 204, session revoke, cookie Max-Age=0.
+func (h *AdminHandlers) Logout(w http.ResponseWriter, r *http.Request) {
+	st, _ := httpx.StaffFrom(r.Context())
+	if err := revokeSession(r.Context(), h.db, st.ShopID, st.SessionID); err != nil {
+		h.internal(w, r, "staff logout", err)
+		return
+	}
+	httpx.AdminCookie(w, "", 0)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Me: GET /api/admin/me (RequireStaff er pore, shudhu active) → StaffProfile.
+func (h *AdminHandlers) Me(w http.ResponseWriter, r *http.Request) {
+	st, _ := httpx.StaffFrom(r.Context())
+	p, err := staffProfile(r.Context(), h.db, st.ShopID, st.ID)
+	switch {
+	case err == nil:
+		httpx.WriteJSON(w, http.StatusOK, p)
+	case errors.Is(err, sql.ErrNoRows):
+		httpx.WriteError(w, r, http.StatusUnauthorized, httpx.ErrorBody{Code: "unauthenticated"})
+	default:
+		h.internal(w, r, "staff me", err)
 	}
 }
 

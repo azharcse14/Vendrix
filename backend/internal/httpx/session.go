@@ -54,3 +54,32 @@ func CustomerFrom(ctx context.Context) (Customer, bool) {
 	c, ok := ctx.Value(customerKey).(Customer)
 	return c, ok
 }
+
+// LookupStaff: __Host-asid token → staff session (active ba setup_pending; mfa_pending kokhono na) er Staff
+// (SessionID, Setup shoho); na pele ErrNoSession ba ErrSessionExpired. Lookup auth e.
+type LookupStaff func(ctx context.Context, token string) (Staff, error)
+
+// AdminSession (3.2 Niyom 3, 11.3, Rule 16): admin route e __Host-asid cookie theke staff; shop context
+// session theke (X-Shop-Host na). Bearer dekhe na, tai customer token admin e 401. Na pele 401; thakle
+// WithStaff. Setup gate RequireStaff e.
+func AdminSession(log *slog.Logger, lookup LookupStaff) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			st, err := Staff{}, ErrNoSession
+			if c, cerr := r.Cookie(AdminCookieName); cerr == nil && c.Value != "" {
+				st, err = lookup(r.Context(), c.Value)
+			}
+			switch {
+			case err == nil:
+				next.ServeHTTP(w, r.WithContext(WithStaff(r.Context(), st)))
+			case errors.Is(err, ErrSessionExpired):
+				WriteError(w, r, http.StatusUnauthorized, ErrorBody{Code: "session_expired"})
+			case errors.Is(err, ErrNoSession):
+				WriteError(w, r, http.StatusUnauthorized, ErrorBody{Code: "unauthenticated"})
+			default:
+				log.ErrorContext(r.Context(), "staff session lookup", "request_id", RequestIDFrom(r.Context()), "err", err)
+				WriteError(w, r, http.StatusInternalServerError, ErrorBody{Code: "internal"})
+			}
+		})
+	}
+}

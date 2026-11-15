@@ -40,7 +40,9 @@ func newFixture(t *testing.T) *fixture {
 	}
 	h := NewHandlers(d, slog.New(slog.DiscardHandler))
 	mux := http.NewServeMux()
-	h.Routes(mux, httpx.ShopFromHost(slog.New(slog.DiscardHandler), shop.NewResolver(d).Resolve))
+	// admin test staff context nijei boshay (WithStaff), tai session middleware na
+	h.Routes(mux, httpx.ShopFromHost(slog.New(slog.DiscardHandler), shop.NewResolver(d).Resolve),
+		func(h http.Handler) http.Handler { return h })
 	f.srv = httpx.JSONErrors(mux)
 	return f
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/jobs"
 )
 
@@ -101,12 +102,12 @@ func useRecoveryCode(ctx context.Context, tx *sql.Tx, shopID, staffID int64, has
 		WHERE shop_id = $1 AND staff_id = $2 AND code_hash = $3 AND used_at IS NULL`, shopID, staffID, hash))
 }
 
-// activateSession (8.3 step 3): mfa_pending row-i active/setup_pending, notun token_hash.
-func activateSession(ctx context.Context, tx *sql.Tx, shopID, id int64, hash []byte, stage string, ttl time.Duration) (bool, error) {
-	return affected(tx.ExecContext(ctx, `UPDATE sessions SET stage = $3, token_hash = $4,
-		  expires_at = now() + make_interval(secs => $5), last_used_at = now()
-		WHERE id = $1 AND shop_id = $2 AND stage = 'mfa_pending' AND revoked_at IS NULL AND expires_at > now()`,
-		id, shopID, stage, hash, ttl.Seconds()))
+// activateSession (8.3 step 3, 4): from stage er (mfa_pending ba setup_pending) row-i notun stage, notun token_hash.
+func activateSession(ctx context.Context, tx *sql.Tx, shopID, id int64, from string, hash []byte, stage string, ttl time.Duration) (bool, error) {
+	return affected(tx.ExecContext(ctx, `UPDATE sessions SET stage = $4, token_hash = $5,
+		  expires_at = now() + make_interval(secs => $6), last_used_at = now()
+		WHERE id = $1 AND shop_id = $2 AND stage = $3 AND revoked_at IS NULL AND expires_at > now()`,
+		id, shopID, from, stage, hash, ttl.Seconds()))
 }
 
 func mfaSucceeded(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
@@ -139,4 +140,103 @@ func affected(res sql.Result, err error) (bool, error) {
 	}
 	n, err := res.RowsAffected()
 	return n == 1, err
+}
+
+type staffSessionRow struct {
+	staff          httpx.Staff
+	expired, stale bool
+}
+
+// staffSessionByHash: __Host-asid er session (active ba setup_pending, revoke na) ar tar active staff. Shop
+// session er row theke (3.2 Niyom 3), token_hash unique. Expire holeo row ashe (session_expired).
+func staffSessionByHash(ctx context.Context, d *sql.DB, hash []byte) (staffSessionRow, error) {
+	var r staffSessionRow
+	var vendor sql.NullInt64
+	err := d.QueryRowContext(ctx, `SELECT s.id, s.shop_id, st.id, st.vendor_id, st.role, s.stage = 'setup_pending',
+		  s.expires_at <= now(), s.last_used_at < now() - interval '1 hour'
+		FROM sessions s JOIN staff st ON st.shop_id = s.shop_id AND st.id = s.staff_id AND st.is_active
+		WHERE s.token_hash = $1 AND s.subject_type = 'staff' AND s.stage IN ('active', 'setup_pending')
+		  AND s.revoked_at IS NULL`, hash).Scan(&r.staff.SessionID, &r.staff.ShopID, &r.staff.ID, &vendor, &r.staff.Role,
+		&r.staff.Setup, &r.expired, &r.stale)
+	if vendor.Valid {
+		r.staff.VendorID = &vendor.Int64
+	}
+	return r, err
+}
+
+func staffPasswordHash(ctx context.Context, d *sql.DB, shopID, staffID int64) (string, error) {
+	var h string
+	err := d.QueryRowContext(ctx, `SELECT password_hash FROM staff WHERE id = $1 AND shop_id = $2`, staffID, shopID).Scan(&h)
+	return h, err
+}
+
+// setPassword (8.3 step 4): notun hash, must_change_password false.
+func setPassword(ctx context.Context, tx *sql.Tx, shopID, staffID int64, hash string) error {
+	_, err := tx.ExecContext(ctx, `UPDATE staff SET password_hash = $3, must_change_password = false, password_changed_at = now()
+		WHERE id = $1 AND shop_id = $2`, staffID, shopID, hash)
+	return err
+}
+
+// revokeOtherSessions (8.3 step 4): password bodlale ei session chhara staff er shob session (mfa_pending o).
+func revokeOtherSessions(ctx context.Context, tx *sql.Tx, shopID, staffID, keep int64) error {
+	_, err := tx.ExecContext(ctx, `UPDATE sessions SET revoked_at = now()
+		WHERE shop_id = $1 AND staff_id = $2 AND id <> $3 AND revoked_at IS NULL`, shopID, staffID, keep)
+	return err
+}
+
+type totpRow struct {
+	mustChange      bool
+	slug, email     string
+	totpCT, totpNon []byte
+	keyVersion      int
+}
+
+// staffTOTP: setup/enable er jonno staff er obostha, FOR UPDATE: enable er majhe setup secret na bodlay.
+func staffTOTP(ctx context.Context, tx *sql.Tx, shopID, staffID int64) (totpRow, error) {
+	var r totpRow
+	err := tx.QueryRowContext(ctx, `SELECT st.must_change_password, sh.slug, st.email, st.totp_secret_enc, st.totp_nonce,
+		  coalesce(st.totp_key_version, 0)
+		FROM staff st JOIN shops sh ON sh.id = st.shop_id WHERE st.id = $1 AND st.shop_id = $2 FOR UPDATE OF st`,
+		staffID, shopID).Scan(&r.mustChange, &r.slug, &r.email, &r.totpCT, &r.totpNon, &r.keyVersion)
+	return r, err
+}
+
+// setTOTPSecret (8.3 step 6): enable er age-o purono secret replace.
+func setTOTPSecret(ctx context.Context, tx *sql.Tx, shopID, staffID int64, ct, nonce []byte, keyVersion int) error {
+	_, err := tx.ExecContext(ctx, `UPDATE staff SET totp_secret_enc = $3, totp_nonce = $4, totp_key_version = $5
+		WHERE id = $1 AND shop_id = $2`, staffID, shopID, ct, nonce, keyVersion)
+	return err
+}
+
+// replaceRecoveryCodes (8.3 step 6): enable e purono shob muche notun 10 ta (hash).
+func replaceRecoveryCodes(ctx context.Context, tx *sql.Tx, shopID, staffID int64, hashes [][]byte) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM staff_recovery_codes WHERE shop_id = $1 AND staff_id = $2`, shopID, staffID); err != nil {
+		return err
+	}
+	for _, h := range hashes {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO staff_recovery_codes (shop_id, staff_id, code_hash) VALUES ($1, $2, $3)`,
+			shopID, staffID, h); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// StaffProfile: GET /api/admin/me (7.7); id na (customer User er moto).
+type StaffProfile struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	VendorID *int64 `json:"vendor_id"`
+}
+
+func staffProfile(ctx context.Context, d *sql.DB, shopID, staffID int64) (StaffProfile, error) {
+	var p StaffProfile
+	var vendor sql.NullInt64
+	err := d.QueryRowContext(ctx, `SELECT name, email, role, vendor_id FROM staff WHERE id = $1 AND shop_id = $2 AND is_active`,
+		staffID, shopID).Scan(&p.Name, &p.Email, &p.Role, &vendor)
+	if vendor.Valid {
+		p.VendorID = &vendor.Int64
+	}
+	return p, err
 }
