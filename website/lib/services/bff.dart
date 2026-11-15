@@ -19,15 +19,46 @@ class BffRoute {
   /// Mil theke Go API er path.
   final String Function(Match) api;
 
+  /// Go er uttor theke browser er body ar `Set-Cookie` (auth, 10.11 item 4); null = Go er uttor bhanga.
+  final (List<int>, String?)? Function(http.Response)? session;
+
   /// BffRoute.
-  const BffRoute(this.methods, this.path, this.api);
+  const BffRoute(this.methods, this.path, this.api, {this.session});
 }
 
 // Go API er `httpx.MaxBody` (12.2): er beshi body memory te pora hoy na.
 const _maxBody = 1 << 20;
 
-/// Asol route: M3 e skeleton, prothom route M4 e (`/_/auth/otp/*`, 10.10).
-const bffRoutes = <BffRoute>[];
+/// Asol route (10.9): M4 e auth ar account.
+final bffRoutes = <BffRoute>[
+  BffRoute({'POST'}, RegExp(r'^/_/auth/otp/send$'), (_) => '/api/auth/otp/send'),
+  BffRoute({'POST'}, RegExp(r'^/_/auth/otp/verify$'), (_) => '/api/auth/otp/verify', session: _login),
+  BffRoute({'POST'}, RegExp(r'^/_/auth/logout$'), (_) => '/api/auth/logout', session: _logout),
+  BffRoute({'PATCH'}, RegExp(r'^/_/account$'), (_) => '/api/me'),
+];
+
+// Go er `rand.Text()` base32; onno okkhor (`;`, space) cookie header bhangte pare.
+final _tokenChars = RegExp(r'^[A-Za-z0-9_-]+$');
+
+String _sid(String token, int maxAge) => '__Host-sid=$token; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=$maxAge';
+
+// verify: token shudhu HttpOnly cookie te, body theke muche (JS kokhono token dekhe na, 10.11 item 4).
+(List<int>, String?)? _login(http.Response res) {
+  if (res.statusCode != 200) return (res.bodyBytes, null);
+  try {
+    if (jsonDecode(res.body) case final Map<String, dynamic> m) {
+      if (m.remove('token') case final String t when _tokenChars.hasMatch(t)) {
+        return (utf8.encode(jsonEncode(m)), _sid(t, 30 * 24 * 3600));
+      }
+    }
+  } on FormatException {
+    // niche 502
+  }
+  return null;
+}
+
+// logout: Go revoke na korte parleo (401, session expire) browser er cookie muche.
+(List<int>, String?) _logout(http.Response res) => (res.bodyBytes, _sid('', 0));
 
 /// Request er cookie (naam → value).
 Map<String, String> parseCookies(String? header) => {
@@ -85,17 +116,25 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       } on http.ClientException {
         return _error(502, 'network_error');
       }
+      final (body, cookie) = route.session == null ? (res.bodyBytes, null) : (route.session!(res) ?? (null, null));
+      if (body == null) return _error(502, 'internal');
+      // Session cookie thaka uttor personal (10.3).
+      final personal = {'set-cookie': ?cookie, 'cache-control': cookie == null ? 'no-store' : 'private, no-store'};
       if (form) {
         // POST-redirect-GET; error hole form er page e `?error=<code>` (10.9 niyom 4)
         final back = Uri.parse(referer);
         final ok = res.statusCode >= 200 && res.statusCode < 300;
         final to = ok ? back : back.replace(queryParameters: {...back.queryParameters, 'error': _code(res.body)});
-        return Response(303, headers: {'location': to.toString(), 'cache-control': 'no-store'});
+        return Response(303, headers: {'location': to.toString(), ...personal});
       }
       return Response(
         res.statusCode,
-        body: res.bodyBytes,
-        headers: {'content-type': ?res.headers['content-type'], 'cache-control': 'no-store'},
+        body: body,
+        headers: {
+          'content-type': ?res.headers['content-type'],
+          'retry-after': ?res.headers['retry-after'],
+          ...personal,
+        },
       );
     };
 
