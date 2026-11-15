@@ -12,7 +12,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 - **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) cholche** (plan approve 15 November 2026, design v1.22; step 0-14 shesh: OTP send/verify, customer session, `/api/me`, staff login + TOTP/recovery, setup + admin session, `sms.otp` template, `jobs.cleanup`, `staff reset-2fa` CLI, BFF auth route, website `/login` + `/account`, manual proman, feature doc). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
-- Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
+- Go test ar `go test -race` green; database constraint test 85/85 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
 - `make check` e `psql` lage: `brew install libpq` korechi; PATH e `/opt/homebrew/opt/libpq/bin` (keg-only).
 
@@ -54,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M4 step 15 TOTP pending (user decision, security-reviewer M2): design v1.25 `d35a877`, test `aea4dcb` (fail dekhe), fix `2cf0ede` (setup er secret `totp_pending_*` e, enable e live; TOTP live + `must_change_password` e password bodlale session `active`); `make db-test` 85/85, `-race` green. `TestStaffLockRaceIntegration` er flake: shombhoboto Mac sleep (wall clock 5 minute er beshi agay), code race na; 22 bar `-race` pass.
 - 15 November 2026: M4 step 15 review fix: design v1.24 `8d61dfe` (staff lock atomic reservation, account lock e `401` user decision), test `b7d95fa` (fail dekhe), fix `d3b2c72` (`reserveFailed`, purono temp_token revoke, `/auth/password` gona, audit e `email_domain`, auth `no-store`, totp/recovery IP limit, alert `dedupe_key` din); asol Postgres e `-race` green. Step 15 er baki: `make check`, acceptance, report.
 - 15 November 2026: M4 step 14: feature doc M4 er code er sathe milano (`auth.md` code map/Proshno-uttor, `website.md`, `server.md`, `http-foundation.md`, `jobs.md`, `shop.md`, `credentials.md`, `catalog.md`, `audit.md`, `api-client.md`, `README.md`); naam ar test grep e mile; docsync green.
 - 15 November 2026: M4 step 13 manual proman: customer (Chromium 131, local https proxy) phone → Turnstile test key → log er OTP → `/account` (naam, bhasha) → logout, `__Host-sid` flag, CSP, console error 0, 360/1280 screenshot; staff (curl, shop `qa13`) password → TOTP → recovery → `/api/admin/me` → logout, `reset-2fa` er por abar setup. Bug nai; finding: http e `__Host-` cookie `InvalidPrefix` (16.1 v1.23).
@@ -68,5 +69,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 15 November 2026: M4 step 4 (ar 8): test `3681ea1`, code `453dae4` (`POST /api/auth/otp/send`: Turnstile, phone limit/lock, SMS cap, payload AES-GCM, IP limit); asol Postgres e pass; 16.1 e Turnstile test secret er hostname proshno (v1.21).
 - 15 November 2026: M4 step 3: AES-GCM helper `auth.Seal`/`Open` e `08023df`, test `3384d7a` (`TestTOTP`, `TestTOTPSecretAAD`, `TestRecoveryCode`), code `d8ea20c` (`totp.go`, `recovery.go`).
 - 15 November 2026: M4 step 2: OTP primitive: test `8c3cfaf` (`TestOTPCode`, `TestOTPHash`), code `b9f6ec2` (`NewOTPCode`, `HashOTP`, `CheckOTP`), `docs/features/auth.md` notun.
-- 15 November 2026: M4 step 1: design v1.20 (Turnstile test secret local chhara config error, user decision; 13.5, 16.1) `898b41b`, test `ff652ec`, config e `OTP_SECRET`/`TURNSTILE_SECRET`/`TOTP_KEY`/`RECOVERY_SECRET` `58252c7`.
-- 15 November 2026: M4 plan approve (shob recommendation), design v1.19; M4 step 0.
