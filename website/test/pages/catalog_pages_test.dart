@@ -76,8 +76,9 @@ void main() {
       expect(imgs.last.attributes['loading'], 'lazy');
       expect(imgs.every((i) => i.attributes['alt'] == 'লাল চাল' && i.attributes['width'] == '800'), isTrue);
       // Stock e thaka variant (8) shuru te bachai; dam API theke.
-      expect(doc.querySelector('input[name="variant"][value="8"]')!.attributes.containsKey('checked'), isTrue);
-      expect(doc.querySelector('input[name="variant"][value="7"]')!.attributes.containsKey('checked'), isFalse);
+      // v1.28: radio er naam `variant_id` (cart e add er JS chhara form er field, 10.12 item 4).
+      expect(doc.querySelector('input[name="variant_id"][value="8"]')!.attributes.containsKey('checked'), isTrue);
+      expect(doc.querySelector('input[name="variant_id"][value="7"]')!.attributes.containsKey('checked'), isFalse);
       final shown = doc.querySelectorAll('[data-variant="8"]');
       expect(shown, hasLength(2)); // page ar sticky bar
       expect(shown.every((e) => !e.attributes.containsKey('hidden') && e.text.contains('৳৮৫০')), isTrue);
