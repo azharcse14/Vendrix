@@ -106,7 +106,8 @@ func (h *AdminHandlers) mfa(w http.ResponseWriter, r *http.Request, recovery boo
 }
 
 // Password: POST /api/admin/auth/password {old, new} (AdminSession er pore; active ba setup_pending) → 204
-// (8.3 step 4, 6). new 12–128 okkhor, old er sathe ekoi na; bhul old e 400 (fields.old).
+// (8.3 step 4, 6). new 12–128 okkhor, old er sathe ekoi na; bhul old e 400 (fields.old). v1.25: TOTP live ar
+// must_change_password e session active, notun __Host-asid (43200).
 func (h *AdminHandlers) Password(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Old string `json:"old"`
@@ -130,10 +131,14 @@ func (h *AdminHandlers) Password(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, _ := httpx.StaffFrom(r.Context())
-	err := changePassword(r.Context(), h.db, st, in.Old, in.New, httpx.IP(r.Context()))
+	token, err := changePassword(r.Context(), h.db, st, in.Old, in.New, httpx.IP(r.Context()))
 	var limit limitError
 	switch {
 	case err == nil:
+		if token != "" {
+			noStore(w)
+			httpx.AdminCookie(w, token, int(adminTTL.Seconds()))
+		}
 		w.WriteHeader(http.StatusNoContent)
 	case errors.As(err, &limit):
 		writeLimit(w, r, limit.retry)
@@ -197,6 +202,8 @@ func (h *AdminHandlers) setupErr(w http.ResponseWriter, r *http.Request, what st
 	switch {
 	case errors.Is(err, errPasswordChangeRequired):
 		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "password_change_required"})
+	case errors.Is(err, errTOTPLive):
+		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "forbidden"})
 	case errors.Is(err, errMFAInvalid):
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "mfa_invalid"})
 	case errors.Is(err, httpx.ErrNoSession):

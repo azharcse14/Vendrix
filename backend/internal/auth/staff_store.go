@@ -210,27 +210,35 @@ func revokeOtherSessions(ctx context.Context, tx *sql.Tx, shopID, staffID, keep 
 }
 
 type totpRow struct {
-	mustChange      bool
-	slug, email     string
-	totpCT, totpNon []byte
-	keyVersion      int
+	mustChange, live bool // live: login e TOTP chay
+	slug, email      string
+	pendCT, pendNon  []byte // setup er secret (v1.25)
+	keyVersion       int    // pending er
 }
 
-// staffTOTP: setup/enable er jonno staff er obostha, FOR UPDATE: enable er majhe setup secret na bodlay.
+// staffTOTP: password/setup/enable er jonno staff er obostha, FOR UPDATE: enable er majhe setup secret na bodlay.
 func staffTOTP(ctx context.Context, tx *sql.Tx, shopID, staffID int64) (totpRow, error) {
 	var r totpRow
-	err := tx.QueryRowContext(ctx, `SELECT st.must_change_password, sh.slug, st.email, st.totp_secret_enc, st.totp_nonce,
-		  coalesce(st.totp_key_version, 0)
+	err := tx.QueryRowContext(ctx, `SELECT st.must_change_password, st.totp_secret_enc IS NOT NULL, sh.slug, st.email,
+		  st.totp_pending_enc, st.totp_pending_nonce, coalesce(st.totp_pending_key_version, 0)
 		FROM staff st JOIN shops sh ON sh.id = st.shop_id WHERE st.id = $1 AND st.shop_id = $2 FOR UPDATE OF st`,
-		staffID, shopID).Scan(&r.mustChange, &r.slug, &r.email, &r.totpCT, &r.totpNon, &r.keyVersion)
+		staffID, shopID).Scan(&r.mustChange, &r.live, &r.slug, &r.email, &r.pendCT, &r.pendNon, &r.keyVersion)
 	return r, err
 }
 
-// setTOTPSecret (8.3 step 6): enable er age-o purono secret replace.
-func setTOTPSecret(ctx context.Context, tx *sql.Tx, shopID, staffID int64, ct, nonce []byte, keyVersion int) error {
-	_, err := tx.ExecContext(ctx, `UPDATE staff SET totp_secret_enc = $3, totp_nonce = $4, totp_key_version = $5
+// setPendingTOTP (8.3 step 6 v1.25): setup er secret pending e (ager pending replace); live e hat na.
+func setPendingTOTP(ctx context.Context, tx *sql.Tx, shopID, staffID int64, ct, nonce []byte, keyVersion int) error {
+	_, err := tx.ExecContext(ctx, `UPDATE staff SET totp_pending_enc = $3, totp_pending_nonce = $4, totp_pending_key_version = $5
 		WHERE id = $1 AND shop_id = $2`, staffID, shopID, ct, nonce, keyVersion)
 	return err
+}
+
+// livePendingTOTP (8.3 step 6 v1.25): enable e pending → live, pending NULL, totp_last_step = enable er step.
+func livePendingTOTP(ctx context.Context, tx *sql.Tx, shopID, staffID, step int64) (bool, error) {
+	return affected(tx.ExecContext(ctx, `UPDATE staff SET totp_secret_enc = totp_pending_enc, totp_nonce = totp_pending_nonce,
+		  totp_key_version = totp_pending_key_version, totp_last_step = $3,
+		  totp_pending_enc = NULL, totp_pending_nonce = NULL, totp_pending_key_version = NULL
+		WHERE id = $1 AND shop_id = $2 AND totp_pending_enc IS NOT NULL`, staffID, shopID, step))
 }
 
 // replaceRecoveryCodes (8.3 step 6): enable e purono shob muche notun 10 ta (hash).
@@ -280,10 +288,11 @@ func staffForReset(ctx context.Context, tx *sql.Tx, slug, email string) (shopID,
 	return shopID, staffID, err
 }
 
-// clearStaff2FA (8.3 item 6): TOTP ar recovery code muche, shob session revoke; porer login setup_pending.
+// clearStaff2FA (8.3 item 6): TOTP (pending o) ar recovery code muche, shob session revoke; porer login setup_pending.
 func clearStaff2FA(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
 	for _, q := range []string{
 		`UPDATE staff SET totp_secret_enc = NULL, totp_nonce = NULL, totp_key_version = NULL, totp_last_step = NULL,
+		  totp_pending_enc = NULL, totp_pending_nonce = NULL, totp_pending_key_version = NULL,
 		  failed_mfa = 0 WHERE id = $2 AND shop_id = $1`,
 		`DELETE FROM staff_recovery_codes WHERE shop_id = $1 AND staff_id = $2`,
 		`UPDATE sessions SET revoked_at = now() WHERE shop_id = $1 AND staff_id = $2 AND revoked_at IS NULL`,

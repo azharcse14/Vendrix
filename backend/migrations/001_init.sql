@@ -135,6 +135,9 @@ CREATE TABLE staff (
   totp_secret_enc      BYTEA,               -- v1.5: AES-GCM, TOTP_KEY, AAD = shop_id:staff_id:key_version (8.3)
   totp_nonce           BYTEA,
   totp_key_version     SMALLINT,            -- v1.5: kon TOTP_KEY diye encrypt (rotation, 13.5)
+  totp_pending_enc     BYTEA,               -- v1.25: setup er secret (AES-GCM, AAD live er moto); enable e live e jay, login dekhe na (8.3)
+  totp_pending_nonce   BYTEA,
+  totp_pending_key_version SMALLINT,
   totp_last_step       BIGINT,              -- v1.2: shesh use kora TOTP time-step; ekoi code abar cholbe na
   failed_logins        INT NOT NULL DEFAULT 0 CHECK (failed_logins >= 0),  -- v1.2: restart e-o lock thake
   failed_mfa           INT NOT NULL DEFAULT 0 CHECK (failed_mfa >= 0),        -- v1.3: TOTP/recovery bhul, temp_token jure; 10 e lock (8.3)
@@ -145,6 +148,8 @@ CREATE TABLE staff (
   CONSTRAINT staff_vendor_role_check CHECK ((vendor_id IS NULL) = (role IN ('owner','admin','staff'))),
   CONSTRAINT staff_totp_check CHECK ((totp_secret_enc IS NULL) = (totp_nonce IS NULL)
     AND (totp_secret_enc IS NULL) = (totp_key_version IS NULL)),   -- v1.5: key_version o
+  CONSTRAINT staff_totp_pending_check CHECK ((totp_pending_enc IS NULL) = (totp_pending_nonce IS NULL)
+    AND (totp_pending_enc IS NULL) = (totp_pending_key_version IS NULL)),
   UNIQUE (shop_id, id),
   FOREIGN KEY (shop_id, vendor_id) REFERENCES vendors (shop_id, id)
 );

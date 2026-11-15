@@ -249,34 +249,50 @@ const (
 var (
 	errWrongPassword          = errors.New("purono password bhul")      // 400 validation_failed (old)
 	errPasswordChangeRequired = errors.New("age password bodlate hobe") // 403 password_change_required
+	errTOTPLive               = errors.New("TOTP already live")         // 403 forbidden (bodlano shudhu reset-2fa)
 )
 
 // changePassword (8.3 step 4, 6): purono password login er moto failed_logins er reservation diye (v1.24: lock e
 // 429, bhul e audit + alert); thik hole notun hash (semaphore e), must_change_password false, gona 0, ei session
-// chhara staff er shob session revoke, audit. Dairgho ar "purono na" handler e.
-func changePassword(ctx context.Context, d *sql.DB, st httpx.Staff, old, pw, ip string) error {
+// chhara staff er shob session revoke, audit. Dairgho ar "purono na" handler e. v1.25: setup_pending e TOTP live
+// ar must_change_password hole (ei session TOTP par koreche) session active, notun token ferot; na hole "".
+func changePassword(ctx context.Context, d *sql.DB, st httpx.Staff, old, pw, ip string) (string, error) {
 	n, locked, err := reserveFailed(ctx, d, st.ShopID, st.ID, false, loginLockAfter, loginLock)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if n == 0 {
-		return limitError{locked}
+		return "", limitError{locked}
 	}
 	hash, err := staffPasswordHash(ctx, d, st.ShopID, st.ID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if ok, err := checkPasswordSem(ctx, hash, old); err != nil || !ok {
 		if err != nil {
-			return err
+			return "", err
 		}
 		failed := audit{shopID: st.ShopID, staffID: st.ID, action: "staff.password_change_failed", ip: ip}
-		return cmpErr(passwordFailed(ctx, d, failed, n), errWrongPassword)
+		return "", cmpErr(passwordFailed(ctx, d, failed, n), errWrongPassword)
 	}
 	if hash, err = hashPasswordSem(ctx, pw); err != nil {
-		return err
+		return "", err
 	}
-	return db.InTx(ctx, d, func(tx *sql.Tx) error {
+	var token string
+	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
+		r, err := staffTOTP(ctx, tx, st.ShopID, st.ID)
+		if err != nil {
+			return err
+		}
+		// TOTP chhara setup_pending e enable er age password lage, ar password onno session revoke kore: tai
+		// must_change + live TOTP shudhu TOTP par kora session e (8.3 step 4 v1.25)
+		if st.Setup && r.mustChange && r.live {
+			tok, th := newSessionToken()
+			if ok, err := activateSession(ctx, tx, st.ShopID, st.SessionID, "setup_pending", th, "active", adminTTL); err != nil || !ok {
+				return cmpErr(err, httpx.ErrNoSession)
+			}
+			token = tok
+		}
 		if err := setPassword(ctx, tx, st.ShopID, st.ID, hash); err != nil {
 			return err
 		}
@@ -288,25 +304,32 @@ func changePassword(ctx context.Context, d *sql.DB, st httpx.Staff, old, pw, ip 
 		}
 		return insertAudit(ctx, tx, audit{shopID: st.ShopID, staffID: st.ID, action: "staff.password_changed", ip: ip})
 	})
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
 
-// totpSetup (8.3 step 4, 6): password bodlanor por; notun secret (purono replace) AES-GCM e staff e, ferot
-// base32 ar otpauth URL (issuer shop er slug, label slug:email).
+// totpSetup (8.3 step 4, 6): password bodlanor por; notun secret AES-GCM e pending e (v1.25: live na, ager
+// pending replace; live TOTP thakle 403), ferot base32 ar otpauth URL (issuer shop er slug, label slug:email).
 func totpSetup(ctx context.Context, d *sql.DB, key []byte, st httpx.Staff, ip string) (secret, otpauth string, err error) {
 	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
 		r, err := staffTOTP(ctx, tx, st.ShopID, st.ID)
 		if err != nil {
 			return err
 		}
-		if r.mustChange {
+		switch {
+		case r.mustChange:
 			return errPasswordChangeRequired
+		case r.live:
+			return errTOTPLive
 		}
 		raw, b32 := NewTOTPSecret()
 		ct, nonce, err := SealTOTPSecret(key, st.ShopID, st.ID, totpKeyVersion, raw)
 		if err != nil {
 			return err
 		}
-		if err := setTOTPSecret(ctx, tx, st.ShopID, st.ID, ct, nonce, totpKeyVersion); err != nil {
+		if err := setPendingTOTP(ctx, tx, st.ShopID, st.ID, ct, nonce, totpKeyVersion); err != nil {
 			return err
 		}
 		secret = b32
@@ -318,10 +341,10 @@ func totpSetup(ctx context.Context, d *sql.DB, key []byte, st httpx.Staff, ip st
 	return secret, otpauth, err
 }
 
-// totpEnable (8.3 step 4, 6): ekhon er secret er code (±1 step, totp_last_step er beshi) thik hole notun 10
+// totpEnable (8.3 step 4, 6): pending secret er code (±1 step) thik hole pending → live (v1.25), notun 10
 // recovery code (purono muche), setup_pending row-i active 12 ghonta, token notun (setup token JS dekhe na,
-// tobu stage bodlale notun, verifyMFA er moto). Bhul code e failed_mfa na: setup session password e pawa,
-// TOTP er lock er dorkar nai.
+// tobu stage bodlale notun, verifyMFA er moto). Bhul code e pending thake ar failed_mfa na: setup session
+// password e pawa, TOTP er lock er dorkar nai.
 func totpEnable(ctx context.Context, d *sql.DB, key []byte, recoverySecret string, st httpx.Staff, code, ip string) (string, []string, error) {
 	codes := NewRecoveryCodes()
 	hashes := make([][]byte, len(codes))
@@ -336,10 +359,12 @@ func totpEnable(ctx context.Context, d *sql.DB, key []byte, recoverySecret strin
 			return err
 		case r.mustChange:
 			return errPasswordChangeRequired
-		case r.totpCT == nil:
+		case r.live:
+			return errTOTPLive
+		case r.pendCT == nil:
 			return errMFAInvalid
 		}
-		secret, err := OpenTOTPSecret(key, st.ShopID, st.ID, r.keyVersion, r.totpCT, r.totpNon)
+		secret, err := OpenTOTPSecret(key, st.ShopID, st.ID, r.keyVersion, r.pendCT, r.pendNon)
 		if err != nil {
 			return err
 		}
@@ -347,7 +372,7 @@ func totpEnable(ctx context.Context, d *sql.DB, key []byte, recoverySecret strin
 		if !ok {
 			return errMFAInvalid
 		}
-		if ok, err := useTOTPStep(ctx, tx, st.ShopID, st.ID, step); err != nil || !ok {
+		if ok, err := livePendingTOTP(ctx, tx, st.ShopID, st.ID, step); err != nil || !ok {
 			return cmpErr(err, errMFAInvalid)
 		}
 		if err := replaceRecoveryCodes(ctx, tx, st.ShopID, st.ID, hashes); err != nil {
@@ -371,7 +396,7 @@ var (
 )
 
 // ResetStaff2FA (8.3 item 6, 7.7): owner TOTP ar recovery code duitai harale CLI er ekmatro path. Ek
-// transaction e TOTP, recovery code muche, shob session revoke, audit (actor CLI, staff_id NULL).
+// transaction e TOTP (pending o), recovery code muche, shob session revoke, audit (actor CLI, staff_id NULL).
 func ResetStaff2FA(ctx context.Context, d *sql.DB, slug, email string) error {
 	return db.InTx(ctx, d, func(tx *sql.Tx) error {
 		shopID, staffID, err := staffForReset(ctx, tx, slug, email)
