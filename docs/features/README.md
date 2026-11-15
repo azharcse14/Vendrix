@@ -9,23 +9,23 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Feature | Doc | Design | Milestone | Obostha |
 |---|---|---|---|---|
 | Server, config, healthz, CLI | [server.md](server.md) | 2.2, 4.2, 13.5 | M0 | chalu (serve, migrate, shop, staff, credentials) |
-| HTTP er bhitti: client IP, log, error, session middleware | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 11.3, 12.2 | M0, M1, M4 | chalu |
+| HTTP er bhitti: client IP, log, error, session middleware | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 11.3, 12.2 | M0, M1, M4, M5 | chalu |
 | Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | chalu |
 | Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche |
 | Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche |
 | Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant) |
 | Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
-| API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3 | M2, M4 | cholche (catalog, settings, account) |
-| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3, M4 | cholche (layout, home, category, product, search, policy, login, account, BFF auth) |
+| API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4 | M2, M4, M5 | cholche (catalog, settings, account, cart, wishlist) |
+| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3, M4, M5 | cholche (layout, home, category, product, search, policy, login, account, BFF auth, cart, wishlist) |
 | SEO: meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) | 10.4 | M3 | cholche |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora SMS provider ar M10 e) |
-| Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4 | chalu (OTP SMS, cleanup; SMS provider ar alert email M12 e) |
+| Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5 | chalu (OTP SMS, cleanup, `cart.cleanup`; SMS provider ar alert email M12 e) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
 | Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec) |
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4 | chalu (OTP send/verify, customer session, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
-| Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist) |
+| Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`; website `/cart`, heart) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
@@ -45,7 +45,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/jobs` | Job queue, worker, sweep, cleanup | [jobs.md](jobs.md) |
 | `backend/internal/notify` | SMS sender, `sms.send` (OTP template), `alert.security` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
-| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist | [cart.md](cart.md) |
+| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup` | [cart.md](cart.md) |
 | `backend/internal/order` | Status er state machine (pure) | [order-status.md](order-status.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
@@ -59,7 +59,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `packages/shared/lib/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
 | `packages/shared/lib/theme` | Token derive, contrast | [theme.md](theme.md) |
 | `packages/shared/lib/api` | `ApiClient`, `ApiError`, repository | [api-client.md](api-client.md) |
-| `packages/shared/lib/models` | API er model (catalog, settings, `User`; `LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
+| `packages/shared/lib/models` | API er model (catalog, settings, `User`, `Cart`; `LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
 
 ## Code map (website)
 

@@ -63,7 +63,7 @@ Ei kram e poro:
 | `website/lib/services/cache_control.dart` → `cacheControl` | `Cache-Control` middleware |
 | `website/lib/services/security_headers.dart` → `securityHeaders` | Security header ar CSP |
 | `website/lib/services/settings_cache.dart` → `SettingsCache`, `ShopSettings`; `api.dart` → `settingsCache` | Host onujayi settings ar translation cache |
-| `website/lib/services/bff.dart` → `bff`, `BffRoute`, `bffRoutes`, `parseCookies`, `validCartKey` | BFF: CSRF, forward, form `303`, auth cookie |
+| `website/lib/services/bff.dart` → `bff`, `BffRoute`, `bffRoutes`, `_login`, `_mergeWishlist`, `_cart`, `formDone`, `parseCookies`, `validCartKey` | BFF: CSRF, forward, form `303`, auth/cart cookie, verify e `wl` merge |
 | `website/lib/services/api.dart` → `apiHeaders`, `apiFor`, `httpClient` | Request theke `ApiClient` |
 | `website/tailwind.config.js`, `scripts/tailwind.sh` | Tailwind token ar build |
 | `scripts/web.sh` | `make web` |
@@ -119,6 +119,7 @@ Nai (website database dhore na; shob Go API theke).
 - BFF e notun route `bffRoutes` e ar test; Go er `Set-Cookie` forward hoy na, cookie shudhu route er `session` theke.
 - Notun personal cookie (jemon M4/M5 e) hole `_personal` e jog ar test.
 - `Document(base: null)` (`render.dart`): `<base>` CSP `base-uri 'none'` e atke, tokhon client script relative path e `/c/...`, `/p/...` page e 404 hoy ar hydration (filter dialog, variant) chole na; base na thakle Jaspr `/main.client.dart.js` dey.
+- Cookie shob jaygay `parseCookies` (`bff.dart`; page e `requestCookies`) diye; Jaspr er `context.cookies` na: oita `dart:io` `Cookie` e pore, `wl` er koma te `FormatException` dey ar puro page bhange (`cart_test.dart` er `wl` koma case).
 - Jaspr update hole `jaspr install-skills --agent claude-code` abar ar `*.options.dart` (`dart run build_runner build`).
 - `__Host-sid` e `Secure` ar `__Host-` prefix: browser shudhu https e rakhe, tai local `make web` (http) e login er cookie thake na (Chromium `InvalidPrefix`); browser e login `make https` diye `https://sobujbazar.localhost:8443` e (Caddy `tls internal`, 13.1 v1.27). Cookie naam env onujayi bodlabe na.
 
@@ -136,6 +137,9 @@ Nai (website database dhore na; shob Go API theke).
 - **Heart keno JS chhara lukano?** Guest e cookie JS lekhe (server `wl` dekhe na, page cache), tai JS chhara kaj kore na; ordhek kaj kora button dekhano hoy na.
 - **`wl` keno `_personal` e nai?** Server `wl` diye kichu render kore na (guest er heart JS e), tai product page public cache thake (10.12 item 3); cart ar login er cookie `_personal` e.
 - **Login thakle `X-Cart-Key` keno jay na?** Go Bearer thakle key dekhe na (7.4); verify e jay, karon guest cart merge oi key diye (purono sid cookie thakleo).
+- **Cookie chhara `/cart` keno `public, max-age=60`?** Cookie nai mane cart nai: page khali, personal kichu na, sob guest er ekoi HTML (10.3 er niyom); `__Host-cart` ba `__Host-sid` thakle `private, no-store`.
+- **Guest heart e 50 er beshi hole?** `wlCookie` shesh 50 rakhe, purono ta bad (cookie choto, Go merge o 50 ID ney; error dekhano hoy na).
+- **`wl` merge fail hole cookie muche na keno?** Muchle guest er heart hariye jeto; login thik thake, porer login e abar merge (Go te `ON CONFLICT`, duibar e khoti na).
 - **Logout JS chhara form keno?** Account page e `@client` lage na (10.2); BFF form e `303` dey ar cookie muche, tarpor `/account` nijei `/login` e pathay.
 - **`GET /api/me` BFF e nai keno?** `/account` SSR e cookie er token diye sora-sori Go te jay (`ApiClient(token:)`); browser er JS e profile lage na.
 - **Account link login na thakleo keno?** Page `public, max-age=60` cache hoy, tai header e login obostha dekhano jay na; link `/account` e, session na thakle `/login` e.

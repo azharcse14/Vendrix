@@ -60,7 +60,7 @@ Ei kram e poro:
 
 ## Bhul hole ki hoy
 
-`ErrInvalidQuantity` ba bhul body → `400 validation_failed`; `OutOfStockError` → `409 out_of_stock` + `details {variant_id, max_quantity}`; `ErrCartFull` → `409 cart_full`; `ErrNotFound` → `404 not_found` (7.1); `ErrWishlistFull` → `409 wishlist_full`. Wishlist merge e bhul ID error na (bad); `product_ids` na thakle ba number na hole `400 validation_failed`. Bhul format er key error na, notun cart. Ojon-variable variant e `nominal_weight_g` NULL hole add `409 out_of_stock` (`max_quantity` 0), cart e thakle `in_stock: false`.
+`ErrInvalidQuantity` ba bhul body → `400 validation_failed`; `OutOfStockError` → `409 out_of_stock` + `details {variant_id, max_quantity}`; `ErrCartFull` → `409 cart_full`; `ErrNotFound` → `404 not_found` (7.1); `ErrWishlistFull` → `409 wishlist_full`. Wishlist merge e bhul ID error na (bad); `product_ids` na thakle ba number na hole `400 validation_failed`. `PATCH` e cart ba oi variant cart e na thakle `404 not_found` (add na; `DELETE` e kintu `200`). Bhul format er key error na, notun cart. Ojon-variable variant e `nominal_weight_g` NULL hole add `409 out_of_stock` (`max_quantity` 0), cart e thakle `in_stock: false`.
 
 ## Bodlanor age mone rakho
 
@@ -76,4 +76,5 @@ Ei kram e poro:
 - **Merge e bad hoya item er notice porer `GET` e ashe na keno?** Tar jonno state (column) lagto; notice verify er response er `cart_notices` e, website login form e ek line (10.12 item 2, v1.30).
 - **Wishlist merge e 50 er beshi ID hole?** Prothom 50 nei, baki chupchap bad (`wl` cookie max 50; merge fail hole login fail na, 10.12).
 - **Wishlist er 200 e bondho product gona hoy keno?** Row DB te thake (chalu hole ferot), tai limit row er; GET e kom dekhale-o notun add `409` hote pare.
+- **`PATCH` e item na thakle `404`, `DELETE` e `200` keno?** `PATCH` qty set kore, nai emon line chupchap banale add er niyom (`CheckRoom`, notun cart) baad pore; `DELETE` er fol (line nai) already shotti, tai idempotent.
 - **`variant_label` ki?** Variant er `options` er value gulo key er kram e, bortoman bhashay, koma diye.

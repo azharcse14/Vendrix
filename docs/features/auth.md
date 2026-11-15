@@ -125,6 +125,7 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 - `HashRecoveryCode` kokhono fail kore na; bhul code er hash DB te mile na.
 - OTP send: bhul JSON ba `purpose` `400 validation_failed`; bhul phone `400 invalid_phone`; Turnstile fail `400 turnstile_failed`; Cloudflare e jete na parle ba DB error `500 internal` (log e phone mask); blocked `403 phone_blocked`; limit, lock ba cap `429 rate_limited` + `Retry-After`.
 - OTP verify: bhul JSON `400 validation_failed`, bhul phone `400 invalid_phone`; OTP nai, expire, use hoye geche ba bhul code `400 otp_invalid`; 5 attempt shesh `400 otp_too_many_attempts`; lock `429 rate_limited` + `Retry-After`; DB error `500 internal` (log e phone mask).
+- Verify e cart merge: `X-Cart-Key` nai, bhul format ba onno shop er hole merge chupchap hoy na (login thik); merge e DB error hole puro verify transaction rollback (`500 internal`, OTP consume o ferot), session hoy na.
 - Customer route: token nai/bhul/onno shop/revoke/staff `401 unauthenticated`, expire `401 session_expired`; user delete hole `/api/me` `401`. `PATCH /api/me` bhul field e `400 validation_failed` (`fields` e kon ta).
 - Staff login: bhul JSON `400 validation_failed`; ochena shop/email, inactive, bhul password `401 invalid_credentials`; account lock o `401 invalid_credentials` (enumeration na, 16.1 v1.24); IP limit `429 rate_limited` + `Retry-After`; DB error `500`.
 - TOTP/recovery: temp_token nai/bhul/customer/active hoye geche `401 unauthenticated`, expire `401 session_expired`; 5 attempt shesh `400 mfa_too_many_attempts`; bhul, replay ba use kora code `400 mfa_invalid`; `failed_mfa` lock ba IP limit (minute e 120) `429`; `OpenTOTPSecret` fail (bhul `TOTP_KEY`) `500`.
@@ -152,6 +153,7 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 - **Test secret e hostname check na keno?** Cloudflare er test secret shob shomoy `example.com` dey, tai local login hoto na; test secret local chhara config e atke (v1.20), tai production e check bad hoy na (10.11).
 - **Verify e Turnstile na keno?** OTP nijei 5 attempt ar 24 ghontar lock e bandha; Turnstile send e (14.2 test 23).
 - **Lock er 10 tomo bhul e `429`, `otp_invalid` na keno?** Tokhon theke lock chalu; client `Retry-After` dekhe opekkha kore, lock ache bole na (7.8).
+- **Cart merge verify er transaction e keno?** Login ar merge eksathe: verify fail e guest cart thake, parallel verify e guest cart ekbar-i merge (`FOR UPDATE`); notice (`item_dropped`) tai verify er response e ([cart](cart.md)).
 - **Response e user id nai keno?** Client er lage na; serial id baire dei na (Rule 11 er moto).
 
 - **TOTP er por token bodlay keno?** Temp_token response body te JS dekhe; oi token-i HttpOnly cookie hole XSS e pawa temp_token pore admin session hoto. Row ekoi (8.3 step 3), shudhu `token_hash` notun.
