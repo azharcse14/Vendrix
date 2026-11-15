@@ -139,10 +139,12 @@ func TestRun(t *testing.T) {
 		}
 	}
 	env := map[string]string{"APP_ENV": "local", "DATABASE_URL": "postgres://x@127.0.0.1:1/db?connect_timeout=1",
-		"JASPR_INTERNAL_SECRET": strings.Repeat("s", 32)}
+		"JASPR_INTERNAL_SECRET": strings.Repeat("s", 32), "OTP_SECRET": strings.Repeat("o", 32), "RECOVERY_SECRET": strings.Repeat("r", 32),
+		"TURNSTILE_SECRET": "1x0000000000000000000000000000000AA", "TOTP_KEY": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="}
 	lookup := func(k string) (string, bool) { v, ok := env[k]; return v, ok }
-	if err := run(ctx, nil, lookup, nil, &out); err == nil {
-		t.Error("database chhara serve chole geche")
+	// config thik, tai error database theke (config er error e na)
+	if err := run(ctx, nil, lookup, nil, &out); err == nil || strings.Contains(err.Error(), "_SECRET") || strings.Contains(err.Error(), "TOTP_KEY") {
+		t.Errorf("database chhara serve: %v", err)
 	}
 	for _, args := range [][]string{{"credentials"}, {"credentials", "get"}, {"credentials", "set", "--shop", "x"},
 		{"credentials", "set", "--provider", "sms"}, {"credentials", "set", "--shop", "x", "--provider", "sms", "extra"}} {

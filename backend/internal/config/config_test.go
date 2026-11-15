@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -15,19 +16,29 @@ func env(kv ...string) func(string) (string, bool) {
 
 const secret = "0123456789abcdef0123456789abcdef"
 
+// totpKey: base64 e 32 byte.
+const totpKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+
+// authEnv: serve er M4 secret (13.5).
+var authEnv = []string{"OTP_SECRET", secret, "TURNSTILE_SECRET", "0x4AAAAAAAreal-turnstile-secret", "TOTP_KEY", totpKey,
+	"RECOVERY_SECRET", secret}
+
 func TestLoadServe(t *testing.T) {
-	c, err := Load(env("APP_ENV", "production", "DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5432/shop",
-		"JASPR_INTERNAL_SECRET", secret, "ADMIN_ORIGINS", "https://admin.tomarshop.com, https://admin2.tomarshop.com"), Serve)
+	c, err := Load(env(append([]string{"APP_ENV", "production", "DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5432/shop",
+		"JASPR_INTERNAL_SECRET", secret, "ADMIN_ORIGINS", "https://admin.tomarshop.com, https://admin2.tomarshop.com"}, authEnv...)...), Serve)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if c.Addr != "127.0.0.1:8080" || len(c.AdminOrigins) != 2 || c.AdminOrigins[1] != "https://admin2.tomarshop.com" {
 		t.Errorf("config: %+v", c)
 	}
+	if c.OTPSecret != secret || c.RecoverySecret != secret || len(c.TOTPKey) != 32 || c.TurnstileSecret == "" {
+		t.Errorf("auth secret: %+v", c)
+	}
 	// local e http://localhost er admin cholbe, ADMIN_ORIGINS chhara-o
 	for _, origins := range []string{"http://localhost:3001", ""} {
-		if _, err := Load(env("APP_ENV", "local", "DATABASE_URL", "postgres://a@localhost/db", "JASPR_INTERNAL_SECRET", secret,
-			"ADMIN_ORIGINS", origins, "ADDR", "localhost:9090"), Serve); err != nil {
+		if _, err := Load(env(append([]string{"APP_ENV", "local", "DATABASE_URL", "postgres://a@localhost/db", "JASPR_INTERNAL_SECRET", secret,
+			"ADMIN_ORIGINS", origins, "ADDR", "localhost:9090"}, authEnv...)...), Serve); err != nil {
 			t.Errorf("local %q: %v", origins, err)
 		}
 	}
@@ -35,8 +46,8 @@ func TestLoadServe(t *testing.T) {
 
 // TestLoadRejects: protiti bhul alada dhora pore, ar error e kokhono password na.
 func TestLoadRejects(t *testing.T) {
-	base := []string{"APP_ENV", "production", "DATABASE_URL", "postgres://a:pw-secret@h/db", "JASPR_INTERNAL_SECRET", secret,
-		"ADMIN_ORIGINS", "https://admin.x.com"}
+	base := append([]string{"APP_ENV", "production", "DATABASE_URL", "postgres://a:pw-secret@h/db", "JASPR_INTERNAL_SECRET", secret,
+		"ADMIN_ORIGINS", "https://admin.x.com"}, authEnv...)
 	with := func(k, v string) func(string) (string, bool) {
 		kv := append([]string{}, base...)
 		for i := 0; i < len(kv); i += 2 {
@@ -63,6 +74,17 @@ func TestLoadRejects(t *testing.T) {
 		{"production e ADMIN_ORIGINS nai", with("ADMIN_ORIGINS", ""), "ADMIN_ORIGINS nai"},
 		{"production e http origin", with("ADMIN_ORIGINS", "http://localhost:3001"), "https lagbe"},
 		{"origin e path", with("ADMIN_ORIGINS", "https://admin.x.com/app"), "path chhara"},
+		{"OTP_SECRET nai", with("OTP_SECRET", ""), "OTP_SECRET"},
+		{"OTP_SECRET choto", with("OTP_SECRET", "short"), "OTP_SECRET"},
+		{"RECOVERY_SECRET nai", with("RECOVERY_SECRET", ""), "RECOVERY_SECRET"},
+		{"TURNSTILE_SECRET nai", with("TURNSTILE_SECRET", ""), "TURNSTILE_SECRET"},
+		{"TOTP_KEY nai", with("TOTP_KEY", ""), "TOTP_KEY"},
+		{"TOTP_KEY base64 na", with("TOTP_KEY", "pw-secret not base64!"), "TOTP_KEY"},
+		{"TOTP_KEY 16 byte", with("TOTP_KEY", "MDEyMzQ1Njc4OWFiY2RlZg=="), "TOTP_KEY"},
+		// v1.20: Cloudflare er test secret production e Turnstile bondho kore dito
+		{"Turnstile pass test secret", with("TURNSTILE_SECRET", "1x0000000000000000000000000000000AA"), "TURNSTILE_SECRET"},
+		{"Turnstile fail test secret", with("TURNSTILE_SECRET", "2x0000000000000000000000000000000AA"), "TURNSTILE_SECRET"},
+		{"Turnstile spent test secret", with("TURNSTILE_SECRET", "3x0000000000000000000000000000000AA"), "TURNSTILE_SECRET"},
 	}
 	for _, c := range cases {
 		_, err := Load(c.lookup, Serve)
@@ -119,9 +141,39 @@ func TestRejectExampleSecrets(t *testing.T) {
 		!strings.Contains(err.Error(), "CREDENTIALS_KEY") {
 		t.Errorf("production e example key: %v", err)
 	}
-	if _, err := Load(env(append(base, "APP_ENV", "staging", "ADMIN_ORIGINS", "https://admin.tomarshop.com",
-		"JASPR_INTERNAL_SECRET", "local-only-jaspr-internal-secret-change-me")...), Serve); err == nil ||
-		!strings.Contains(err.Error(), "JASPR_INTERNAL_SECRET") {
-		t.Errorf("staging e example JASPR secret: %v", err)
+	// backend/env.example nijei: local e chole, staging e protiti local-only secret ar Turnstile test secret atke
+	example := envFile(t, "../../env.example")
+	if _, err := Load(example, Serve); err != nil {
+		t.Errorf("local e env.example: %v", err)
 	}
+	staging := func(k string) (string, bool) {
+		switch k {
+		case "APP_ENV":
+			return "staging", true
+		case "ADMIN_ORIGINS":
+			return "https://admin.tomarshop.com", true
+		}
+		return example(k)
+	}
+	_, err := Load(staging, Serve)
+	for _, k := range []string{"JASPR_INTERNAL_SECRET", "OTP_SECRET", "TOTP_KEY", "RECOVERY_SECRET", "TURNSTILE_SECRET"} {
+		if err == nil || !strings.Contains(err.Error(), k) {
+			t.Errorf("staging e env.example er %s: %v", k, err)
+		}
+	}
+}
+
+// envFile: KEY=VALUE file (# comment bad) theke lookup.
+func envFile(t *testing.T, path string) func(string) (string, bool) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kv []string
+	for _, l := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(l, "="); ok && !strings.HasPrefix(strings.TrimSpace(l), "#") {
+			kv = append(kv, strings.TrimSpace(k), v)
+		}
+	}
+	return env(kv...)
 }
