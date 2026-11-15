@@ -372,6 +372,18 @@ func TestTurnstile(t *testing.T) {
 			t.Errorf("%q/%q: %v %v, chai false", tok, host, ok, err)
 		}
 	}
+	// v1.22 (10.11): Cloudflare er test secret shob shomoy hostname "example.com" dey, tai shudhu oi secret e
+	// hostname check na; success false hole tobu fail. Asol secret e upore "ok:evil.com" fail, "ok:a.com" pass.
+	for secret, want := range map[string]bool{"1x0000000000000000000000000000000AA": true,
+		"3x0000000000000000000000000000000AA": true, "ts-secret": false} {
+		test := auth.Turnstile{URL: srv.URL, Secret: secret}
+		if ok, err := test.Verify(ctx, "ok:example.com", "", "localhost"); ok != want || err != nil {
+			t.Errorf("%s + example.com: %v %v, chai %v", secret, ok, err, want)
+		}
+		if ok, err := test.Verify(ctx, "bad", "", "localhost"); ok || err != nil {
+			t.Errorf("%s + bad token: %v %v, chai false", secret, ok, err)
+		}
+	}
 	form = nil
 	if ok, err := ts.Verify(ctx, "", "203.0.113.7", "a.com"); ok || err != nil || form != nil {
 		t.Errorf("khali token: %v %v, siteverify dakche %v", ok, err, form != nil)
