@@ -19,7 +19,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 ## Porer kaj
 
 1. **User: push ar CI**: `git push origin main` (`339de22`..HEAD; `gh auth switch -u azharcse14`), tarpor CI green kina dekho (Go job, `ci(M3): website build`, Dart job); Linux e `TestSearchRankingIntegration` (`backend/internal/catalog`) green howa uchit (Mac e macOS `C.UTF-8` e fail, M3/M4 Report). Local browser login er jonno `backend/.env` e `OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET` ar `website/.env` e `TURNSTILE_SITE_KEY` (`env.example` dekho).
-2. **M5 (Cart ar wishlist)**: `docs/design/15-milestones.md` er M5 row (8.4, 7.4: guest cart `X-Cart-Key`, login cart, merge, wishlist login + cookie merge; acceptance: merge test, bondho product cart theke bad, dam fresh). `milestone` skill (`/milestone M5`): design pora, `docs/milestones/M5.md` e plan ar open question, user approve er por code.
+2. **M5 (Cart ar wishlist)**: M5 plan draft [`docs/milestones/M5.md`](milestones/M5.md) e; user approve (ar Open question 1–11) baki. Approve pele step 0: uttor 16.1 ar design e (`design-change`, v1.28), tarpor step 1 theke (`milestone` skill, `/milestone M5`). Approve er age code na.
 
 ## User er kache proshno
 
@@ -41,7 +41,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | M2 | Shared Dart package | shesh (10 November 2026) | [M2](milestones/M2.md) |
 | M3 | Website catalog | shesh (15 November 2026) | [M3](milestones/M3.md) |
 | M4 | Login | shesh (15 November 2026) | [M4](milestones/M4.md) |
-| M5 | Cart ar wishlist | baki | |
+| M5 | Cart ar wishlist | baki (plan draft) | [M5](milestones/M5.md) |
 | M6 | Checkout (COD) | baki | |
 | M7 | Admin panel v1 | baki | |
 | M8 | Store settings | baki | |
@@ -54,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M5 plan draft `docs/milestones/M5.md` (scope, Already ache, acceptance → test, 11 ta Open question recommendation shoho, step 0–11); user approve baki, code na.
 - 15 November 2026: **M4 shesh**: step 15 `make check` (gofmt, vet, docsync, rule green; DB 85/85; shared 78, website 123; `-race` e shudhu jana `TestSearchRankingIntegration` macOS locale), `dart format` fix `7b90d9b` (`account.dart`), acceptance ☑, [M4](milestones/M4.md) Report. Porer kaj: push + CI, tarpor M5 plan.
 - 15 November 2026: 16.1 local `__Host-` cookie: user (a), design v1.27 `bf33e68` (13.1, 13.3); `make https` (Caddy `tls internal`, `infra/caddy/Caddyfile.local`, `scripts/https.sh`); Chromium e `https://sobujbazar.localhost:8443` OTP login → `/account` e `__Host-sid` thake. User: `brew install caddy`, ekbar `caddy trust`.
 - 15 November 2026: M4 step 15 design review baki finding: design v1.26 `bb57e10` (error code, response, rate limit note, audit action, 16.1 SMS cap DoS), test `7f765fe`, fix `4bc4b88` (OTP lock alert key HMAC, account phone placeholder), feature doc `868f489`; M4.md test 23 ☑.
@@ -68,4 +69,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 15 November 2026: M4 step 7: test `e3883ec` (`TestStaffSetupIntegration`, `TestSessionRouteKind`, `TestAdminCookie`; build fail dekhe), code `83ca2d9` (`httpx.AdminSession`, setup_pending gate, `/auth/password`, `/auth/totp/setup`, `/auth/totp/enable`, `/auth/logout`, `GET /api/admin/me`); asol Postgres e `-race` pass.
 - 15 November 2026: M4 step 6: test `58e90b3` (`TestStaffLoginIntegration`, `TestPBKDFSemaphore`, `TestLoginIPLimit`, `TestMFAAttemptsIntegration`, `TestTOTPReplayIntegration`, `TestFailedMFAAcrossTokensIntegration`, `TestRecoveryCodeIntegration`; build fail dekhe), code `6f7a86d` (`/api/admin/auth/login`, `/totp`, `/recovery`; `httpx.FailLimit`, `httpx.AdminCookie`); asol Postgres e `-race` pass.
 - 15 November 2026: 16.1 Turnstile test secret er hostname: user (a), design v1.22 `c559ca6` (10.11, 13.5); test `1f86d07`, code `9b03b5b` (`config.TurnstileTestSecret`, test secret e `Turnstile.Verify` hostname check na).
-- 15 November 2026: M4 step 5: test `67aa30c` (OTP attempt/expire/parallel verify, guest order jog, customer session, shop isolation; build fail dekhe), code `12aad8b` (`POST /api/auth/otp/verify`, `RequireCustomer` + `LookupSession`, logout, `GET`/`PATCH /api/me`); asol Postgres e `-race` pass.
