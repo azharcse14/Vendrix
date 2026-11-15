@@ -1,8 +1,11 @@
 package auth
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestPasswordHash (8.3): format pbkdf2-sha256$600000$<salt>$<hash>, protibar notun salt, thik password e
@@ -33,5 +36,43 @@ func TestPasswordHash(t *testing.T) {
 		if CheckPassword(stored, "correct horse") {
 			t.Errorf("bhul format %q e true", stored)
 		}
+	}
+}
+
+// TestPBKDFSemaphore (8.3 step 1): ek shathe 4 tar beshi PBKDF2 na (CPU DoS); 5 tomo opekkha kore, slot
+// khalile chole; opekkhay request bondho hole ctx er error.
+func TestPBKDFSemaphore(t *testing.T) {
+	if cap(pbkdfSem) != 4 {
+		t.Fatalf("semaphore %d, chai 4", cap(pbkdfSem))
+	}
+	h, err := HashPassword("pw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 4 {
+		pbkdfSem <- struct{}{}
+	}
+	done := make(chan bool)
+	go func() {
+		ok, _ := checkPasswordSem(context.Background(), h, "pw")
+		done <- ok
+	}()
+	select {
+	case <-done:
+		t.Fatal("4 ta cholar shomoy 5 tomo PBKDF2 cholche")
+	case <-time.After(100 * time.Millisecond):
+	}
+	<-pbkdfSem
+	if !<-done {
+		t.Error("slot khalir por thik password false")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	pbkdfSem <- struct{}{} // abar 4 ta bhora (3 ta age theke)
+	if _, err := checkPasswordSem(ctx, h, "pw"); !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("opekkhay ctx shesh: %v", err)
+	}
+	for range 4 {
+		<-pbkdfSem
 	}
 }
