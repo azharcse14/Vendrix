@@ -168,6 +168,14 @@ void main() {
       }
     });
 
+    test('wl cookie e koma (10.12 item 3) thakleo cookie pora bhange na (dart:io Cookie koma mane na)', () async {
+      final (res, _, _) = await page('/cart', cookie: 'wl=1,2,3; __Host-cart=$key');
+      expect(res.statusCode, 200);
+      expect(cartCalls().single.headers['X-Cart-Key'], key);
+      final account = await get('/account/wishlist', cookie: 'wl=1,2; __Host-sid=GOOD');
+      expect(account.statusCode, 200);
+    });
+
     test('BFF er ?error=<code> lekha hishebe', () async {
       final (_, _, doc) = await page('/cart?error=out_of_stock', cookie: '__Host-cart=$key');
       expect(doc.querySelector('[role="alert"]')!.text, t.t('error.out_of_stock'));
