@@ -40,7 +40,8 @@ Vendrix: ekoi code e single store, marketplace ar multi-tenant ecommerce (Bangla
 | 5 Feature list (phase onujayi) | `docs/design/05-features.md` |
 | 6 Database (6.7: `backend/migrations/001_init.sql`) | `docs/design/06-database.md` |
 | 7 API | `docs/design/07-api.md` |
-| 8 Core flow: phone, OTP, staff login, cart, pricing, checkout, state machine, SSLCommerz, COD, packing, inventory, coupon, review, SMS, job | `docs/design/08-core-flows.md` |
+| 8 Core flow: phone, OTP, staff login, cart (8.1–8.4), packing, inventory, coupon, review, SMS, job (8.11–8.18) | `docs/design/08-core-flows.md` |
+| 8 Checkout: pricing, checkout, risk/OTP, state machine, SSLCommerz, COD confirm (8.5–8.10, 8.19) | `docs/design/08-checkout.md` |
 | 9 Theme, design token, localization | `docs/design/09-theme-l10n.md` |
 | 10 Website (Jaspr), BFF | `docs/design/10-website.md` |
 | 11 Admin (Flutter web), role | `docs/design/11-admin.md` |
