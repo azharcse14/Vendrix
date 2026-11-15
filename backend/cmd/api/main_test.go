@@ -244,6 +244,42 @@ func TestOTPSendIPLimit(t *testing.T) {
 	}
 }
 
+// TestAdminMFAIPLimit (7.8 v1.24): /api/admin/auth/totp ar /recovery e ek client IP te minute e 120 (duita
+// route mile), tarpor 429 + Retry-After; onno IP te chole.
+func TestAdminMFAIPLimit(t *testing.T) {
+	d := dbtest.New(t)
+	cfg := testConfig()
+	cfg.TOTPKey = bytes.Repeat([]byte{7}, 32)
+	h, err := newHandler(cfg, quiet(), d, fakeDB{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	post := func(path, ip string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"temp_token":"x","code":"000000"}`))
+		r.RemoteAddr = ip + ":1234"
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec
+	}
+	for i := range 120 {
+		path := "/api/admin/auth/totp"
+		if i%2 == 1 {
+			path = "/api/admin/auth/recovery"
+		}
+		if rec := post(path, "198.51.100.7"); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%d tomo: %d %s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+	for _, p := range []string{"/api/admin/auth/totp", "/api/admin/auth/recovery"} {
+		if rec := post(p, "198.51.100.7"); rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" {
+			t.Errorf("%s 121 tomo: %d %q", p, rec.Code, rec.Header().Get("Retry-After"))
+		}
+	}
+	if rec := post("/api/admin/auth/totp", "198.51.100.8"); rec.Code != http.StatusUnauthorized {
+		t.Errorf("onno IP: %d", rec.Code)
+	}
+}
+
 // TestSessionRouteKind (14.2 test 19, 3.2 Niyom 3, Rule 16): router diye session er dhoron. Customer token admin
 // route e (Bearer ba cookie) 401; mfa_pending temp_token admin API te 401; setup_pending e setup route chole,
 // baki admin API 403 setup_required; active staff cookie admin e chole kintu customer route e (cookie ba Bearer) 401.

@@ -3,6 +3,7 @@ package auth_test
 import (
 	"bytes"
 	"crypto/pbkdf2"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -126,6 +127,16 @@ func (f *staffFixture) tempToken(t *testing.T, shop string) string {
 	return out.TempToken
 }
 
+// mfaToken: DB te sora-sori mfa_pending session (5 minute): duita parallel login er moto, jekhane notun login
+// er purono temp_token revoke (8.3 step 2 v1.24) er age duitai password par hoyeche.
+func (f *staffFixture) mfaToken(t *testing.T, shop string) string {
+	t.Helper()
+	tok := rand.Text()
+	f.exec(t, `INSERT INTO sessions (shop_id, token_hash, subject_type, staff_id, stage, expires_at)
+		VALUES ($1, $2, 'staff', $3, 'mfa_pending', now() + interval '5 minutes')`, f.shops[shop+".com"], hashOf(tok), f.owner[shop])
+	return tok
+}
+
 func (f *staffFixture) totp(temp, code string) *httptest.ResponseRecorder {
 	return f.adminPost("/api/admin/auth/totp", "192.0.2.1", map[string]string{"temp_token": temp, "code": code})
 }
@@ -183,7 +194,8 @@ func (f *staffFixture) audits(t *testing.T, shop, action string) int {
 
 // TestStaffLoginIntegration (8.3 step 1-4, 7.7, 7.8, Q7, Q9): thik password e TOTP thakle mfa_pending temp_token
 // (body te, 5 minute, cookie na), na hole setup_pending + __Host-asid (900); ochena shop/email, bhul password ar
-// inactive ekoi 401 invalid_credentials; failed_logins, 5 er por protiti bhul e 1 minute lock (429), thik hole 0;
+// inactive ekoi 401 invalid_credentials; failed_logins, 5 er por protiti bhul e 1 minute lock (v1.24: lock e o 401,
+// Retry-After na), thik hole 0;
 // 10 ar 50 e alert.security; shob login audit_logs e; closed/suspended shop e login chole; shop A er staff
 // shop B er slug e na.
 func TestStaffLoginIntegration(t *testing.T) {
@@ -225,11 +237,13 @@ func TestStaffLoginIntegration(t *testing.T) {
 		t.Errorf("bhul login er audit %d, chai 5", n)
 	}
 
-	// 5 tomo bhul e lock; lock e thik password o 429
+	// 5 tomo bhul e lock; lock e thik password o 401, Retry-After na (8.3 step 1 v1.24: lock dekhe email chena na)
 	f.login("a", "o@a.com", "wrong-password-1")
 	wantErr(t, f.login("a", "o@a.com", "wrong-password-1"), 401, "invalid_credentials", "5 tomo bhul")
-	if s := limited(t, f.login("a", "o@a.com", staffPW), "lock e thik password"); s > 60 {
-		t.Errorf("soft lock Retry-After %d > 60", s)
+	rec := f.login("a", "o@a.com", staffPW)
+	wantErr(t, rec, 401, "invalid_credentials", "lock e thik password")
+	if h := rec.Header().Get("Retry-After"); h != "" {
+		t.Errorf("lock e Retry-After %q", h)
 	}
 	if n := f.count(t, `SELECT failed_logins FROM staff WHERE id = $1`, own); n != 5 {
 		t.Errorf("lock e attempt gona hoyeche: failed_logins %d", n)
@@ -241,7 +255,7 @@ func TestStaffLoginIntegration(t *testing.T) {
 	}
 	f.exec(t, `UPDATE staff SET failed_logins = 4 WHERE id = $1`, own)
 	wantErr(t, f.login("a", "o@a.com", "nope-nope-nope"), 401, "invalid_credentials", "5 tomo bhul (abar)")
-	limited(t, f.login("a", "o@a.com", staffPW), "5 er por lock")
+	wantErr(t, f.login("a", "o@a.com", staffPW), 401, "invalid_credentials", "5 er por lock")
 
 	// 10 ar 50 e alert, 11 e na
 	for _, c := range []struct{ before, alerts int }{{8, 0}, {9, 1}, {10, 1}, {49, 2}, {50, 2}} {
@@ -260,7 +274,7 @@ func TestStaffLoginIntegration(t *testing.T) {
 
 	// setup_pending: must_change_password ba TOTP nai
 	f.exec(t, `UPDATE staff SET must_change_password = true, totp_secret_enc = NULL, totp_nonce = NULL, totp_key_version = NULL WHERE id = $1`, own)
-	rec := f.login("a", "o@a.com", staffPW)
+	rec = f.login("a", "o@a.com", staffPW)
 	if rec.Code != http.StatusOK || strings.TrimSpace(rec.Body.String()) != `{"setup_required":true}` {
 		t.Fatalf("setup login: %d %s", rec.Code, rec.Body.String())
 	}
@@ -396,7 +410,7 @@ func TestTOTPReplayIntegration(t *testing.T) {
 	wantErr(t, f.totp(f.tempToken(t, "a"), f.code(own, -1)), 400, "mfa_invalid", "ager step er code")
 	wantErr(t, f.totp(f.tempToken(t, "a"), f.code(f.owner["b"], 1)), 400, "mfa_invalid", "onno staff er code")
 
-	t1, t2, t3 := f.tempToken(t, "a"), f.tempToken(t, "a"), f.tempToken(t, "a")
+	t1, t2, t3 := f.mfaToken(t, "a"), f.mfaToken(t, "a"), f.mfaToken(t, "a")
 	next := f.code(own, 1)
 	toks := make(chan string, 3)
 	toks <- t1
@@ -414,27 +428,36 @@ func TestTOTPReplayIntegration(t *testing.T) {
 	}
 }
 
-// TestFailedMFAAcrossTokensIntegration (8.3 step 2 v1.3, 7.8, 14.2 test 10): temp_token bodle-o staff.failed_mfa
-// jure 10 bhul e 30 minute lock (429) ar alert ekbar; lock e thik code o login o na; lock khulle thik code e 0.
+// TestFailedMFAAcrossTokensIntegration (8.3 step 2 v1.3, v1.24, 7.8, 14.2 test 10): temp_token bodle-o
+// staff.failed_mfa jure 10 bhul e 30 minute lock (429) ar alert ekbar (dedupe_key din shoho); notun login e purono
+// temp_token revoke; lock e thik code na, login 401; lock khulle thik code e 0.
 func TestFailedMFAAcrossTokensIntegration(t *testing.T) {
 	f := newStaffFixture(t)
 	a, own := f.shops["a.com"], f.owner["a"]
-	t1, t2, t3 := f.tempToken(t, "a"), f.tempToken(t, "a"), f.tempToken(t, "a")
+	t1 := f.tempToken(t, "a")
 	for i := range 5 {
 		wantErr(t, f.totp(t1, "000000"), 400, "mfa_invalid", "t1 bhul "+strconv.Itoa(i+1))
 	}
+	t2 := f.tempToken(t, "a")
+	wantErr(t, f.totp(t1, f.code(own, 0)), 401, "unauthenticated", "notun login er por purono temp_token")
 	for i := range 3 {
 		wantErr(t, f.recovery(t2, "AAAAA-AAAAA"), 400, "mfa_invalid", "t2 recovery bhul "+strconv.Itoa(i+1))
 	}
 	wantErr(t, f.totp(t2, "000000"), 400, "mfa_invalid", "9 tomo bhul")
-	if s := limited(t, f.totp(t2, "000000"), "10 tomo bhul"); s < 1790 || s > 1800 {
+	t3 := f.tempToken(t, "a")
+	if s := limited(t, f.totp(t3, "000000"), "10 tomo bhul"); s < 1790 || s > 1800 {
 		t.Errorf("failed_mfa lock Retry-After %d, chai ~1800", s)
 	}
 	limited(t, f.totp(t3, f.code(own, 0)), "lock e thik code")
-	limited(t, f.login("a", "o@a.com", staffPW), "lock e login")
-	if n := f.count(t, `SELECT count(*) FROM jobs WHERE kind = 'alert.security' AND shop_id = $1
-		AND payload->>'event' = 'staff_mfa_lock' AND (payload->>'staff_id')::bigint = $2`, a, own); n != 1 {
-		t.Errorf("mfa lock alert %d, chai 1", n)
+	wantErr(t, f.login("a", "o@a.com", staffPW), 401, "invalid_credentials", "lock e login")
+	var key string
+	if err := f.d.QueryRow(`SELECT dedupe_key FROM jobs WHERE kind = 'alert.security' AND shop_id = $1
+		AND payload->>'event' = 'staff_mfa_lock' AND (payload->>'staff_id')::bigint = $2`, a, own).Scan(&key); err != nil {
+		t.Fatalf("mfa lock alert ekta chai: %v", err)
+	}
+	day := time.Now().In(mustLoc(t, "Asia/Dhaka")).Format(time.DateOnly)
+	if want := fmt.Sprintf("alert.staff_mfa_lock:%d:%d:%s", a, own, day); key != want {
+		t.Errorf("dedupe_key %q, chai %q", key, want)
 	}
 	if n := f.count(t, `SELECT count(*) FROM sessions WHERE staff_id = $1 AND stage = 'active'`, own); n != 0 {
 		t.Errorf("lock e session active: %d", n)
@@ -444,8 +467,8 @@ func TestFailedMFAAcrossTokensIntegration(t *testing.T) {
 	if rec := f.totp(t3, f.code(own, 0)); rec.Code != http.StatusOK {
 		t.Fatalf("lock khulle thik code: %d %s", rec.Code, rec.Body.String())
 	}
-	if n := f.count(t, `SELECT failed_mfa FROM staff WHERE id = $1`, own); n != 0 {
-		t.Errorf("thik code e failed_mfa %d", n)
+	if n := f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND failed_mfa = 0 AND locked_until IS NULL`, own); n != 1 {
+		t.Error("thik code e failed_mfa 0 ar lock khole nai")
 	}
 }
 
@@ -482,7 +505,7 @@ func TestRecoveryCodeIntegration(t *testing.T) {
 
 	toks := make(chan string, 4)
 	for range 4 {
-		toks <- f.tempToken(t, "a")
+		toks <- f.mfaToken(t, "a")
 	}
 	got := parallel(4, func() *httptest.ResponseRecorder { return f.recovery(<-toks, codes[1]) })
 	if got["200 "] != 1 || got["400 mfa_invalid"] != 3 {
@@ -497,5 +520,109 @@ func TestRecoveryCodeIntegration(t *testing.T) {
 	}
 	if n := f.count(t, `SELECT failed_mfa FROM staff WHERE id = $1`, own); n != 0 {
 		t.Errorf("thik recovery er por failed_mfa %d", n)
+	}
+}
+
+// TestStaffLockRaceIntegration (8.3 step 1, 2, 4 v1.24, 7.8, 8.17, 12.2): lock check er age atomic reservation.
+// Parallel bhul password e lock er age 5 tar beshi asol PBKDF2 na (baki "locked" audit), lock er por thik password
+// o 401; parallel temp_token e 10 tar beshi TOTP guess na, lock e thik code o 429; 30 minute lock password er
+// bhul e choto hoy na; login alert er dedupe_key; /auth/password e bhul old gona ar audit; ochena email er audit e
+// email na, shudhu domain; auth response e Cache-Control: no-store.
+func TestStaffLockRaceIntegration(t *testing.T) {
+	f := newStaffFixture(t)
+	a, own := f.shops["a.com"], f.owner["a"]
+	reason := func(r string) int {
+		return f.count(t, `SELECT count(*) FROM audit_logs WHERE shop_id = $1 AND action = 'staff.login_failed'
+			AND after->>'reason' = $2`, a, r)
+	}
+
+	got := parallel(20, func() *httptest.ResponseRecorder { return f.login("a", "o@a.com", "wrong-password-1") })
+	if got["401 invalid_credentials"] != 20 {
+		t.Errorf("parallel bhul password: %v, chai 20 ta 401", got)
+	}
+	if n, p := f.count(t, `SELECT failed_logins FROM staff WHERE id = $1`, own), reason("password"); n != 5 || p != 5 {
+		t.Errorf("parallel 20 bhul: failed_logins %d, password audit %d; chai 5, 5", n, p)
+	}
+	if n := reason("locked"); n != 15 {
+		t.Errorf("locked audit %d, chai 15", n)
+	}
+	rec := f.login("a", "o@a.com", staffPW)
+	wantErr(t, rec, 401, "invalid_credentials", "lock er por thik password")
+	if h := rec.Header().Get("Retry-After"); h != "" {
+		t.Errorf("lock e Retry-After %q", h)
+	}
+
+	// failed_mfa: 4 ta parallel temp_token e 20 bhul → 10 guess, baki 429; lock e thik code o 429
+	f.exec(t, `UPDATE staff SET failed_logins = 0, locked_until = NULL WHERE id = $1`, own)
+	toks := make(chan string, 20)
+	for range 4 {
+		tok := f.mfaToken(t, "a")
+		for range 5 {
+			toks <- tok
+		}
+	}
+	got = parallel(20, func() *httptest.ResponseRecorder { return f.totp(<-toks, "000000") })
+	if got["400 mfa_invalid"]+got["429 rate_limited"] != 20 || got["429 rate_limited"] < 10 {
+		t.Errorf("parallel temp_token 20 bhul: %v", got)
+	}
+	if n, m := f.count(t, `SELECT failed_mfa FROM staff WHERE id = $1`, own), f.audits(t, "a", "staff.login_mfa_failed"); n != 10 || m != 10 {
+		t.Errorf("failed_mfa %d, mfa_failed audit %d; chai 10, 10", n, m)
+	}
+	limited(t, f.totp(f.mfaToken(t, "a"), f.code(own, 0)), "lock e thik code")
+
+	// 30 minute lock password er bhul e choto hoy na (GREATEST)
+	f.exec(t, `UPDATE staff SET failed_logins = 9 WHERE id = $1`, own)
+	f.login("a", "o@a.com", "wrong-password-1")
+	if n := f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND locked_until > now() + interval '29 minutes'`, own); n != 1 {
+		t.Error("lambha lock choto hoyeche")
+	}
+
+	// login alert er dedupe_key (8.17 v1.24)
+	f.exec(t, `UPDATE staff SET failed_logins = 9, failed_mfa = 0, locked_until = NULL WHERE id = $1`, own)
+	f.login("a", "o@a.com", "wrong-password-1")
+	var key string
+	if err := f.d.QueryRow(`SELECT dedupe_key FROM jobs WHERE kind = 'alert.security' AND shop_id = $1
+		AND payload->>'event' = 'staff_login_failed'`, a).Scan(&key); err != nil {
+		t.Fatalf("login alert: %v", err)
+	}
+	day := time.Now().In(mustLoc(t, "Asia/Dhaka")).Format(time.DateOnly)
+	if want := fmt.Sprintf("alert.staff_login_failed:%d:%d:10:%s", a, own, day); key != want {
+		t.Errorf("dedupe_key %q, chai %q", key, want)
+	}
+
+	// ochena email: audit e email na (keu password likhe phellte pare), shudhu domain
+	f.login("a", "Secret-PW-123@a.com", staffPW)
+	if n := f.count(t, `SELECT count(*) FROM audit_logs WHERE shop_id = $1 AND after->>'reason' = 'unknown_email'
+		AND NOT after ? 'email' AND after->>'email_domain' = 'a.com' AND after::text NOT LIKE '%Secret-PW%'`, a); n != 1 {
+		t.Error("ochena email er audit e email (ba domain nai)")
+	}
+
+	// no-store: temp_token, session cookie
+	f.exec(t, `UPDATE staff SET failed_logins = 0, locked_until = NULL WHERE id = $1`, own)
+	rec = f.login("a", "o@a.com", staffPW)
+	if h := rec.Header().Get("Cache-Control"); h != "no-store" {
+		t.Errorf("login Cache-Control %q", h)
+	}
+	if h := f.totp(f.mfaToken(t, "a"), f.code(own, 1)).Header().Get("Cache-Control"); h != "no-store" {
+		t.Errorf("totp Cache-Control %q", h)
+	}
+	if h := f.verify(t, "a.com", "+8801711000001", "000000").Header().Get("Cache-Control"); h != "no-store" {
+		t.Errorf("otp verify Cache-Control %q", h)
+	}
+	cust, _ := f.otpFixture.login(t, "a.com", "+8801711000002", "bn")
+	if h := f.serve(newReq(http.MethodGet, "/api/me", "a.com", cust, nil)).Header().Get("Cache-Control"); h != "no-store" {
+		t.Errorf("/api/me Cache-Control %q", h)
+	}
+
+	// /auth/password: bhul old e failed_logins gona ar audit (8.3 step 4 v1.24)
+	f.exec(t, `UPDATE staff SET must_change_password = true, totp_secret_enc = NULL, totp_nonce = NULL WHERE id = $1`, own)
+	tok := f.setupSession(t, "a", staffPW)
+	wantErr(t, f.cookieReq("POST", "/api/admin/auth/password", tok, map[string]string{"old": "bhul-password-xx", "new": "notun-password-123"}),
+		400, "validation_failed", "bhul old")
+	if n := f.count(t, `SELECT failed_logins FROM staff WHERE id = $1`, own); n != 1 {
+		t.Errorf("bhul old e failed_logins %d, chai 1", n)
+	}
+	if n := f.audits(t, "a", "staff.password_change_failed"); n != 1 {
+		t.Errorf("password_change_failed audit %d", n)
 	}
 }
