@@ -211,7 +211,8 @@ void main() {
         expect(r.headers['Authorization'], 'Bearer TOK2ABC');
         expect(res.statusCode, 200);
         expect(await res.readAsString(), '{"items":[]}');
-        expect(res.headers['cache-control'], 'private, no-store');
+        // Cookie nai tai BFF `no-store`; `__Host-sid` er jonno `cacheControl` `private, no-store` kore (cache_control_test).
+        expect(res.headers['cache-control'], 'no-store');
       }
     });
 

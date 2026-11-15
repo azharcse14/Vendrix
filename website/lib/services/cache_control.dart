@@ -3,6 +3,7 @@ import 'package:shelf/shelf.dart';
 import 'bff.dart';
 
 // Ei cookie thakle page personal (session, cart, draft theme), Cloudflare e cache hole onno jon dekhbe (10.3).
+// `wl` na: server `wl` diye kichu render kore na, product page public thake (10.12 item 3).
 const _personal = {'__Host-sid', '__Host-cart', 'preview'};
 
 /// `Cache-Control` (10.3, 14.2 test 24): personal cookie ba `Set-Cookie` → `private, no-store` (page er header
