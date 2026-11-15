@@ -3,8 +3,11 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
+
+	"vendrix/backend/internal/notify"
 )
 
 // lockPhone: ek shop er ek phone er OTP send ek ek kore (transaction shesh e chhare), jate parallel send e
@@ -72,11 +75,21 @@ func insertOTP(ctx context.Context, tx *sql.Tx, shopID int64, phone, purpose str
 	return id, err
 }
 
-// otpPhone: OTP job er phone (shop shoho, Rule 3).
-func otpPhone(ctx context.Context, d *sql.DB, shopID, otpID int64) (string, error) {
-	var phone string
-	err := d.QueryRowContext(ctx, `SELECT phone FROM otp_codes WHERE id = $1 AND shop_id = $2`, otpID, shopID).Scan(&phone)
-	return phone, err
+// otpSMS: OTP job er phone, customer er locale (user na thakle khali) ar shop er sms.otp override (shop
+// shoho, Rule 3).
+func otpSMS(ctx context.Context, d *sql.DB, shopID, otpID int64) (notify.OTP, error) {
+	o := notify.OTP{Override: map[string]string{}}
+	var override []byte
+	err := d.QueryRowContext(ctx, `SELECT o.phone, coalesce(u.locale, ''),
+		  (SELECT coalesce(jsonb_object_agg(t.locale, t.value), '{}') FROM translations t
+		   WHERE t.shop_id = o.shop_id AND t.key = 'sms.otp')
+		FROM otp_codes o
+		LEFT JOIN users u ON u.shop_id = o.shop_id AND u.phone = o.phone AND u.deleted_at IS NULL
+		WHERE o.id = $1 AND o.shop_id = $2`, otpID, shopID).Scan(&o.Phone, &o.Locale, &override)
+	if err != nil {
+		return o, err
+	}
+	return o, json.Unmarshal(override, &o.Override)
 }
 
 func seconds(s sql.NullFloat64) time.Duration {

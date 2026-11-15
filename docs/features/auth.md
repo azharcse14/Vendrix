@@ -18,7 +18,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
    - `Turnstile.Verify` (`turnstile.go`): siteverify e `secret`, `response`, `remoteip`; `success` ar `hostname` = `X-Shop-Host` (`httpx.Shop.Domain`); secret Cloudflare er test secret (`config.TurnstileTestSecret`) hole hostname check na (v1.22). DB er age.
    - `db.InTx`: `lockPhone` (`pg_advisory_xact_lock`, shop + phone) → `isBlocked` → `phoneLock` (24 ghontar bhul, lock hole `lockAlert` commit kore `429`) → `sendLimit` (3/15 minute, 10/24 ghonta, shob purpose) → `smsCap` (shop er timezone er din, `checkout.sms_daily_cap`) → `insertOTP` (5 minute) → `Seal` (key `otpSMSKey` = HKDF(`OTP_SECRET`), AAD otp id) → `jobs.Enqueue` `sms.send` (`max_attempts` 2).
    - Response `{"sent": true}`; limit/lock/cap e `429 rate_limited` + `Retry-After`.
-8. SMS: worker er `notify.SendSMSJob` payload e `otp_id` pele `SMSCode` (phone `otp_codes` theke shop shoho, code decrypt) dake; done hole worker payload `{}` kore ([jobs](jobs.md)).
+8. SMS: worker er `notify.SendSMSJob` payload e `otp_id` pele `SMSCode` (`otpSMS`: phone `otp_codes` theke shop shoho, customer er `users.locale` ar shop er `translations` e `sms.otp` override; code decrypt) dake, lekha `notify.OTPText` ([jobs](jobs.md)); done hole worker payload `{}` kore ([jobs](jobs.md)).
 9. OTP verify (`POST /api/auth/otp/verify {phone, code}`, Turnstile na): `handler.go` → `VerifyOTP`, tarpor `service.go` → `verifyOTP`:
    - `phoneLocked` (24 ghontay 10 bhul hole `429`, `lockAlert`) → `latestOTP` (shesh, use na hoya, expire na hoya login OTP; na pele `400 otp_invalid`) → `countAttempt` (autocommit e conditional `attempts + 1`; kichu na ele `attemptsUsed` dekhe `otp_too_many_attempts` ba `otp_invalid`) → `CheckOTP`; bhul hole abar `phoneLocked` (10 tomo bhul e `429` + alert), na hole `otp_invalid`.
    - Thik hole `db.InTx`: `consumeOTP` (conditional; parallel e ekta-i) → `upsertUser` (notun user er `locale` = `httpx.Locale`, purono user bodlay na) → `linkGuestOrders` (`user_id IS NULL` shudhu) → `insertSession` (`session.go` → `newSessionToken`: `rand.Text()`, DB te `sha256`; 30 din, `ip` = `httpx.IP`, `user_agent` 512 byte porjonto).
@@ -59,7 +59,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 | `backend/internal/auth/seal.go` → `Seal`, `Open` | AES-GCM + AAD; shop credential ([credentials](credentials.md)), TOTP secret ar OTP SMS payload |
 | `backend/internal/auth/handler.go` → `NewHandlers`, `SendOTP` | `POST /api/auth/otp/send` er HTTP, error code |
 | `backend/internal/auth/service.go` → `sendOTP`, `lockAlert`, `otpSMSKey`, `SMSCode` | OTP send er niyom, alert, payload er key, job er decrypt |
-| `backend/internal/auth/store.go` → `lockPhone`, `isBlocked`, `phoneLock`, `sendLimit`, `smsCap`, `insertOTP`, `otpPhone` | SQL |
+| `backend/internal/auth/store.go` → `lockPhone`, `isBlocked`, `phoneLock`, `sendLimit`, `smsCap`, `insertOTP`, `otpSMS` | SQL |
 | `backend/internal/auth/turnstile.go` → `Turnstile.Verify` | Cloudflare siteverify |
 | `backend/internal/auth/handler.go` → `VerifyOTP`, `Logout`, `Me`, `UpdateMe`, `writeUser`, `internal` | Verify, logout, `/api/me` er HTTP |
 | `backend/internal/auth/service.go` → `verifyOTP`, `phoneLocked`, `User`, `UserPatch` | Verify er niyom (attempt, lock, consume, user, order, session) |
@@ -91,6 +91,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 | Turnstile: siteverify e secret, token, remoteip; `success` ar `hostname` = shop er domain; bhul token e `400 turnstile_failed` (12.2, 10.11, 14.2 test 23) | `Turnstile.Verify`, `SendOTP` | `TestTurnstile` |
 | Turnstile test secret (`1x`/`2x`/`3x...AA`) e `hostname` check na (Cloudflare `example.com` dey), `success` lage; asol secret e local eo check (10.11 v1.22, 16.1) | `Turnstile.Verify`, `config.TurnstileTestSecret` | `TestTurnstile` |
 | OTP SMS payload `{otp_id, nonce, ct}` (AES-GCM, key HKDF(`OTP_SECRET`), AAD otp id), plain code na; `max_attempts` 2; done hole `{}` (8.2 step 4, 8.17, Q1) | `sendOTP`, `SMSCode`, `jobs.finish` | `TestOTPJobPayload` |
+| OTP SMS customer er `locale` e (user na thakle bn), shop er `sms.otp` override shudhu nijer shop er (8.16, Rule 3) | `otpSMS` | `TestOTPJobPayload` |
 | Client IP te ghontay 10 OTP send; website er `X-Client-IP` shudhu secret shoho (7.8, 3.2 Niyom 5, 14.2 test 18) | `cmd/api/router.go` → `newHandler` | `TestOTPSendIPLimit` |
 | OTP verify: ek OTP e 5 attempt (autocommit, error path e thake, parallel e 5 er beshi na), tarpor `otp_too_many_attempts`; 24 ghontay 10 bhul e `429` + alert ekbar, lock e thik code o na (8.2 verify step 2-3, 7.8, 14.2 test 10) | `verifyOTP`, `countAttempt`, `phoneLocked` | `TestOTPAttemptsIntegration` |
 | Shudhu shesh, use na hoya, expire na hoya login OTP; expire e attempt gona na; ek code ekbar (8.2 verify step 1, 3) | `latestOTP`, `consumeOTP` | `TestOTPExpiredIntegration` |

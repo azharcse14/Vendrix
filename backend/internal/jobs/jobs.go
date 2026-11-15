@@ -88,13 +88,14 @@ type Worker struct {
 	lastSweep time.Time
 }
 
-// NewWorker: handlers kind → Handler; jobs.sweep nijei jog hoy.
+// NewWorker: handlers kind → Handler; jobs.sweep ar jobs.cleanup nijei jog hoy.
 func NewWorker(d *sql.DB, log *slog.Logger, handlers map[string]Handler) *Worker {
 	w := &Worker{db: d, log: log, handlers: map[string]Handler{}}
 	for k, h := range handlers {
 		w.handlers[k] = h
 	}
 	w.handlers["jobs.sweep"] = w.sweep
+	w.handlers["jobs.cleanup"] = w.cleanup
 	return w
 }
 
@@ -119,13 +120,16 @@ func (w *Worker) Run(ctx context.Context) {
 	}
 }
 
-// schedule: recurring job, slot er dedupe_key diye (duita process e-o ekbar).
+// schedule: recurring job, slot er dedupe_key diye (duita process e-o ekbar). jobs.cleanup UTC din er key e;
+// protiti slot e insert chesta kore, dedupe e dine ekbar-i row.
 func (w *Worker) schedule(ctx context.Context, now time.Time) error {
 	slot := now.UTC().Truncate(sweepInterval)
 	if slot.Equal(w.lastSweep) {
 		return nil
 	}
-	err := Enqueue(ctx, w.db, New{Kind: "jobs.sweep", DedupeKey: "jobs.sweep:" + slot.Format(time.RFC3339), RunAt: slot})
+	err := errors.Join(
+		Enqueue(ctx, w.db, New{Kind: "jobs.sweep", DedupeKey: "jobs.sweep:" + slot.Format(time.RFC3339), RunAt: slot}),
+		Enqueue(ctx, w.db, New{Kind: "jobs.cleanup", DedupeKey: "jobs.cleanup:" + slot.Format(time.DateOnly), RunAt: slot}))
 	if err == nil {
 		w.lastSweep = slot
 	}
@@ -266,6 +270,14 @@ func (w *Worker) sweep(ctx context.Context, _ Job) error {
 		w.alert(id, shopID, kind, lastErr)
 	}
 	return rows.Err()
+}
+
+// cleanup (jobs.cleanup, 8.17 v1.19): done 30 din ar failed 90 din er purono row muche; row er sathe
+// dedupe_key o jay. Failed beshi din thake jate alert er por dekha jay.
+func (w *Worker) cleanup(ctx context.Context, _ Job) error {
+	_, err := w.db.ExecContext(ctx, `DELETE FROM jobs
+		WHERE done_at < now() - interval '30 days' OR failed_at < now() - interval '90 days'`)
+	return err
 }
 
 // ponytail: admin alert ekhon shudhu error log; ALERT_EMAIL/ALERT_WEBHOOK_URL (13.5) M12 e.

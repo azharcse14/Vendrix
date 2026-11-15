@@ -12,6 +12,7 @@ import (
 
 	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/jobs"
+	"vendrix/backend/internal/notify"
 	"vendrix/backend/internal/phone"
 )
 
@@ -136,22 +137,24 @@ func otpSMSKey(secret string) ([]byte, error) {
 	return hkdf.Key(sha256.New, []byte(secret), nil, "vendrix otp sms payload", 32)
 }
 
-// SMSCode: notify.SendSMSJob er OTPSource. otp_codes theke phone (shop shoho), code decrypt (AAD otp id).
-func SMSCode(d *sql.DB, secret string) func(ctx context.Context, shopID, otpID int64, nonce, ct []byte) (string, string, error) {
-	return func(ctx context.Context, shopID, otpID int64, nonce, ct []byte) (string, string, error) {
+// SMSCode: notify.SendSMSJob er OTPSource. otp_codes theke phone (shop shoho), customer er locale ar shop er
+// sms.otp override, code decrypt (AAD otp id).
+func SMSCode(d *sql.DB, secret string) notify.OTPSource {
+	return func(ctx context.Context, shopID, otpID int64, nonce, ct []byte) (notify.OTP, error) {
 		key, err := otpSMSKey(secret)
 		if err != nil {
-			return "", "", err
+			return notify.OTP{}, err
 		}
-		phone, err := otpPhone(ctx, d, shopID, otpID)
+		o, err := otpSMS(ctx, d, shopID, otpID)
 		if err != nil {
-			return "", "", err
+			return notify.OTP{}, err
 		}
 		code, err := Open(key, strconv.FormatInt(otpID, 10), ct, nonce)
 		if err != nil {
-			return "", "", err
+			return notify.OTP{}, err
 		}
-		return phone, string(code), nil
+		o.Code = string(code)
+		return o, nil
 	}
 }
 
