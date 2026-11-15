@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.25, 15 November 2026
+Version 1.26, 15 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -77,3 +77,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.23 | 15 November 2026 | 16.1: local http e `__Host-` cookie Chromium e thake na (https scheme lage), tai `make web` e browser login hoy na; proshno M7 er age (M4 step 13) |
 | 1.24 | 15 November 2026 | 8.3, 7.8, 8.17, 12.2, 16.1 (M4 step 15 review): password ar `failed_mfa` lock check er age atomic reservation (parallel e lock edano jeto); account lock e `401` (user decision, enumeration); `GREATEST` diye lock choto hoy na; `/auth/password` e bhul purono password gona; audit e ochena email er shudhu domain; auth response e `no-store`; `/auth/totp`, `/recovery` e IP limit; staff alert er `dedupe_key` (din); password bodlale "ekhon er session chhara" |
 | 1.25 | 15 November 2026 | 8.3, 6.4, 6.7, 7.7, 16.1 (M4 step 15 review, user decision): TOTP setup er secret pending column e (`staff.totp_pending_*`), `/auth/totp/enable` e thik code e live; login shudhu live dekhe, tai setup kore enable na korle staff atke na; TOTP live ar `must_change_password` e password bodlale session `active`; live TOTP e setup/enable `403` |
+| 1.26 | 15 November 2026 | 7.1, 7.3, 7.7, 7.8, 8.3, 8.17, 10.9, 16.1 (M4 step 15 design review): M4 er notun error code 7.1 e (`invalid_credentials`, `mfa_invalid`, `mfa_too_many_attempts`, `setup_required`, `password_change_required`, `method_not_allowed`, `db_unavailable`); `PATCH /api/me` validation, `/auth/password` er response; staff IP limit er key; SMS cap approximate ar DoS (16.1); staff audit action, `token_hash` notun, issuer; OTP lock alert er `dedupe_key` e plain phone er bodole HMAC tag (PII 30 din `jobs` e thakto); BFF `/_/account` → `PATCH /api/me`. Code agei emon chilo, shudhu alert key bodlay |

@@ -28,6 +28,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
 - **M10 er age**: SSLCommerz validation er HTTP call DB lock er bhetore naki baire (16.1).
+- **M12 er age**: OTP SMS cap shesh hole oi din OTP login bondho (bot DoS): (a) ekhon er moto + monitor/alert, (b) cap er kache extra limit, (c) cap shudhu alert (16.1, v1.26).
 - **M12 er age**: production domain (doc e `tomarshop.com` placeholder), server region, SMS provider (16.1).
 - **Public launch er age**: IP-bhittik rate limit ar CGNAT; shathe ochena `X-Shop-Host` er rate limit (M1 review) (16.1).
 - **M7 er age**: `vendor_owner` admin category list porte parbe kina (11.2, 16.1).

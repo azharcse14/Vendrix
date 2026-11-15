@@ -38,15 +38,17 @@ Error er format shob jaygay ekoi:
 
 | HTTP | Kokhon | Code er udahoron |
 |---|---|---|
-| 400 | Input bhul | `validation_failed`, `invalid_phone`, `missing_idempotency_key`, `turnstile_failed`, `otp_invalid`, `otp_too_many_attempts` |
-| 401 | Login nai ba token bhul | `unauthenticated`, `session_expired` |
-| 403 | Onumoti nai | `forbidden`, `phone_blocked` |
+| 400 | Input bhul | `validation_failed`, `invalid_phone`, `missing_idempotency_key`, `turnstile_failed`, `otp_invalid`, `otp_too_many_attempts`, v1.26: `mfa_invalid` (TOTP ba recovery code bhul), `mfa_too_many_attempts` (ek temp_token e 5 bhul) |
+| 401 | Login nai ba token bhul | `unauthenticated`, `session_expired`, v1.26: `invalid_credentials` (staff login: ochena shop/email, inactive, bhul password, account lock; 8.3) |
+| 403 | Onumoti nai | `forbidden`, `phone_blocked`, v1.26: `setup_required` (`setup_pending` session e admin API), `password_change_required` (password bodlanor age TOTP setup) |
+| 405 | Path ache, method na | v1.26: `method_not_allowed` (`Allow` header shoho) |
 | 404 | Pawa jayni | `not_found`, `shop_not_found` (v1.10: `closed` shop o) |
 | 423 | Shop bondho | `shop_suspended` |
 | 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken` |
 | 422 | Ekoi `Idempotency-Key` e alada body | `idempotency_key_reused` |
 | 429 | Beshi request | `rate_limited` (`Retry-After` header shoho) |
 | 500 | Server er bhul | `internal` (details log e, client e na) |
+| 503 | Database pawa jay na | v1.26: `db_unavailable` (`/healthz` chhara) |
 
 ### 7.2 Public ar system
 
@@ -75,8 +77,8 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 |---|---|---|
 | POST | `/api/auth/otp/send` | `{phone, purpose: "login", turnstile_token}` OTP pathano. v1.19: response shob shomoy `{"sent": true}` (`429` chhara) |
 | POST | `/api/auth/otp/verify` | `{phone, code}` → `{token, user}`. Ek-i shathe guest cart merge (`X-Cart-Key`), oi phone er (`customer_phone`) guest order account e jog |
-| POST | `/api/auth/logout` | Session revoke |
-| GET, PATCH | `/api/me` | Profile (`name`, `email`, `locale`) |
+| POST | `/api/auth/logout` | Session revoke, `204` |
+| GET, PATCH | `/api/me` | Profile `{phone, name, email, locale}` (v1.26: `id` nai). PATCH e shudhu deya field bodlay: `name` trim, max 100 okkhor (rune); `email` trim, `net/mail` e ekta thikana (naam ba `<>` chhara), max 254; `""` dile `NULL`; `locale` `bn` ba `en`. Bhul hole `400 validation_failed` + `fields` (`too_long`, `invalid`) |
 | GET, POST | `/api/me/addresses` | Address list, notun |
 | PATCH, DELETE | `/api/me/addresses/{id}` | Address bodlano, muche fela |
 | GET | `/api/me/orders` | Nijer order list |
@@ -142,7 +144,7 @@ v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff cont
 
 | Bhag | Endpoint |
 |---|---|
-| Login | `POST /auth/login {shop, email, password}` (`shop` = slug) → `{totp_required, temp_token}`, ba `{setup_required}` ar `setup_pending` session cookie (8.3); `POST /auth/totp {temp_token, code}` → session cookie; `POST /auth/recovery {temp_token, code}`; `POST /auth/password {old, new}` (v1.25: TOTP live ar `must_change_password` hole session `active`, notun cookie); `POST /auth/totp/setup` → `{otpauth_url, secret}` (v1.19; v1.25: pending secret, live na); `POST /auth/totp/enable {code}` → `{recovery_codes}`, pending → live, session `active` (v1.25: live TOTP thakle setup/enable `403`); `POST /auth/logout`; `GET /me` |
+| Login | `POST /auth/login {shop, email, password}` (`shop` = slug) → `{totp_required, temp_token}`, ba `{setup_required}` ar `setup_pending` session cookie (8.3); `POST /auth/totp {temp_token, code}` → session cookie; `POST /auth/recovery {temp_token, code}`; `POST /auth/password {old, new}` → `204` (v1.25: TOTP live ar `must_change_password` hole session `active`, notun cookie; v1.26: bhul old `400 validation_failed` + `fields.old: wrong`, `fields.new`: `too_short` (12 er kom), `too_long` (128 er beshi), `same_as_old`); `POST /auth/totp/setup` → `{otpauth_url, secret}` (v1.19; v1.25: pending secret, live na); `POST /auth/totp/enable {code}` → `{recovery_codes}`, pending → live, session `active` (v1.25: live TOTP thakle setup/enable `403`; v1.26: `active` session e setup/enable `403 forbidden`, password bodlanor age `403 password_change_required`, bhul code `400 mfa_invalid`); `/auth/totp`, `/recovery` bhul code `400 mfa_invalid`, temp_token e 5 bhul `400 mfa_too_many_attempts`; `POST /auth/logout` → `204`; `GET /me` |
 | Dashboard | `GET /dashboard` (ajker order, bikri, pending, low stock, expiry kache, deadline kache) |
 | Product | `GET, POST /products`; `GET, PATCH /products/{id}`; `POST /products/{id}/variants`; `PATCH /variants/{id}`; `POST /products/{id}/images` (multipart); `PATCH /products/{id}/images/order`; `DELETE /images/{id}` |
 | Category | `GET, POST /categories`; `PATCH, DELETE /categories/{id}` |
@@ -170,12 +172,12 @@ Vendor staff (`vendor_owner`, `vendor_staff`) ekoi endpoint use kore, kintu back
 
 | Endpoint | Shima |
 |---|---|
-| `POST /api/auth/otp/send` | Turnstile; ek phone e 15 minute e 3 bar ar dine 10 bar (shob purpose mile), ek client IP te ghontay 10 bar; shop e dine `checkout.sms_daily_cap` (default 500) er beshi OTP SMS na (v1.7: cap shudhu OTP gone; order, confirm, ship er SMS e cap nai, tai OTP er dhel order er SMS atkay na) |
-| `POST /api/auth/otp/verify` | Ek OTP te 5 bar bhul (database e atomic `UPDATE`, error path eo commit), tarpor notun OTP. Ek phone e 24 ghontay 10 bar bhul hole 24 ghonta oi phone er OTP bondho ar alert (cap chhara dine prai 1,440 guess, mashe prai 4% chance). v1.19: lock er alada table na: shesh 24 ghontay oi phone er `otp_codes` er `sum(attempts)` theke consumed row gulo bad (consumed row er shesh attempt thik) = bhul; 10 ba beshi hole send ar verify `429 rate_limited` + `Retry-After` (lock ache bole na), rolling window (`otp_phone_idx`, migration na). Alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone>:<din>`) |
+| `POST /api/auth/otp/send` | Turnstile; ek phone e 15 minute e 3 bar ar dine 10 bar (shob purpose mile), ek client IP te ghontay 10 bar; shop e dine `checkout.sms_daily_cap` (default 500) er beshi OTP SMS na (v1.7: cap shudhu OTP gone; order, confirm, ship er SMS e cap nai, tai OTP er dhel order er SMS atkay na). v1.26: cap approximate: lock phone er, shop er na, tai parallel e alada phone er send 1–2 ta par hote pare (khoroch er shima, nirapotta na). Cap shesh hole oi diner baki OTP login bondho (bot onek phone diye Turnstile par korle DoS); launch er age (M12) SMS gona monitor ar alert, 16.1 |
+| `POST /api/auth/otp/verify` | Ek OTP te 5 bar bhul (database e atomic `UPDATE`, error path eo commit), tarpor notun OTP. Ek phone e 24 ghontay 10 bar bhul hole 24 ghonta oi phone er OTP bondho ar alert (cap chhara dine prai 1,440 guess, mashe prai 4% chance). v1.19: lock er alada table na: shesh 24 ghontay oi phone er `otp_codes` er `sum(attempts)` theke consumed row gulo bad (consumed row er shesh attempt thik) = bhul; 10 ba beshi hole send ar verify `429 rate_limited` + `Retry-After` (lock ache bole na), rolling window (`otp_phone_idx`, migration na). Alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone>:<din>`; v1.26: `<phone>` er jaygay `HMAC-SHA256(OTP_SECRET, "otp_lock:" + phone)` er prothom 16 hex, karon `jobs` row 30 din thake, plain phone na) |
 | `POST /api/orders` | Ek phone e ghontay 5 ta, ek IP te ghontay 10 ta |
 | `POST /api/orders/track` | Ek client IP te minute e 10 bar |
 | `POST /api/complaints` | Ek client IP te ghontay 5 ta |
-| `POST /api/admin/auth/login` | Ek client IP te 15 minute e 10 bar bhul (memory). Account e 5 bar bhul er por protiti bhul e 1 minute `locked_until` (soft lock: keu owner er email diye barbar bhul dileo owner shudhu 1 minute opekkha kore), 10 ar 50 e owner alert. TOTP: ek temp_token e 5 bar, temp_token jure `staff.failed_mfa` 10 e 30 minute lock ar alert. v1.24: duita lock-i check er age atomic reservation (8.3); account lock e login `401 invalid_credentials` (`429` na, `Retry-After` na; email chena na jay), IP limit e `429`; `failed_mfa` lock e `/auth/totp`, `/auth/recovery` `429` |
+| `POST /api/admin/auth/login` | Ek client IP te 15 minute e 10 bar bhul (memory; v1.26: key shudhu IP, shop na: admin domain e request er shop nai, shop body te, tai ek IP theke onek shop e cheshta o ek gona). Account e 5 bar bhul er por protiti bhul e (v1.26: 5 tomo bhul thekei) 1 minute `locked_until` (soft lock: keu owner er email diye barbar bhul dileo owner shudhu 1 minute opekkha kore), 10 ar 50 e owner alert. TOTP: ek temp_token e 5 bar, temp_token jure `staff.failed_mfa` 10 e 30 minute lock ar alert. v1.24: duita lock-i check er age atomic reservation (8.3); account lock e login `401 invalid_credentials` (`429` na, `Retry-After` na; email chena na jay), IP limit e `429`; `failed_mfa` lock e `/auth/totp`, `/auth/recovery` `429` |
 | `POST /api/admin/auth/totp`, `/recovery` | v1.24: ek client IP te minute e 120 (baki public er moto) |
 | Baki public | Ek IP te minute e 120 |
 

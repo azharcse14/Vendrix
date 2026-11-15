@@ -143,12 +143,13 @@ Browser kokhono Go API te jay na (CORS shudhu admin), tai `@client` component ar
 | POST, PATCH, DELETE | `/_/cart/items`, `/_/cart/items/{variant_id}` | `/api/cart/items...` |
 | POST | `/_/checkout/quote` | `POST /api/checkout/quote` |
 | POST | `/_/checkout` | `POST /api/orders` (JS e random `Idempotency-Key`; JS chhara form e page render er shomoy hidden field) |
-| POST | `/_/auth/otp/send`, `/_/auth/otp/verify`, `/_/auth/logout` | `/api/auth/...` (verify e `__Host-sid` cookie set) |
+| POST | `/_/auth/otp/send`, `/_/auth/otp/verify`, `/_/auth/logout` | `/api/auth/...` (verify e `__Host-sid` cookie set; v1.26: logout e cookie `Max-Age=0`, JS chhara form e `303`) |
 | POST, DELETE | `/_/wishlist/{product_id}` | `/api/wishlist/{product_id}` |
 | POST | `/_/orders/{token}/cancel`, `pay` | `/api/orders/{token}/...` |
 | POST | `/_/confirm/{confirm_token}` | `POST /api/confirm/{confirm_token}` (v1.4, 8.10) |
 | POST | `/_/track`, `/_/complaint`, `/_/review` | `POST /api/orders/track`, `/api/complaints`, `/api/reviews` |
-| PATCH, POST, DELETE | `/_/account/...` | `/api/me/...` |
+| PATCH, POST | `/_/account` | v1.26: `PATCH /api/me` (JS chhara form er POST o PATCH hoye jay, `apiMethod`) |
+| PATCH, POST, DELETE | `/_/account/...` | `/api/me/...` (M6) |
 
 Niyom:
 
