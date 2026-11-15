@@ -76,7 +76,7 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 | Method | Path | Kaj |
 |---|---|---|
 | POST | `/api/auth/otp/send` | `{phone, purpose: "login", turnstile_token}` OTP pathano. v1.19: response shob shomoy `{"sent": true}` (`429` chhara) |
-| POST | `/api/auth/otp/verify` | `{phone, code}` → `{token, user}`. Ek-i shathe guest cart merge (`X-Cart-Key`), oi phone er (`customer_phone`) guest order account e jog |
+| POST | `/api/auth/otp/verify` | `{phone, code}` → `{token, user}`. Ek-i shathe guest cart merge (`X-Cart-Key`), oi phone er (`customer_phone`) guest order account e jog. v1.30: response e `cart_notices` (shob shomoy array, khali hole `[]`): merge e 50 variant er jayga na thakay bad guest item `[{code: "item_dropped", name}]` (naam request er bhashay, 8.4 item 6) |
 | POST | `/api/auth/logout` | Session revoke, `204` |
 | GET, PATCH | `/api/me` | Profile `{phone, name, email, locale}` (v1.26: `id` nai). PATCH e shudhu deya field bodlay: `name` trim, max 100 okkhor (rune); `email` trim, `net/mail` e ekta thikana (naam ba `<>` chhara), max 254; `""` dile `NULL`; `locale` `bn` ba `en`. Bhul hole `400 validation_failed` + `fields` (`too_long`, `invalid`) |
 | GET, POST | `/api/me/addresses` | Address list, notun |
