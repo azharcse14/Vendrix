@@ -18,7 +18,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M4 step 15, Report** ([M4](milestones/M4.md)): `make check` green; `security-reviewer` (OTP, session, staff password, TOTP, cookie, client IP, rate limit) ar `design-reviewer`; finding thik ba karon; acceptance ☑; STATUS (M4 shesh, porer kaj M5). Commit `docs(M4): report`. Step 14 er review e dekha: 8.17 e `alert.security` "`dedupe_key` shoho" kintu staff alert dedupe chhara; `/auth/password` e bhul old password er kono limit nai.
+1. **M4 step 15, Report** ([M4](milestones/M4.md)): `make check` green; `security-reviewer` (OTP, session, staff password, TOTP, cookie, client IP, rate limit) ar `design-reviewer`; finding thik ba karon; acceptance ☑; STATUS (M4 shesh, porer kaj M5). Commit `docs(M4): report`.
 2. Push er por CI green kina dekho (`ci(M3): website build` ar Go job; Linux e `TestSearchRankingIntegration` green howa uchit).
 
 ## User er kache proshno
@@ -54,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M4 step 15 review fix: design v1.24 `8d61dfe` (staff lock atomic reservation, account lock e `401` user decision), test `b7d95fa` (fail dekhe), fix `d3b2c72` (`reserveFailed`, purono temp_token revoke, `/auth/password` gona, audit e `email_domain`, auth `no-store`, totp/recovery IP limit, alert `dedupe_key` din); asol Postgres e `-race` green. Step 15 er baki: `make check`, acceptance, report.
 - 15 November 2026: M4 step 14: feature doc M4 er code er sathe milano (`auth.md` code map/Proshno-uttor, `website.md`, `server.md`, `http-foundation.md`, `jobs.md`, `shop.md`, `credentials.md`, `catalog.md`, `audit.md`, `api-client.md`, `README.md`); naam ar test grep e mile; docsync green.
 - 15 November 2026: M4 step 13 manual proman: customer (Chromium 131, local https proxy) phone → Turnstile test key → log er OTP → `/account` (naam, bhasha) → logout, `__Host-sid` flag, CSP, console error 0, 360/1280 screenshot; staff (curl, shop `qa13`) password → TOTP → recovery → `/api/admin/me` → logout, `reset-2fa` er por abar setup. Bug nai; finding: http e `__Host-` cookie `InvalidPrefix` (16.1 v1.23).
 - 15 November 2026: M4 step 12: test `ed916bd` (`login_test.dart`, Turnstile CSP, `client_components_test` e `login_form.dart`, account form `POST` → `PATCH`, `TURNSTILE_SITE_KEY`, shared `Account`; fail dekhe), code `1697328` (shared `User`/`AccountRepository.me()`/`ApiClient(token:)`, l10n `login.*`/`account.*`/M4 `error.*`; `/login` + `@client LoginForm`, `/account`, Account link, `/login` e Turnstile CSP, `BffRoute.apiMethod`); `jaspr build` `main.client.dart.js` 172,552 byte (login part 96,486 alada); `make quick-check` green.
