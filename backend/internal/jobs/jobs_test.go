@@ -159,7 +159,7 @@ func TestScheduleSweep(t *testing.T) {
 	}
 }
 
-// TestJobsCleanupIntegration (8.17 v1.19, M4 Q2 (c)): jobs.cleanup protidin ekbar (UTC din er dedupe_key);
+// TestJobsCleanupIntegration (8.17 v1.19, v1.28, M4 Q2 (c)): jobs.cleanup ar cart.cleanup protidin ekbar (UTC din er dedupe_key);
 // done 30 din ar failed 90 din er purono row muche, dedupe_key shoho (oi key e abar enqueue hoy); notun,
 // cholche ba baki row thake.
 func TestJobsCleanupIntegration(t *testing.T) {
@@ -179,6 +179,14 @@ func TestJobsCleanupIntegration(t *testing.T) {
 	}
 	if keys != "jobs.cleanup:2026-11-10 jobs.cleanup:2026-11-11" {
 		t.Errorf("cleanup keys = %q", keys)
+	}
+	// cart.cleanup (8.17 v1.28) eki din er slot e; handler cart package er, main e jog hoy
+	if err := d.QueryRow(`SELECT string_agg(dedupe_key, ' ' ORDER BY dedupe_key) FROM jobs WHERE kind = 'cart.cleanup'`).
+		Scan(&keys); err != nil {
+		t.Fatal(err)
+	}
+	if keys != "cart.cleanup:2026-11-10 cart.cleanup:2026-11-11" {
+		t.Errorf("cart.cleanup keys = %q", keys)
 	}
 	if _, ok := w.handlers["jobs.cleanup"]; !ok {
 		t.Fatal("jobs.cleanup handler nai")

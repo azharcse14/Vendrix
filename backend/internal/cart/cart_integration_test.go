@@ -21,6 +21,7 @@ import (
 	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/dbtest"
 	"vendrix/backend/internal/httpx"
+	"vendrix/backend/internal/jobs"
 	"vendrix/backend/internal/shop"
 )
 
@@ -686,5 +687,55 @@ func TestCartMergeIntegration(t *testing.T) {
 	}
 	if c = f.ok(t, get("b.com", "", keyB)); c.Count != 1 {
 		t.Errorf("shop b er cart bodlalo: %+v", c)
+	}
+}
+
+// TestCartCleanupIntegration (8.17 v1.28, 8.4 item 7, M5 Q11 vi): cart.cleanup 30 din er purono guest cart ar
+// tar item muche (duita shop-i); login cart (purono holeo) ar notun guest cart thake; duibar chalale-o thik.
+func TestCartCleanupIntegration(t *testing.T) {
+	f := newFixture(t)
+	va := f.variant(t, "a", "rice", 9000, 10)
+	vb := f.variant(t, "b", "honey", 50000, 10)
+	oldA := f.ok(t, add("a.com", "", "", va, 1)).CartKey
+	newA := f.ok(t, add("a.com", "", "", va, 2)).CartKey
+	oldB := f.ok(t, add("b.com", "", "", vb, 1)).CartKey
+	newB := f.ok(t, add("b.com", "", "", vb, 1)).CartKey
+	tok := f.customer(t, "a", "+8801711000001")
+	f.ok(t, add("a.com", tok, "", va, 3))
+	user := f.userID(t, tok)
+
+	age := func(key string, days int) {
+		sum := sha256.Sum256([]byte(key))
+		f.exec(t, `UPDATE carts SET updated_at = now() - make_interval(days => $2) WHERE session_key = $1`, sum[:], days)
+	}
+	age(oldA, 31)
+	age(oldB, 31)
+	age(newA, 29)
+	age(newB, 29)
+	f.exec(t, `UPDATE carts SET updated_at = now() - interval '400 days' WHERE user_id = $1`, user)
+
+	run := cart.CleanupJob(f.d)
+	for i := range 2 {
+		if err := run(context.Background(), jobs.Job{}); err != nil {
+			t.Fatalf("run %d: %v", i, err)
+		}
+		for key, want := range map[string]int64{oldA: 0, oldB: 0, newA: 1, newB: 1} {
+			if n := f.guestKeyCount(t, key); n != want {
+				t.Errorf("run %d: key er cart %d, chai %d", i, n, want)
+			}
+		}
+		if n := f.id(t, `SELECT count(*) FROM carts WHERE user_id = $1`, user); n != 1 {
+			t.Errorf("run %d: login cart muche gelo", i)
+		}
+		// muche jaoa cart er item CASCADE e jay; baki 3 cart e ekta kore item
+		if n := f.id(t, `SELECT count(*) FROM cart_items`); n != 3 {
+			t.Errorf("run %d: cart_items %d, chai 3", i, n)
+		}
+	}
+	if c := f.ok(t, get("a.com", "", oldA)); c.Count != 0 {
+		t.Errorf("muche jaoa key e cart: %+v", c)
+	}
+	if c := f.ok(t, get("a.com", "", newA)); find(c, va) == nil || find(c, va).Quantity != 2 {
+		t.Errorf("notun guest cart: %+v", c)
 	}
 }
