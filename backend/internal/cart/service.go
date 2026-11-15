@@ -248,13 +248,15 @@ func Add(ctx context.Context, d *sql.DB, shopID int64, o Owner, variantID int64,
 		if err != nil {
 			return err
 		}
-		if err := checkVariant(ctx, tx, shopID, variantID, cur+qty); err != nil {
+		// jog er age cap: boro qty overflow hoye minus (400) na, 409 out_of_stock (7.4 v1.31)
+		sum := cur + min(qty, MaxLineQuantity+1)
+		if err := checkVariant(ctx, tx, shopID, variantID, sum); err != nil {
 			return err
 		}
 		if err := CheckRoom(lines, cur > 0); err != nil {
 			return err
 		}
-		return setItem(ctx, tx, shopID, cartID, variantID, cur+qty)
+		return setItem(ctx, tx, shopID, cartID, variantID, sum)
 	})
 	return newKey, err
 }

@@ -22,6 +22,7 @@ func NewHandlers(d *sql.DB, log *slog.Logger) *Handlers { return &Handlers{db: d
 // Routes: wrap = public + OptionalCustomer.
 func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
 	mux.Handle("GET /api/cart", wrap(http.HandlerFunc(h.Get)))
+	mux.Handle("GET /api/cart/count", wrap(http.HandlerFunc(h.Count)))
 	mux.Handle("POST /api/cart/items", wrap(http.HandlerFunc(h.Add)))
 	mux.Handle("PATCH /api/cart/items/{variant_id}", wrap(http.HandlerFunc(h.Patch)))
 	mux.Handle("DELETE /api/cart/items/{variant_id}", wrap(http.HandlerFunc(h.Delete)))
@@ -92,6 +93,18 @@ func variantPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
 
 // Get: GET /api/cart.
 func (h *Handlers) Get(w http.ResponseWriter, r *http.Request) { h.reply(w, r, owner(r), "") }
+
+// Count: GET /api/cart/count (7.4 v1.31): badge er jonno; normalize na, tai notice gile fele na (notice shudhu
+// GET /api/cart e).
+func (h *Handlers) Count(w http.ResponseWriter, r *http.Request) {
+	n, err := countLines(r.Context(), h.db, shopID(r), owner(r))
+	if err != nil {
+		h.fail(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, map[string]int{"count": n})
+}
 
 // Add: POST /api/cart/items {variant_id, quantity}; dam/total er field nai (DisallowUnknownFields, Rule 1).
 func (h *Handlers) Add(w http.ResponseWriter, r *http.Request) {

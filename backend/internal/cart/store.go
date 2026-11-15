@@ -40,6 +40,17 @@ func findCart(ctx context.Context, q querier, shopID int64, o Owner) (int64, err
 	return id, err
 }
 
+// countLines (GET /api/cart/count): cart er alada line, shudhu SELECT (row banay na, bondho item o gone).
+func countLines(ctx context.Context, q querier, shopID int64, o Owner) (int, error) {
+	cartID, err := findCart(ctx, q, shopID, o)
+	if err != nil || cartID == 0 {
+		return 0, err
+	}
+	var n int
+	err = q.QueryRowContext(ctx, `SELECT count(*) FROM cart_items WHERE shop_id = $1 AND cart_id = $2`, shopID, cartID).Scan(&n)
+	return n, err
+}
+
 // touchCart: write er shuru te cart row lock + updated_at = now() (8.4 item 7, cart.cleanup er 30 din).
 // Na thakle 0.
 func touchCart(ctx context.Context, tx *sql.Tx, shopID int64, o Owner) (int64, error) {
