@@ -48,6 +48,9 @@ type Config struct {
 var turnstileTestSecrets = []string{"1x0000000000000000000000000000000AA", "2x0000000000000000000000000000000AA",
 	"3x0000000000000000000000000000000AA"}
 
+// TurnstileTestSecret: Cloudflare er test secret kina; auth e siteverify er hostname check bad dite (10.11 v1.22).
+func TurnstileTestSecret(s string) bool { return slices.Contains(turnstileTestSecrets, s) }
+
 // Load: lookup (os.LookupEnv) theke config. Shob bhul ek shathe ferot dey, jate ek bare thik kora jay.
 // Error e kokhono secret ba password thake na.
 func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
@@ -107,7 +110,7 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 		if c.TurnstileSecret == "" {
 			bad("TURNSTILE_SECRET nai (Cloudflare Turnstile er secret key)")
 		}
-		if c.Env != "local" && slices.Contains(turnstileTestSecrets, c.TurnstileSecret) {
+		if c.Env != "local" && TurnstileTestSecret(c.TurnstileSecret) {
 			bad("TURNSTILE_SECRET Cloudflare er test secret; asol secret dao")
 		}
 		c.TOTPKey = base64Key(get("TOTP_KEY"))

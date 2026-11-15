@@ -15,7 +15,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 5. TOTP: `totp.go` → `TOTPCode(secret, step)` (HMAC-SHA1, dynamic truncation, 6 digit); `CheckTOTP(secret, code, now)` step `now/30` er -1, 0, +1 dekhe, mille sei step dey (replay atkate `staff.totp_last_step` e, step 6).
 6. TOTP secret: `NewTOTPSecret` 20 byte random + base32 (padding chhara); DB te `SealTOTPSecret` (`seal.go` → `Seal`, AES-GCM, key `TOTP_KEY`, AAD `shop_id:staff_id:key_version`), pora `OpenTOTPSecret`.
 7. OTP send (`POST /api/auth/otp/send`, `cmd/api/router.go` e public limit + client IP te ghontay 10): `handler.go` → `SendOTP` body (`purpose` shudhu `login`), `phone.Normalize`, tarpor `service.go` → `sendOTP`:
-   - `Turnstile.Verify` (`turnstile.go`): siteverify e `secret`, `response`, `remoteip`; `success` ar `hostname` = `X-Shop-Host` (`httpx.Shop.Domain`). DB er age.
+   - `Turnstile.Verify` (`turnstile.go`): siteverify e `secret`, `response`, `remoteip`; `success` ar `hostname` = `X-Shop-Host` (`httpx.Shop.Domain`); secret Cloudflare er test secret (`config.TurnstileTestSecret`) hole hostname check na (v1.22). DB er age.
    - `db.InTx`: `lockPhone` (`pg_advisory_xact_lock`, shop + phone) → `isBlocked` → `phoneLock` (24 ghontar bhul, lock hole `lockAlert` commit kore `429`) → `sendLimit` (3/15 minute, 10/24 ghonta, shob purpose) → `smsCap` (shop er timezone er din, `checkout.sms_daily_cap`) → `insertOTP` (5 minute) → `Seal` (key `otpSMSKey` = HKDF(`OTP_SECRET`), AAD otp id) → `jobs.Enqueue` `sms.send` (`max_attempts` 2).
    - Response `{"sent": true}`; limit/lock/cap e `429 rate_limited` + `Retry-After`.
 8. SMS: worker er `notify.SendSMSJob` payload e `otp_id` pele `SMSCode` (phone `otp_codes` theke shop shoho, code decrypt) dake; done hole worker payload `{}` kore ([jobs](jobs.md)).
@@ -61,6 +61,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 | Phone lock: 24 ghontay `otp_codes` er bhul (consumed row e ek kom) 10 hole `429` + rolling `Retry-After`, alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone>:<din>`), payload e phone mask (7.8 v1.19, Q3) | `phoneLock`, `lockAlert` | `TestOTPPhoneLockIntegration` |
 | Shop er SMS cap: shop er timezone er din e OTP >= `checkout.sms_daily_cap` hole `429`, rat 12 ta porjonto (7.8 v1.7, Rule 5) | `smsCap` | `TestOTPSMSCapIntegration` |
 | Turnstile: siteverify e secret, token, remoteip; `success` ar `hostname` = shop er domain; bhul token e `400 turnstile_failed` (12.2, 10.11, 14.2 test 23) | `Turnstile.Verify`, `SendOTP` | `TestTurnstile` |
+| Turnstile test secret (`1x`/`2x`/`3x...AA`) e `hostname` check na (Cloudflare `example.com` dey), `success` lage; asol secret e local eo check (10.11 v1.22, 16.1) | `Turnstile.Verify`, `config.TurnstileTestSecret` | `TestTurnstile` |
 | OTP SMS payload `{otp_id, nonce, ct}` (AES-GCM, key HKDF(`OTP_SECRET`), AAD otp id), plain code na; `max_attempts` 2; done hole `{}` (8.2 step 4, 8.17, Q1) | `sendOTP`, `SMSCode`, `jobs.finish` | `TestOTPJobPayload` |
 | Client IP te ghontay 10 OTP send; website er `X-Client-IP` shudhu secret shoho (7.8, 3.2 Niyom 5, 14.2 test 18) | `cmd/api/router.go` → `newHandler` | `TestOTPSendIPLimit` |
 | OTP verify: ek OTP e 5 attempt (autocommit, error path e thake, parallel e 5 er beshi na), tarpor `otp_too_many_attempts`; 24 ghontay 10 bhul e `429` + alert ekbar, lock e thik code o na (8.2 verify step 2-3, 7.8, 14.2 test 10) | `verifyOTP`, `countAttempt`, `phoneLocked` | `TestOTPAttemptsIntegration` |
@@ -103,6 +104,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 
 ## Proshno-uttor
 
+- **Test secret e hostname check na keno?** Cloudflare er test secret shob shomoy `example.com` dey, tai local login hoto na; test secret local chhara config e atke (v1.20), tai production e check bad hoy na (10.11).
 - **Verify e Turnstile na keno?** OTP nijei 5 attempt ar 24 ghontar lock e bandha; Turnstile send e (14.2 test 23).
 - **Lock er 10 tomo bhul e `429`, `otp_invalid` na keno?** Tokhon theke lock chalu; client `Retry-After` dekhe opekkha kore, lock ache bole na (7.8).
 - **Response e user id nai keno?** Client er lage na; serial id baire dei na (Rule 11 er moto).

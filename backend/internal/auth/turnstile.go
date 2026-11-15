@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"vendrix/backend/internal/config"
 )
 
 // SiteverifyURL: Cloudflare Turnstile er server-side check (12.2 Website 1).
@@ -22,7 +24,8 @@ type Turnstile struct {
 
 // Verify (10.11): token Cloudflare e pathay (secret, response, remoteip); success ar hostname = shop er domain
 // (X-Shop-Host) hole-i true, jate onno site e solve kora token ekhane na chole. Network ba Cloudflare er bhul e
-// error (caller 500 dey; token bhul bole na).
+// error (caller 500 dey; token bhul bole na). Cloudflare er test secret shob shomoy "example.com" dey, tai tate
+// hostname check na; test secret local chhara config e atke (v1.20), tai production e eta hoy na.
 func (t Turnstile) Verify(ctx context.Context, token, remoteIP, hostname string) (bool, error) {
 	if token == "" || hostname == "" {
 		return false, nil
@@ -58,5 +61,5 @@ func (t Turnstile) Verify(ctx context.Context, token, remoteIP, hostname string)
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return false, fmt.Errorf("turnstile siteverify: %w", err)
 	}
-	return out.Success && strings.EqualFold(out.Hostname, hostname), nil
+	return out.Success && (config.TurnstileTestSecret(t.Secret) || strings.EqualFold(out.Hostname, hostname)), nil
 }
