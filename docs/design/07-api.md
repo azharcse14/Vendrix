@@ -15,7 +15,7 @@
 | Login | Customer: `Authorization: Bearer <token>`. Website e token HttpOnly cookie te, Jaspr server API te Bearer hishebe pathay; app (Phase 2) header e. Staff (admin web): api domain er HttpOnly cookie `__Host-asid` (11.3), Dart code token dekhe na |
 | Guest cart | `X-Cart-Key: <random>` header (website e cookie theke). v1.28: key Go banay (`rand.Text()`, `^[A-Z2-7]{26}$`), notun cart e response e `cart_key`; bhul format er key "nai" dhore (8.4) |
 | Bhasha | `Accept-Language: bn` ba `en`. Public API resolve kora lekha ferot dey (fallback `bn`). Admin API puro `{"bn","en"}` object dey |
-| Order create | `Idempotency-Key` header (max 64 okkhor) bad dile `400` |
+| Order create | `Idempotency-Key` header (max 64 okkhor) bad dile `400`. v1.32: format `^[A-Za-z0-9_-]{16,64}$`, na mille `400 missing_idempotency_key` (8.19 item 12) |
 | Paging | `?page=1&limit=24` (max 100). Response: `{"items": [...], "page": 1, "limit": 24, "total": 130}` |
 | Body size | Default 1 MB, chobi upload 10 MB (`http.MaxBytesReader`, oi route e read deadline 2 minute; 2.2) |
 | Unknown field | Nijer client er JSON e ochena field thakle `400` (`DisallowUnknownFields`). Webhook e na |
@@ -38,7 +38,7 @@ Error er format shob jaygay ekoi:
 
 | HTTP | Kokhon | Code er udahoron |
 |---|---|---|
-| 400 | Input bhul | `validation_failed`, `invalid_phone`, `missing_idempotency_key`, `turnstile_failed`, `otp_invalid`, `otp_too_many_attempts`, v1.26: `mfa_invalid` (TOTP ba recovery code bhul), `mfa_too_many_attempts` (ek temp_token e 5 bhul) |
+| 400 | Input bhul | `validation_failed`, `invalid_phone`, `missing_idempotency_key`, `turnstile_failed`, `otp_invalid`, `otp_too_many_attempts`, v1.26: `mfa_invalid` (TOTP ba recovery code bhul), `mfa_too_many_attempts` (ek temp_token e 5 bhul), v1.32: `cart_empty` (checkout e cart khali, 8.6 step 7) |
 | 401 | Login nai ba token bhul | `unauthenticated`, `session_expired`, v1.26: `invalid_credentials` (staff login: ochena shop/email, inactive, bhul password, account lock; 8.3) |
 | 403 | Onumoti nai | `forbidden`, `phone_blocked`, v1.26: `setup_required` (`setup_pending` session e admin API), `password_change_required` (password bodlanor age TOTP setup) |
 | 405 | Path ache, method na | v1.26: `method_not_allowed` (`Allow` header shoho) |
@@ -65,13 +65,13 @@ Error er format shob jaygay ekoi:
 | GET | `/api/products/{slug}` | Product, variant, chobi, rating, attributes |
 | GET | `/api/products/{slug}/reviews` | Review list (lukano na) |
 | GET | `/api/vendors/{slug}` | Vendor er profile ar product (shudhu marketplace mode e; single e `404`) |
-| GET | `/api/delivery-zones` | Checkout er district/area list |
-| POST | `/api/delivery/quote` | `{district, area, subtotal}` → charge, deadline, same-day possible kina |
+| GET | `/api/delivery-zones` | Checkout er district/area list. v1.32: `[{district, areas: [{area, name}], district_wide: bool}]`, shudhu `is_active`; `district_wide` = district e `area NULL` zone ache (form e "Onno area" + free text, 8.19 item 2) |
+| POST | `/api/delivery/quote` | `{district, area, subtotal}` → charge, deadline, same-day possible kina. v1.32: M6 e na (checkout quote-i jothesto); Phase 2 te product page er delivery estimate |
 | POST | `/api/complaints` | Complaint form (Turnstile + rate limit) |
 
 ### 7.3 Customer login ar account
 
-v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `orders` M6 e, `privacy-requests` M11 e.
+v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `orders` M6 e, `privacy-requests` M11 e. v1.32 (user 15 November 2026): M6 e shudhu `/api/me/orders`; `/api/me/addresses` M11 e (account privacy er sathe, 8.19 item 11).
 
 | Method | Path | Kaj |
 |---|---|---|
@@ -79,9 +79,9 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 | POST | `/api/auth/otp/verify` | `{phone, code}` → `{token, user}`. Ek-i shathe guest cart merge (`X-Cart-Key`), oi phone er (`customer_phone`) guest order account e jog. v1.30: response e `cart_notices` (shob shomoy array, khali hole `[]`): merge e 50 variant er jayga na thakay bad guest item `[{code: "item_dropped", name}]` (naam request er bhashay, 8.4 item 6) |
 | POST | `/api/auth/logout` | Session revoke, `204` |
 | GET, PATCH | `/api/me` | Profile `{phone, name, email, locale}` (v1.26: `id` nai). PATCH e shudhu deya field bodlay: `name` trim, max 100 okkhor (rune); `email` trim, `net/mail` e ekta thikana (naam ba `<>` chhara), max 254; `""` dile `NULL`; `locale` `bn` ba `en`. Bhul hole `400 validation_failed` + `fields` (`too_long`, `invalid`) |
-| GET, POST | `/api/me/addresses` | Address list, notun |
+| GET, POST | `/api/me/addresses` | Address list, notun (v1.32: M11) |
 | PATCH, DELETE | `/api/me/addresses/{id}` | Address bodlano, muche fela |
-| GET | `/api/me/orders` | Nijer order list |
+| GET | `/api/me/orders` | Nijer order list (Rule 16: `user_id` filter). v1.32: paged (7.1), card `{order_number, public_token, display_status, total, placed_at}` |
 | POST | `/api/me/privacy-requests` | `{kind: "export" \| "delete"}` |
 
 ### 7.4 Cart ar wishlist
@@ -114,14 +114,14 @@ v1.31 spashto niyom (M5 er code, review e lekha):
 
 | Method | Path | Kaj |
 |---|---|---|
-| POST | `/api/checkout/quote` | Cart + `{coupon_code, district, area, payment_method, phone}` → subtotal, discount, delivery charge, total, `otp_required`, shomossha gulo. Kichu save hoy na |
-| POST | `/api/orders` | Order create (Section 8.6). Response `201 {order_number, public_token, status, payment_url?}`, `409 otp_required` ba `409 price_changed` |
-| GET | `/api/orders/{token}` | SMS link theke order dekha (phone, thikana mask kora) |
+| POST | `/api/checkout/quote` | Cart + `{coupon_code, district, area, payment_method, phone}` → subtotal, discount, delivery charge, total, `otp_required`, shomossha gulo. Kichu save hoy na. v1.32: response `{subtotal, discount, delivery_charge, total, otp_required, problems}`; coupon na khatle coupon chhara total ar `problems` e `coupon_invalid`/`coupon_limit_reached` (read-only, `used_count` bodlay na, 8.19 item 5) |
+| POST | `/api/orders` | Order create (Section 8.6). Response `201 {order_number, public_token, status, payment_url?}`, `409 otp_required` ba `409 price_changed`. v1.32: `otp_required` er `details {phone_masked}`, `price_changed` er `details {total, subtotal, discount, delivery_charge}`, `out_of_stock` er `details {variant_id}`; rate limit `429` (7.8); ekoi key er ager order `200` + ager response (8.19) |
+| GET | `/api/orders/{token}` | SMS link theke order dekha (phone, thikana mask kora). v1.32: order number, `display_status`, tarikh, item (naam, variant, qty, line total), taka, payment method, `delivery_deadline`, customer/recipient naam, phone `+88017****5678`, thikana shudhu district + area, `can_cancel` (8.19 item 6) |
 | GET, POST | `/api/confirm/{confirm_token}` | COD confirm (8.10): GET e order er shar-songkhep (phone/thikana mask), POST e confirm. Token shudhu SMS e; v1.4 theke `public_token` diye confirm hoy na |
-| POST | `/api/orders/{token}/cancel` | Customer cancel (order `pending`, ba `confirmed` ar shob fulfillment `open`) |
+| POST | `/api/orders/{token}/cancel` | Customer cancel (order `pending`, ba `confirmed` ar shob fulfillment `open`). v1.32: body `{reason?}` (max 200) → `orders.cancel_reason` |
 | POST | `/api/orders/{token}/pay` | Fail hoya online payment abar cheshta → `payment_url` |
 | GET | `/api/orders/{token}/invoice` | Invoice page er data |
-| POST | `/api/orders/track` | `{number, phone}` (phone URL ba log e jay na). Login chhara tracking. Shudhu status, tarikh, courier tracking. Rate limited |
+| POST | `/api/orders/track` | `{number, phone}` (phone URL ba log e jay na). Login chhara tracking. Shudhu status, tarikh, courier tracking. Rate limited. v1.32: phone `customer_phone` ba `recipient_phone` mille `{order_number, display_status, placed_at, history: [{status, at}], tracking: null}` (courier M7), token na; na mille `404 not_found` (8.19 item 6) |
 | POST | `/api/reviews` | `{order_token \| login, product_id, rating, comment, reviewer_name}` |
 
 `POST /api/orders` er body:
@@ -188,7 +188,7 @@ Vendor staff (`vendor_owner`, `vendor_staff`) ekoi endpoint use kore, kintu back
 |---|---|
 | `POST /api/auth/otp/send` | Turnstile; ek phone e 15 minute e 3 bar ar dine 10 bar (shob purpose mile), ek client IP te ghontay 10 bar; shop e dine `checkout.sms_daily_cap` (default 500) er beshi OTP SMS na (v1.7: cap shudhu OTP gone; order, confirm, ship er SMS e cap nai, tai OTP er dhel order er SMS atkay na). v1.26: cap approximate: lock phone er, shop er na, tai parallel e alada phone er send 1–2 ta par hote pare (khoroch er shima, nirapotta na). Cap shesh hole oi diner baki OTP login bondho (bot onek phone diye Turnstile par korle DoS); launch er age (M12) SMS gona monitor ar alert, 16.1 |
 | `POST /api/auth/otp/verify` | Ek OTP te 5 bar bhul (database e atomic `UPDATE`, error path eo commit), tarpor notun OTP. Ek phone e 24 ghontay 10 bar bhul hole 24 ghonta oi phone er OTP bondho ar alert (cap chhara dine prai 1,440 guess, mashe prai 4% chance). v1.19: lock er alada table na: shesh 24 ghontay oi phone er `otp_codes` er `sum(attempts)` theke consumed row gulo bad (consumed row er shesh attempt thik) = bhul; 10 ba beshi hole send ar verify `429 rate_limited` + `Retry-After` (lock ache bole na), rolling window (`otp_phone_idx`, migration na). Alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone>:<din>`; v1.26: `<phone>` er jaygay `HMAC-SHA256(OTP_SECRET, "otp_lock:" + phone)` er prothom 16 hex, karon `jobs` row 30 din thake, plain phone na) |
-| `POST /api/orders` | Ek phone e ghontay 5 ta, ek IP te ghontay 10 ta |
+| `POST /api/orders` | Ek phone e ghontay 5 ta, ek IP te ghontay 10 ta. v1.32: shudhu hoya order gona, DB theke (`orders` e shesh 60 minute er `customer_phone` ar `ip`; 8.6 step 4 er por, transaction er age), `429 rate_limited` + `Retry-After`; OTP/`price_changed` er retry gone na (8.19 item 9) |
 | `POST /api/orders/track` | Ek client IP te minute e 10 bar |
 | `POST /api/complaints` | Ek client IP te ghontay 5 ta |
 | `POST /api/admin/auth/login` | Ek client IP te 15 minute e 10 bar bhul (memory; v1.26: key shudhu IP, shop na: admin domain e request er shop nai, shop body te, tai ek IP theke onek shop e cheshta o ek gona). Account e 5 bar bhul er por protiti bhul e (v1.26: 5 tomo bhul thekei) 1 minute `locked_until` (soft lock: keu owner er email diye barbar bhul dileo owner shudhu 1 minute opekkha kore), 10 ar 50 e owner alert. TOTP: ek temp_token e 5 bar, temp_token jure `staff.failed_mfa` 10 e 30 minute lock ar alert. v1.24: duita lock-i check er age atomic reservation (8.3); account lock e login `401 invalid_credentials` (`429` na, `Retry-After` na; email chena na jay), IP limit e `429`; `failed_mfa` lock e `/auth/totp`, `/auth/recovery` `429` |

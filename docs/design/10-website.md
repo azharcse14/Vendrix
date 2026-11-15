@@ -14,7 +14,7 @@ English version e shob route er samne `/en`.
 | `/search?q=` | Search | Na | `noindex` |
 | `/v/{slug}` | Vendor store page | Na | Shudhu marketplace mode e, single e `404` |
 | `/cart` | Cart | Na | Guest cart. v1.28: SSR, `@client` na, JS chhara form (10.12) |
-| `/checkout` | Checkout | Na | Guest checkout |
+| `/checkout` | Checkout | Na | Guest checkout. v1.32: `@client CheckoutForm`, Turnstile (10.13) |
 | `/order/{token}` | Order dekha | Na (token) | SMS link; phone/thikana mask, `noindex` |
 | `/order/{token}/done` | Order er por | Na | Payment status check |
 | `/confirm/{confirm_token}` | COD confirm (v1.4: alada token, shudhu SMS e, 8.10) | Na | `noindex`, `no-referrer` |
@@ -22,7 +22,7 @@ English version e shob route er samne `/en`.
 | `/invoice/{token}` | Printable invoice | Na | Print CSS |
 | `/track` | Order tracking | Na | Order number + phone (POST form) |
 | `/login` | OTP login | | v1.19: `@client LoginForm`, Turnstile (10.11) |
-| `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | v1.19: M4 e shudhu `/account` (naam, bhasha, logout); baki tar milestone e (10.11). v1.28: `/account/wishlist` M5 e (10.12) |
+| `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | v1.19: M4 e shudhu `/account` (naam, bhasha, logout); baki tar milestone e (10.11). v1.28: `/account/wishlist` M5 e (10.12). v1.32: `/account/orders` M6 e, `/account/addresses` M11 e (10.13) |
 | `/policy/{terms,return,refund,delivery,privacy}` | Policy | Na | Bangla badhyotamulok |
 | `/contact`, `/faq`, `/complaint` | Support | Na | DBID, BFSA number footer e |
 | `/print/{kind}?token=` | Staff er packing slip, pick list | Signed token (10 min) | Admin theke khole; `Referrer-Policy: no-referrer` |
@@ -126,6 +126,8 @@ Field: naam, phone, email (optional; SSLCommerz e na dile shop er email jay), "o
 
 Flow: form → (jhuki thakle) OTP box → order → `/order/{token}/done`. Done page e order number, SMS er kotha (COD confirmation lagle "SMS e pathano link e confirm korun"; done page e confirm button nai, 8.10), ar choto kore "Porer bar druto order korte account khulun (shudhu OTP)". Live hishab (`POST /api/checkout/quote`, BFF diye) area ba coupon bodlale; quote er total `expected_total` hishebe order e jay. OTP box theke submit e notun Turnstile lage na (8.6). Order er age delivery er shomoy dekhao (perishable hole aro kom).
 
+v1.32 (M6, user 15 November 2026): field er limit, login customer er readonly phone ar prefill, area dropdown ar "Onno area": 8.19 item 2, 4, 10; form `@client` ar JS chhara path nai: 10.13. Perishable er kom shomoy Phase 2 (16.1); M6 e 5/10 din.
+
 ### 10.7 Accessibility
 
 Shob chobir `alt` (product naam), protiti input er `<label>`, keyboard diye shob kaj, focus dekha jay, rong-er upor ekmatro nirbhor kore kono tottho na (stock shesh = lekha + rong), contrast 4.5:1.
@@ -143,14 +145,14 @@ Browser kokhono Go API te jay na (CORS shudhu admin), tai `@client` component ar
 | POST, PATCH, DELETE | `/_/cart/items`, `/_/cart/items/{variant_id}` | `/api/cart/items...` (v1.28: notun `cart_key` e `__Host-cart` set, body theke muche; JS chhara form e `303 /cart`) |
 | POST | v1.28: `/_/cart/items/{variant_id}/delete` | `DELETE /api/cart/items/{variant_id}` (JS chhara form) |
 | POST | `/_/checkout/quote` | `POST /api/checkout/quote` |
-| POST | `/_/checkout` | `POST /api/orders` (JS e random `Idempotency-Key`; JS chhara form e page render er shomoy hidden field) |
+| POST | `/_/checkout` | `POST /api/orders` (JS e random `Idempotency-Key`; JS chhara form e page render er shomoy hidden field. v1.32: JS chhara path nai, key shudhu `@client CheckoutForm` banay, BFF header forward kore, 10.13) |
 | POST | `/_/auth/otp/send`, `/_/auth/otp/verify`, `/_/auth/logout` | `/api/auth/...` (verify e `__Host-sid` cookie set; v1.26: logout e cookie `Max-Age=0`, JS chhara form e `303`; v1.28: verify `200` e `__Host-cart` `Max-Age=0`, `wl` thakle `POST /api/wishlist/merge` tarpor `wl` `Max-Age=0`, 10.12) |
 | POST, DELETE | `/_/wishlist/{product_id}` | `/api/wishlist/{product_id}` (v1.28: shudhu login e; guest e `wl` cookie) |
 | POST | `/_/orders/{token}/cancel`, `pay` | `/api/orders/{token}/...` |
 | POST | `/_/confirm/{confirm_token}` | `POST /api/confirm/{confirm_token}` (v1.4, 8.10) |
 | POST | `/_/track`, `/_/complaint`, `/_/review` | `POST /api/orders/track`, `/api/complaints`, `/api/reviews` |
 | PATCH, POST | `/_/account` | v1.26: `PATCH /api/me` (JS chhara form er POST o PATCH hoye jay, `apiMethod`) |
-| PATCH, POST, DELETE | `/_/account/...` | `/api/me/...` (M6) |
+| PATCH, POST, DELETE | `/_/account/...` | `/api/me/...` (v1.32: address M11 e, 10.13) |
 
 Niyom:
 
@@ -180,7 +182,7 @@ Niyom:
 2. **Turnstile**: platform er ekta widget, site key website env `TURNSTILE_SITE_KEY` (shop er hostname widget e jog; Rule 15); implicit render, `data-response-field-name="turnstile_token"`; Go siteverify e `hostname` = `X-Shop-Host` o mile. Local e Cloudflare er test key (13.5), tai asol code path chole. v1.22: `TURNSTILE_SECRET` Cloudflare er test secret (`1x`/`2x`/`3x...AA`) hole `hostname` check bad (test secret shob shomoy `example.com` dey); asol secret e local eo check. Test secret local chhara config e atke (v1.20, 13.5), tai production e check bad hoy na. Per-shop key MT e.
 3. **CSP**: `script-src` ar `frame-src` e `https://challenges.cloudflare.com` shudhu Turnstile thaka page e (M4 e `/login`); baki page 10.10 item 7.
 4. **BFF auth**: verify e Go er response er `token` theke `__Host-sid` (10.3) set, body theke `token` muche (JS kokhono token dekhe na); `/_/auth/logout` revoke ar cookie `Max-Age=0`. `ApiClient` e optional Bearer (`/account` SSR e `/api/me`).
-5. **Account**: M4 e `/account` (naam, bhasha, logout; login chhara `/login` e `303`); `/account/orders`, `addresses` M6, `wishlist` M5, `privacy` M11 e. Bottom nav/header e Account link abar.
+5. **Account**: M4 e `/account` (naam, bhasha, logout; login chhara `/login` e `303`); `/account/orders`, `addresses` M6, `wishlist` M5, `privacy` M11 e. v1.32: `addresses` M11 e (10.13). Bottom nav/header e Account link abar.
 
 ### 10.12 M5 er decision (v1.28)
 
@@ -193,3 +195,13 @@ Niyom:
 7. **Session expire ba revoke** (v1.31, user 15 November 2026): Go `401` dile website shob jaygay `/login?next=<ekhon er path>` e pathay ar `__Host-sid` `Max-Age=0`: `/cart`, `/account`, `/account/wishlist` page (SSR `303`), `@client AddToCart` ar `WishlistButton` (BFF er `401` e `location.assign`), JS chhara form POST (BFF `303 /login?next=<form er page>`). BFF `__Host-sid` pathiye `401` pele uttor e `__Host-sid` `Max-Age=0` (JSON ar form duitai). Na hole expire cookie protiti page e `401` khay ar customer jane na keno cart khali.
 8. **BFF er cookie** (v1.31, M5 security review): `__Host-sid` shudhu `^[A-Za-z0-9_-]+$` hole Bearer (khali ba bhul hole guest: header injection ar bhul `401` na); `__Host-sid` thakle Go `cart_key` dileo `__Host-cart` set na (login cart e key lage na).
 9. **Choto choice** (v1.31, M5 er code, review e lekha): guest `wl` 50 er beshi hole purono gulo bad (shesh 50 thake); merge fail hole `wl` thake (porer login e abar); JS chhara heart ar `−`/`+` button `hidden` (JS chalu kore); login form `cart_notices` 4 second dekhiye redirect; cookie chhara `/cart` page public (`max-age=60`; shob guest er khali cart ekoi).
+
+### 10.13 M6 er decision (v1.32)
+
+User 15 November 2026 e M6 plan er shob recommendation niyeche ([M6](../milestones/M6.md) Q1–Q13). Backend er niyom 8.19 e ([08-checkout.md](08-checkout.md)).
+
+1. **Checkout form** (Q6, 10.2, 10.6): `@client CheckoutForm` puro form: area, coupon ba payment method bodlale live quote (`/_/checkout/quote`), OTP box (`409 otp_required` e), submit JSON e `/_/checkout`, `409 price_changed` e notun total dekhiye abar confirm. JS chhara path nai (Turnstile JS chhara chole na, `LoginForm` er moto, 10.11 item 1); 10.9 er "JS chhara form e hidden field" ar lage na. `Idempotency-Key` client e `crypto.getRandomValues` 128 bit base32; body (hash er field, 8.6 step 1) bodlale notun key, ekoi body er retry (network fail, OTP er por) ekoi key. Dam/total shudhu quote theke (Rule 1). JS size M6 step 13 e mapa; deferred part shudhu `/checkout` e.
+2. **Turnstile ar CSP**: `/checkout` e Turnstile widget; `script-src`/`frame-src` e `https://challenges.cloudflare.com` `/login` ar `/checkout` e (10.11 item 3).
+3. **Field** (Q11, 10.6): limit 8.19 item 10; bhul hole `fields` er code field er pashe. Login customer: phone readonly (account er phone, 8.19 item 4), naam/email `/api/me` theke prefill (bodlano jay), order profile e likhe na. Area: district er zone er dropdown, district-wide zone thakle "Onno area" + free text (8.19 item 2).
+4. **Order page** (Q7, 10.1): `/order/{token}` ar done page `GET /api/orders/{token}` er mask kora data dekhay (8.19 item 6); `/track` er uttor e shudhu status ar itihash, order er link na.
+5. **Account** (Q12): M6 e `/account/orders` (`GET /api/me/orders`, paged); `/account/addresses` ar checkout e saved address M11 e. Login customer er naam prefill (item 3) jothesto.

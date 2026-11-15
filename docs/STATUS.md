@@ -10,6 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
+- **M6 (Checkout (COD)) cholche** (plan approve 15 November 2026: Q1–Q13 shob recommendation, design v1.32): step 0 shesh (8.5–8.10 ekhon `docs/design/08-checkout.md` e, M6 er decision 8.19 ar 10.13); porer step 1 (delivery zone). Plan [M6](milestones/M6.md).
 - **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) shesh** (15 November 2026, design v1.19–v1.27): customer OTP login + session, `/api/me`, staff login + TOTP/recovery + setup, admin session, `staff reset-2fa` CLI, website `/login` + `/account`, local https (`make https`); report [M4](milestones/M4.md). **M5 (Cart ar wishlist) shesh** (15 November 2026, design v1.28–v1.31): Cart API (guest key, `OptionalCustomer`, normalize, `GET /api/cart/count`), login e merge, wishlist API, `cart.cleanup`, shared `Cart`/repository, website BFF cart/wishlist, `/cart`, `/account/wishlist`, `@client AddToCart`/`WishlistButton`, Cart badge; report [M5](milestones/M5.md). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 85/85 (Postgres 16, C.UTF-8).
@@ -18,8 +19,8 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **User: push ar CI**: `git push origin main` (`339de22`..HEAD; `gh auth switch -u azharcse14`), tarpor CI green kina dekho (Go job, website build, Dart job); Linux e `TestSearchRankingIntegration` (`backend/internal/catalog`) green howa uchit (Mac e macOS `C.UTF-8` e fail, M3/M4/M5 Report). Local browser login er jonno `backend/.env` e `OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET` ar `website/.env` e `TURNSTILE_SITE_KEY` (`env.example` dekho).
-2. **M6 (Checkout (COD))**: M6 plan draft `docs/milestones/M6.md`; user approve (ar Open question) baki. Plan e step 0–16, 13 ta Open question (Q1: `08-core-flows.md` 57 KB, 8.5–8.10 `08-checkout.md` e bhag). User uttor dile step 0: uttor design e (`design-change`, v1.32), tarpor step 1 (`milestone` skill, `/milestone M6`). Uttor na pawa porjonto M6 er code na.
+1. **M6 step 1: delivery zone, test age** (`docs/milestones/M6.md` step 1; design 7.2, 8.6 step 5, 8.19 item 2): age `backend/internal/shipping/zone_integration_test.go` e `TestZoneLookupIntegration` (`(district, area)` → na pele `(district, NULL)`, inactive zone bad, onno shop er zone na) ar `TestDeliveryZonesIntegration` (`GET /api/delivery-zones` → `[{district, areas: [{area, name}], district_wide}]`, shudhu active); `TEST_DATABASE_URL` diye fail dekhao, commit `test(M6): delivery zone`. Tarpor notun `backend/internal/shipping` (`doc.go` → `docs/features/delivery-zone.md`, `handler.go`, `service.go` `Lookup`, `store.go`), `cmd/api/router.go` e route, `409 area_not_served`, dev seed (`scripts/dev-seed.sql` ba `make seed`: Dhaka er kichu area + "Dhaka" `area NULL`); `make quick-check`, commit `feat(M6): delivery zone lookup ar list`. `milestone` skill (`/milestone M6`) diye cholo.
+2. **User: push ar CI**: `git push origin main` (`339de22`..HEAD (M6 er commit shoho); `gh auth switch -u azharcse14`), tarpor CI green kina dekho (Go job, website build, Dart job); Linux e `TestSearchRankingIntegration` (`backend/internal/catalog`) green howa uchit (Mac e macOS `C.UTF-8` e fail, M3/M4/M5 Report). Local browser login er jonno `backend/.env` e `OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET` ar `website/.env` e `TURNSTILE_SITE_KEY` (`env.example` dekho).
 
 ## User er kache proshno
 
@@ -43,7 +44,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | M3 | Website catalog | shesh (15 November 2026) | [M3](milestones/M3.md) |
 | M4 | Login | shesh (15 November 2026) | [M4](milestones/M4.md) |
 | M5 | Cart ar wishlist | shesh (15 November 2026) | [M5](milestones/M5.md) |
-| M6 | Checkout (COD) | baki (plan draft) | [M6](milestones/M6.md) |
+| M6 | Checkout (COD) | cholche | [M6](milestones/M6.md) |
 | M7 | Admin panel v1 | baki | |
 | M8 | Store settings | baki | |
 | M9 | Review | baki | |
@@ -55,6 +56,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M6 plan approve (user: shob recommendation, Q1–Q13); M6 step 0: `96d58f9` (8.5–8.10 `docs/design/08-checkout.md` e, AGENTS.md map, README, rule link) ar design v1.32 (notun 8.19, 10.13; 7.1, 7.2, 7.3, 7.5, 7.8, 8.6–8.8, 8.10, 8.13, 8.15, 8.16, 10.1, 10.6, 10.9, 10.11, 12.2, 16.1 perishable row); M6.md e uttor. Porer kaj step 1 (delivery zone).
 - 15 November 2026: M6 plan draft `docs/milestones/M6.md` (scope, Already ache: `001` e shob table, migration lage na; acceptance → test, 14.2 test 1–5, 7, 8, 11, 15, 16, 22, 23, 26, 27, 31, 33, 39, 40; 13 ta Open question recommendation shoho; step 0–16); user approve baki, code na.
 - 15 November 2026: **M5 shesh**: step 11 `make check` (gofmt, vet, docsync, rule green; DB 85/85; shared 86, website 173; `-race` e shudhu jana `TestSearchRankingIntegration` macOS locale, `catalog` `-skip` diye green), JS `main.client.dart.js` 174,827 byte (gzip 54 KB), acceptance ☑, [M5](milestones/M5.md) Report. Porer kaj: push + CI, tarpor M6 plan.
 - 15 November 2026: M5 step 11 review fix (user decision D1/D2): design v1.31 `750f161` (7.4 `GET /api/cart/count`, 8.4 item 9, 8.17 Rule 3/5 er chhar, 10.12 item 5, 7–9, 12.2, 16.1 duita thik holo + MV er age vendor `active` + CGNAT row e note), test `6df9511`, fix `65c3604` (count route, qty overflow `409`), `4ef530a` (Layout count, session `401` e `/login?next=` + `__Host-sid` `Max-Age=0`, `validSid`, login e `cart_key` cookie na, approx bracket); M5.md review line. Rakha: security L3/L5 (12.2), L1 (16.1), design L4 (16.1 MV).
@@ -69,4 +71,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 15 November 2026: M5 step 2 (Cart API): design v1.29 `e2c6b6b` (user: merge e 50 er beshi variant `item_dropped`, wishlist 200 e `409 wishlist_full`; 7.1, 7.4, 8.4, 16.1); test `79748ca` (compile fail), code: `cart` handler/store/service (`View`, `Add`, `SetQuantity`, `Remove`), `httpx.OptionalCustomer`, router, `out_of_stock`/`cart_full` message; asol Postgres e `-race` pass. Porer kaj step 3 (merge).
 - 15 November 2026: M5 step 1: notun `backend/internal/cart` (guest key `NewKey`/`KeyHash`, `CheckQuantity`, `CheckRoom`, `NormalizeQuantity`), test age `c29251f`, `docs/features/cart.md`. Porer kaj step 2 (Cart API).
 - 15 November 2026: M5 plan approve (user: shob recommendation, Q1–Q11), design v1.28 (3.2, 7.1, 7.4, 7.8, 8.2, 8.4, 8.17, 10.1–10.3, 10.5, 10.9, 10.10, notun 10.12, 12.2); M5 step 0.
-- 15 November 2026: M5 plan draft `docs/milestones/M5.md` (scope, Already ache, acceptance → test, 11 ta Open question recommendation shoho, step 0–11); user approve baki, code na.

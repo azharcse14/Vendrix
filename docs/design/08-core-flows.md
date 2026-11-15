@@ -69,7 +69,7 @@ v1.28 (M5, user 15 November 2026):
 8. **Wishlist** (7.4): `GET` e bondho product lukano (row thake, chalu hole ferot); merge e shudhu oi shop er active product, ochena/bhul ID bad, max 50 ID, wishlist e mot 200. v1.29: wishlist e 200 thakle notun `POST /api/wishlist/{product_id}` → `409 wishlist_full` (ager product e `200`).
 9. v1.31 (M5 review, user 15 November 2026): badge er jonno `GET /api/cart/count` (normalize ar notice na); normalize ar notice shudhu `GET /api/cart` e, website e shudhu `/cart` page (7.4, 10.12 item 5). Qty jog/set, `variant_label`, stock 0 er `line_total` ar wishlist er `404`/limit er choto niyom 7.4 e. Vendor `active` cart ar wishlist dekhe, catalog list dekhe na: MV er age milano (16.1).
 
-**8.5–8.10** (dam er hishab, checkout, risk ar OTP, state machine, SSLCommerz, COD confirmation): [08-checkout.md](08-checkout.md). v1.32: 08 file 60 KB er kache, tai bhag; section number ekoi.
+**8.5–8.10** (dam er hishab, checkout, risk ar OTP, state machine, SSLCommerz, COD confirmation) ar 8.19 (M6 er decision): [08-checkout.md](08-checkout.md). v1.32: 08 file 60 KB er kache, tai bhag; section number ekoi.
 
 ### 8.11 Packing, batch ar ojon
 
@@ -111,6 +111,7 @@ Packing hoy **fulfillment** dhore. Single store e order ar fulfillment ek, tai s
 | Snapshot | v1.4: order e shorto copy (`orders.coupon_*`); pore coupon edit ba bondho holeo purono order er packing/edit er hishab bodlay na (8.5) |
 | Hishab | Shudhu `pricing` package (8.5) |
 | Vendor | `vendor_id` NULL = shob vendor er line e; thakle shudhu oi vendor er line e, `min_order` o oi line gulor upor |
+| M6 (v1.32) | Code `trim` + `upper`, max 32; `409 coupon_invalid` ba `coupon_limit_reached` er karon, quote e read-only: 8.19 item 5 ([08-checkout.md](08-checkout.md)) |
 | Taka ke dey | `funded_by`: `shop` (shop/platform bohon kore; vendor er commission discount er ager dam e) ba `vendor` (vendor bohon kore). Single store e parthokko nai |
 
 ### 8.14 Review
@@ -123,7 +124,7 @@ Packing hoy **fulfillment** dhore. Single store e order ar fulfillment ek, tai s
 
 ### 8.15 Delivery deadline
 
-1. Order er shomoy `delivery_deadline` (same city 5 din, onno 10 din). Perishable (fol, mach, shobji) er jonno checkout e aro kom shomoy promise ar dekhano (12.1).
+1. Order er shomoy `delivery_deadline` (same city 5 din, onno 10 din). Perishable (fol, mach, shobji) er jonno checkout e aro kom shomoy promise ar dekhano (12.1). v1.32 (M6): M6 e shudhu 5/10 din; perishable er kom shomoy Phase 2 (16.1).
 2. Ghontay ekbar job: deadline er 24 ghontar moddhe kintu deliver hoyni emon fulfillment er alert (shop admin ke; marketplace e oi vendor ke-o). Dashboard e lal kore dekhano.
 3. Prepaid order 36 ghontar moddhe ship na hole alert (advance payment er 48 ghontar moddhe delivery service e dewar niyom er jonno).
 4. Supply na korte parle (stock, expiry): order er 48 ghontar moddhe customer ke janano, ar prepaid hole 72 ghontay refund er alert (12.1).
@@ -133,17 +134,20 @@ Packing hoy **fulfillment** dhore. Single store e order ar fulfillment ek, tai s
 | Event | Template key | Kokhon |
 |---|---|---|
 | OTP | `sms.otp` | Login/checkout OTP |
-| Order hoyeche | `sms.order_placed` | Order er por (confirm link shoho, dorkar hole) |
+| Order hoyeche | `sms.order_placed` | Order er por (v1.32: confirm na lagle, `/order/{public_token}` link) |
+| Order confirm korun | `sms.order_confirm` | v1.32: order er por, COD confirmation lagle (`sms.order_placed` er bodole, confirm link shoho) |
 | Ship hoyeche | `sms.shipped` | Tracking shoho |
 | Deliver hoyeche | `sms.delivered` | Review link shoho |
 | Final dam bodlalo | `sms.amount_updated` | Ojon-variable COD order |
-| Cancel | `sms.cancelled` | Karon shoho |
+| Cancel | `sms.cancelled` | v1.32: order number, karon chhara (8.19 item 7) |
 | Payment hoyeche | `sms.paid` | Online payment validate hole |
 | Refund | `sms.refund` | Refund `done` hole, poriman shoho |
 
 Template gulo translation key (`sms.*`), admin bodlate pare. Customer er `locale` onujayi bhasha. Mone rakho: Bangla SMS Unicode (UCS-2), ek SMS e 70 unit, multipart e protiti 67 (English e 160/153). Juktakkhor ar kar-fola alada unit, tai "okkhor" er cheye beshi gona hoy; template er length code unit e test koro. Template choto rakho, na hole ek SMS e duita-tinta SMS er khoroch hobe.
 
 v1.19 (M4): `sms.otp` er default lekha Go te (`notify` e bn/en), shop er `translations` (`sms.otp`) override kore; `{code}` placeholder, bn ≤ 70 unit. M4 e provider adapter na: local e log, staging/production e `ErrNoProvider` (job fail ar alert); provider thik hole adapter ar `shop_credentials` pora, M12 er age (16.1).
+
+v1.32 (M6, user 15 November 2026): `sms.order_placed` job confirm lagle notun key `sms.order_confirm` ("confirm korun", `/confirm/` link), na hole `sms.order_placed` (`/order/` link); `sms.cancelled` karon chhara; bn ≤ 134 unit (2 part), en ≤ 160; link e primary domain (8.19 item 7, [08-checkout.md](08-checkout.md)).
 
 ### 8.17 Background job
 

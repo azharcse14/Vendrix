@@ -55,6 +55,7 @@ Ami lawyer na, ar niyom bodlay. Niche-r tottho 28 October 2026 e prokashito khob
 5. Log e phone er majhkhan lukano (`+88017****5678`), thikana log e na.
 6. Database user er shudhu dorkari permission: migration owner role, app `shop_app` (DDL nai, order/payment e DELETE nai, audit e UPDATE nai; `001` er shesh block, 6.1).
 7. v1.31 (M5 review): cart er `409 out_of_stock` er `details.max_quantity` (`min(stock, 50)`) diye 50 er niche exact stock jana jay (catalog e shudhu `in_stock`): mene neya; customer ke shima dekhate lage, stock gopon tottho na (7.4, 8.4).
+8. v1.32 (M6, user 15 November 2026): `GET /api/orders/{token}` e phone mask ar thikana shudhu district + area (SMS link forward hote pare); tracking (`{number, phone}`) e token ferot na, na mille `404` (number ache kina bola na); `/api/me/orders` shudhu nijer `user_id` (Rule 16) (8.19 item 6).
 
 **Payment**
 
