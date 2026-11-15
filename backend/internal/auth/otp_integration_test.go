@@ -449,21 +449,31 @@ func TestOTPJobPayload(t *testing.T) {
 	}
 	src := auth.SMSCode(f.d, otpSecret)
 	ctx := context.Background()
-	phone, code, err := src(ctx, a, otpID, p.Nonce, p.CT)
-	if err != nil || phone != "+8801711000001" || !auth.CheckOTP(otpSecret, phone, "login", code, hash) {
-		t.Fatalf("decrypt: %q %q %v", phone, code, err)
+	o, err := src(ctx, a, otpID, p.Nonce, p.CT)
+	phone, code := o.Phone, o.Code
+	if err != nil || phone != "+8801711000001" || !auth.CheckOTP(otpSecret, phone, "login", code, hash) ||
+		o.Locale != "" || len(o.Override) != 0 {
+		t.Fatalf("decrypt (user nai: locale khali, override nai): %+v %v", o, err)
+	}
+	// customer er locale ar shop er sms.otp override (8.16); onno shop er override ase na (Rule 3)
+	f.exec(t, `INSERT INTO users (shop_id, phone, locale) VALUES ($1, '+8801711000001', 'en')`, a)
+	f.exec(t, `INSERT INTO translations (shop_id, locale, key, value) VALUES ($1, 'en', 'sms.otp', 'A {code}'),
+		($1, 'bn', 'cart.add', 'x'), ($2, 'bn', 'sms.otp', 'B {code}')`, a, f.shops["b.com"])
+	if o, err := src(ctx, a, otpID, p.Nonce, p.CT); err != nil || o.Locale != "en" ||
+		len(o.Override) != 1 || o.Override["en"] != "A {code}" {
+		t.Fatalf("locale/override: %+v %v", o, err)
 	}
 	if strings.Contains(string(raw), code) || strings.Contains(string(raw), "1711000001") {
 		t.Errorf("payload e plain code ba phone: %s", raw)
 	}
-	if _, _, err := src(ctx, f.shops["b.com"], otpID, p.Nonce, p.CT); err == nil {
+	if _, err := src(ctx, f.shops["b.com"], otpID, p.Nonce, p.CT); err == nil {
 		t.Error("onno shop e decrypt holo")
 	}
 	f.exec(t, `INSERT INTO otp_codes (shop_id, phone, purpose, code_hash, expires_at) VALUES ($1, '+8801711000001', 'login', '\x00', now())`, a)
-	if _, _, err := src(ctx, a, otpID+1, p.Nonce, p.CT); err == nil {
+	if _, err := src(ctx, a, otpID+1, p.Nonce, p.CT); err == nil {
 		t.Error("onno otp_codes.id (AAD) e decrypt holo")
 	}
-	if _, _, err := auth.SMSCode(f.d, "onno-secret")(ctx, a, otpID, p.Nonce, p.CT); err == nil {
+	if _, err := auth.SMSCode(f.d, "onno-secret")(ctx, a, otpID, p.Nonce, p.CT); err == nil {
 		t.Error("onno OTP_SECRET e decrypt holo")
 	}
 
@@ -477,7 +487,7 @@ func TestOTPJobPayload(t *testing.T) {
 	if _, err := w.RunOnce(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || !strings.HasPrefix(got[0], strconv.FormatInt(a, 10)+"|+8801711000001|") || !strings.Contains(got[0], code) {
+	if len(got) != 1 || got[0] != strconv.FormatInt(a, 10)+"|+8801711000001|A "+code {
 		t.Fatalf("SMS: %q", got)
 	}
 	var after string

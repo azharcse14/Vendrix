@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"unicode/utf16"
 
 	"vendrix/backend/internal/jobs"
 )
@@ -39,17 +40,17 @@ func TestSendSMSJob(t *testing.T) {
 		got = append(got, phone+"|"+text)
 		return nil
 	})
-	otp := func(_ context.Context, shopID, otpID int64, nonce, ct []byte) (string, string, error) {
+	otp := func(_ context.Context, shopID, otpID int64, nonce, ct []byte) (OTP, error) {
 		if shopID != 1 || otpID != 7 || string(nonce) != "n" || string(ct) != "c" {
-			return "", "", errors.New("bhul otp payload")
+			return OTP{}, errors.New("bhul otp payload")
 		}
-		return "+8801722222222", "012345", nil
+		return OTP{Phone: "+8801722222222", Code: "012345", Locale: "en"}, nil
 	}
 	if err := SendSMSJob(sms, otp)(context.Background(), jobs.Job{ShopID: 1, Payload: []byte(`{"otp_id":7,"nonce":"bg==","ct":"Yw=="}`)}); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || !strings.HasPrefix(got[0], "+8801722222222|") || !strings.Contains(got[0], "012345") {
-		t.Errorf("OTP SMS: %q", got)
+	if len(got) != 1 || got[0] != "+8801722222222|"+OTPText("en", nil, "012345") {
+		t.Errorf("OTP SMS (customer er locale e): %q", got)
 	}
 	got = nil
 	for _, p := range []string{`{"otp_id":8,"nonce":"bg==","ct":"Yw=="}`, `{"otp_id":7}`} {
@@ -78,4 +79,45 @@ type smsFunc func(ctx context.Context, shopID int64, phone, text string) error
 
 func (f smsFunc) Send(ctx context.Context, shopID int64, phone, text string) error {
 	return f(ctx, shopID, phone, text)
+}
+
+// TestOTPTemplateLength (8.16, Q10 iv): sms.otp er default bn ek SMS e (UCS-2, ≤ 70 code unit), en ≤ 160
+// (GSM-7, ASCII); {code} bosano; kram override[locale] → default[locale] → override[bn] → default[bn] (9.8);
+// {code} chhara override bad (code chhara OTP SMS kaje lage na).
+func TestOTPTemplateLength(t *testing.T) {
+	const code = "012345"
+	bn, en := OTPText("bn", nil, code), OTPText("en", nil, code)
+	if n := len(utf16.Encode([]rune(bn))); n > 70 || !strings.Contains(bn, code) {
+		t.Errorf("bn %d unit (≤ 70 chai): %q", n, bn)
+	}
+	for _, r := range en {
+		if r > 0x7e || (r < 0x20 && r != '\n') {
+			t.Errorf("en e GSM-7 er baire %q: %q", r, en)
+		}
+	}
+	if len(en) > 160 || !strings.Contains(en, code) || en == bn {
+		t.Errorf("en %d (≤ 160 chai): %q", len(en), en)
+	}
+	if strings.Contains(bn+en, "{code}") {
+		t.Errorf("placeholder roye geche: %q %q", bn, en)
+	}
+	for _, c := range []struct {
+		locale   string
+		override map[string]string
+		want     string
+	}{
+		{"", nil, bn},
+		{"fr", nil, bn},
+		{"en", map[string]string{"en": "Shop: {code}"}, "Shop: 012345"},
+		{"en", map[string]string{"bn": "দোকান {code}"}, en},
+		{"bn", map[string]string{"en": "Shop: {code}"}, bn},
+		{"bn", map[string]string{"bn": "দোকান {code}, {code}"}, "দোকান 012345, 012345"},
+		{"en", map[string]string{"en": "no code"}, en},
+		{"bn", map[string]string{"bn": "kod nai"}, bn},
+		{"fr", map[string]string{"bn": "দোকান {code}"}, "দোকান 012345"},
+	} {
+		if got := OTPText(c.locale, c.override, code); got != c.want {
+			t.Errorf("%q %v: %q, chai %q", c.locale, c.override, got, c.want)
+		}
+	}
 }

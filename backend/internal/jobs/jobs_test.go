@@ -159,6 +159,61 @@ func TestScheduleSweep(t *testing.T) {
 	}
 }
 
+// TestJobsCleanupIntegration (8.17 v1.19, M4 Q2 (c)): jobs.cleanup protidin ekbar (UTC din er dedupe_key);
+// done 30 din ar failed 90 din er purono row muche, dedupe_key shoho (oi key e abar enqueue hoy); notun,
+// cholche ba baki row thake.
+func TestJobsCleanupIntegration(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	w := NewWorker(d, slog.New(slog.DiscardHandler), nil)
+	t0 := time.Date(2026, 11, 10, 23, 58, 0, 0, time.UTC)
+	for _, at := range []time.Time{t0, t0.Add(time.Minute), t0.Add(5 * time.Minute), t0.Add(30 * time.Minute)} {
+		if err := w.schedule(ctx, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var keys string
+	if err := d.QueryRow(`SELECT string_agg(dedupe_key, ' ' ORDER BY dedupe_key) FROM jobs WHERE kind = 'jobs.cleanup'`).
+		Scan(&keys); err != nil {
+		t.Fatal(err)
+	}
+	if keys != "jobs.cleanup:2026-11-10 jobs.cleanup:2026-11-11" {
+		t.Errorf("cleanup keys = %q", keys)
+	}
+	if _, ok := w.handlers["jobs.cleanup"]; !ok {
+		t.Fatal("jobs.cleanup handler nai")
+	}
+	if _, err := d.Exec(`DELETE FROM jobs`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := d.Exec(`INSERT INTO jobs (kind, dedupe_key, attempts, done_at, failed_at, run_at) VALUES
+		('old.done', 'k:old.done', 1, now() - interval '31 days', NULL, now() - interval '31 days'),
+		('new.done', 'k:new.done', 1, now() - interval '29 days', NULL, now() - interval '29 days'),
+		('old.failed', 'k:old.failed', 1, NULL, now() - interval '91 days', now() - interval '91 days'),
+		('new.failed', NULL, 1, NULL, now() - interval '89 days', now() - interval '89 days'),
+		('old.pending', NULL, 0, NULL, NULL, now() - interval '200 days')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.handlers["jobs.cleanup"](ctx, Job{}); err != nil {
+		t.Fatal(err)
+	}
+	var left string
+	if err := d.QueryRow(`SELECT string_agg(kind, ' ' ORDER BY kind) FROM jobs`).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != "new.done new.failed old.pending" {
+		t.Errorf("baki row = %q", left)
+	}
+	if err := Enqueue(ctx, d, New{Kind: "old.done", DedupeKey: "k:old.done"}); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := d.QueryRow(`SELECT count(*) FROM jobs WHERE dedupe_key = 'k:old.done'`).Scan(&n); err != nil || n != 1 {
+		t.Errorf("muche fela dedupe_key e abar enqueue: %d %v", n, err)
+	}
+}
+
 // TestBatchStolenLockIntegration (8.17): batch er porer job er lock onno worker nile purono worker oita
 // chalay na (SMS duibar na); handler er ctx e deadline thake.
 func TestBatchStolenLockIntegration(t *testing.T) {
