@@ -615,7 +615,7 @@ func TestStaffLockRaceIntegration(t *testing.T) {
 	}
 
 	// /auth/password: bhul old e failed_logins gona ar audit (8.3 step 4 v1.24)
-	f.exec(t, `UPDATE staff SET must_change_password = true, totp_secret_enc = NULL, totp_nonce = NULL WHERE id = $1`, own)
+	f.exec(t, `UPDATE staff SET must_change_password = true, totp_secret_enc = NULL, totp_nonce = NULL, totp_key_version = NULL WHERE id = $1`, own)
 	tok := f.setupSession(t, "a", staffPW)
 	wantErr(t, f.cookieReq("POST", "/api/admin/auth/password", tok, map[string]string{"old": "bhul-password-xx", "new": "notun-password-123"}),
 		400, "validation_failed", "bhul old")

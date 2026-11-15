@@ -40,6 +40,7 @@ func (h *AdminHandlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	noStore(w)
 	if ok, retry := h.ipFails.Take(ctx); !ok {
 		writeLimit(w, r, time.Duration(retry)*time.Second)
 		return
@@ -49,15 +50,12 @@ func (h *AdminHandlers) Login(w http.ResponseWriter, r *http.Request) {
 	if !errors.Is(err, errBadCredentials) { // shudhu bhul gona (7.8)
 		h.ipFails.Refund(ctx)
 	}
-	var limit limitError
 	switch {
 	case err == nil && stage == "mfa_pending":
 		httpx.WriteJSON(w, http.StatusOK, map[string]any{"totp_required": true, "temp_token": token})
 	case err == nil:
 		httpx.AdminCookie(w, token, int(setupTTL.Seconds()))
 		httpx.WriteJSON(w, http.StatusOK, map[string]bool{"setup_required": true})
-	case errors.As(err, &limit):
-		writeLimit(w, r, limit.retry)
 	case errors.Is(err, errBadCredentials):
 		httpx.WriteError(w, r, http.StatusUnauthorized, httpx.ErrorBody{Code: "invalid_credentials"})
 	default:
@@ -72,6 +70,7 @@ func (h *AdminHandlers) TOTP(w http.ResponseWriter, r *http.Request) { h.mfa(w, 
 func (h *AdminHandlers) Recovery(w http.ResponseWriter, r *http.Request) { h.mfa(w, r, true) }
 
 func (h *AdminHandlers) mfa(w http.ResponseWriter, r *http.Request, recovery bool) {
+	noStore(w)
 	var in struct {
 		TempToken string `json:"temp_token"`
 		Code      string `json:"code"`
@@ -132,9 +131,12 @@ func (h *AdminHandlers) Password(w http.ResponseWriter, r *http.Request) {
 	}
 	st, _ := httpx.StaffFrom(r.Context())
 	err := changePassword(r.Context(), h.db, st, in.Old, in.New, httpx.IP(r.Context()))
+	var limit limitError
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
+	case errors.As(err, &limit):
+		writeLimit(w, r, limit.retry)
 	case errors.Is(err, errWrongPassword):
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed", Fields: map[string]string{"old": "wrong"}})
 	default:
@@ -144,6 +146,7 @@ func (h *AdminHandlers) Password(w http.ResponseWriter, r *http.Request) {
 
 // TOTPSetup: POST /api/admin/auth/totp/setup (shudhu setup_pending) → {otpauth_url, secret} (8.3 step 4, 6).
 func (h *AdminHandlers) TOTPSetup(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	st, ok := h.setupOnly(w, r)
 	if !ok {
 		return
@@ -159,6 +162,7 @@ func (h *AdminHandlers) TOTPSetup(w http.ResponseWriter, r *http.Request) {
 // TOTPEnable: POST /api/admin/auth/totp/enable {code} (shudhu setup_pending) → {recovery_codes} + __Host-asid
 // (43200), session active (8.3 step 4, 6).
 func (h *AdminHandlers) TOTPEnable(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	st, ok := h.setupOnly(w, r)
 	if !ok {
 		return

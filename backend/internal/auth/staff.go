@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,8 +38,9 @@ type loginInput struct {
 }
 
 // staffLogin (8.3 step 1, 2, 4): shop (slug, closed o, Q7) ar email e staff; ochena/inactive e dummy hash er
-// tulona; locked_until e 429 (PBKDF2 er age); bhul e failed_logins (5 er por 1 minute lock, 10 ar 50 e alert);
-// thik hole 0 ar session: TOTP thakle mfa_pending (temp_token), na hole setup_pending. Shob login audit e.
+// tulona; PBKDF2 er age failed_logins er reservation (5 er por 1 minute lock, 10 ar 50 e alert), lock e-o dummy
+// PBKDF2 ar 401 (v1.24: lock dekhe email chena na jay); thik hole 0, purono temp_token revoke ar session: TOTP
+// thakle mfa_pending (temp_token), na hole setup_pending. Shob login audit e.
 func staffLogin(ctx context.Context, d *sql.DB, in loginInput) (token, stage string, err error) {
 	st, err := staffForLogin(ctx, d, in.Shop, in.Email)
 	if errors.Is(err, sql.ErrNoRows) { // ochena shop: audit er shop nai
@@ -53,15 +56,23 @@ func staffLogin(ctx context.Context, d *sql.DB, in loginInput) (token, stage str
 		}
 		a := audit{shopID: st.shopID, staffID: st.id, action: "staff.login_failed", ip: in.IP,
 			after: map[string]any{"reason": "inactive"}}
-		if st.id == 0 {
-			a.after = map[string]any{"reason": "unknown_email", "email": clip(strings.ToLower(in.Email), 254)}
+		if st.id == 0 { // email na: keu email er ghore password likhte pare (12.2 v1.24)
+			_, domain, _ := strings.Cut(strings.ToLower(in.Email), "@")
+			a.after = map[string]any{"reason": "unknown_email", "email_domain": clip(domain, 254)}
 		}
 		return "", "", cmpErr(insertAudit(ctx, d, a), errBadCredentials)
 	}
 	failed := audit{shopID: st.shopID, staffID: st.id, action: "staff.login_failed", ip: in.IP}
-	if st.locked > 0 {
+	n, _, err := reserveFailed(ctx, d, st.shopID, st.id, false, loginLockAfter, loginLock)
+	if err != nil {
+		return "", "", err
+	}
+	if n == 0 { // lock: bhul password er moto shomoy ar response
+		if _, err := checkPasswordSem(ctx, dummyHash, in.Password); err != nil {
+			return "", "", err
+		}
 		failed.after = map[string]any{"reason": "locked"}
-		return "", "", cmpErr(insertAudit(ctx, d, failed), limitError{st.locked})
+		return "", "", cmpErr(insertAudit(ctx, d, failed), errBadCredentials)
 	}
 	ok, err := checkPasswordSem(ctx, st.hash, in.Password)
 	if err != nil {
@@ -69,30 +80,18 @@ func staffLogin(ctx context.Context, d *sql.DB, in loginInput) (token, stage str
 	}
 	if !ok {
 		failed.after = map[string]any{"reason": "password"}
-		err := db.InTx(ctx, d, func(tx *sql.Tx) error {
-			n, err := bumpFailed(ctx, tx, st.shopID, st.id, false, loginLockAfter, loginLock)
-			if err != nil {
-				return err
-			}
-			if n == 10 || n == 50 {
-				if err := securityAlert(ctx, tx, st.shopID, st.id, "staff_login_failed", n); err != nil {
-					return err
-				}
-			}
-			return insertAudit(ctx, tx, failed)
-		})
-		return "", "", cmpErr(err, errBadCredentials)
+		return "", "", cmpErr(passwordFailed(ctx, d, failed, n), errBadCredentials)
 	}
 	stage, ttl := "setup_pending", setupTTL
 	if st.hasTOTP { // TOTP thakle age TOTP, must_change_password tar pore (8.3 step 4)
 		stage, ttl = "mfa_pending", mfaTTL
 	}
 	token, th := newSessionToken()
-	var limit error
 	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
-		limit = nil
-		if ok, err := resetFailedLogins(ctx, tx, st.shopID, st.id); err != nil || !ok {
-			limit = limitError{loginLock} // PBKDF2 er majhe parallel bhul e lock
+		if err := resetFailedLogins(ctx, tx, st.shopID, st.id, mfaLockAfter); err != nil {
+			return err
+		}
+		if err := revokeMFAPending(ctx, tx, st.shopID, st.id); err != nil {
 			return err
 		}
 		if err := insertStaffSession(ctx, tx, st.shopID, st.id, th, stage, in.IP, in.UserAgent, ttl); err != nil {
@@ -101,10 +100,19 @@ func staffLogin(ctx context.Context, d *sql.DB, in loginInput) (token, stage str
 		return insertAudit(ctx, tx, audit{shopID: st.shopID, staffID: st.id, action: "staff.login", ip: in.IP,
 			after: map[string]any{"stage": stage}})
 	})
-	if err == nil && limit != nil {
-		err = limit
-	}
 	return token, stage, err
+}
+
+// passwordFailed: bhul password (gona reservation e hoye geche, n): 10 ar 50 e alert, audit.
+func passwordFailed(ctx context.Context, d *sql.DB, a audit, n int) error {
+	return db.InTx(ctx, d, func(tx *sql.Tx) error {
+		if n == 10 || n == 50 {
+			if err := securityAlert(ctx, tx, a.shopID, a.staffID, "staff_login_failed", n); err != nil {
+				return err
+			}
+		}
+		return insertAudit(ctx, tx, a)
+	})
 }
 
 type mfaInput struct {
@@ -112,10 +120,10 @@ type mfaInput struct {
 	Recovery        bool // recovery code, na hole TOTP
 }
 
-// verifyMFA (8.3 step 2, 3): temp_token (mfa_pending, 5 minute) → staff er lock (429) → mfa_attempts (5,
-// autocommit e conditional) → TOTP (±1 step, totp_last_step er conditional UPDATE) ba recovery code (used_at
+// verifyMFA (8.3 step 2, 3): temp_token (mfa_pending, 5 minute) → mfa_attempts (5, autocommit e conditional)
+// → staff e failed_mfa er reservation (v1.24; lock e 429, parallel temp_token e-o 10 er beshi guess na) → TOTP (±1 step, totp_last_step er conditional UPDATE) ba recovery code (used_at
 // conditional). Thik hole oi row-i active (12 ghonta), must_change_password thakle setup_pending (15 minute);
-// token notun, karon temp_token JS dekheche. Bhul e failed_mfa (10 e 30 minute lock + alert).
+// token notun, karon temp_token JS dekheche; failed_mfa 0. Bhul e audit, 10 e alert ar 429.
 func verifyMFA(ctx context.Context, d *sql.DB, totpKey []byte, recoverySecret string, in mfaInput) (token string, setup bool, err error) {
 	s, err := mfaSession(ctx, d, tokenHash(in.Token))
 	switch {
@@ -125,11 +133,16 @@ func verifyMFA(ctx context.Context, d *sql.DB, totpKey []byte, recoverySecret st
 		return "", false, err
 	case s.expired:
 		return "", false, httpx.ErrSessionExpired
-	case s.locked > 0:
-		return "", false, limitError{s.locked}
 	}
 	if ok, err := countMFAAttempt(ctx, d, s.shopID, s.id); err != nil || !ok {
 		return "", false, cmpErr(err, errMFAAttempts)
+	}
+	n, locked, err := reserveFailed(ctx, d, s.shopID, s.staffID, true, mfaLockAfter, mfaLock)
+	if err != nil {
+		return "", false, err
+	}
+	if n == 0 {
+		return "", false, limitError{locked}
 	}
 	method := "totp"
 	var step int64
@@ -143,7 +156,7 @@ func verifyMFA(ctx context.Context, d *sql.DB, totpKey []byte, recoverySecret st
 		}
 		var ok bool
 		if step, ok = CheckTOTP(secret, in.Code, time.Now()); !ok {
-			return "", false, mfaFailed(ctx, d, s, method, in.IP)
+			return "", false, mfaFailed(ctx, d, s, method, in.IP, n)
 		}
 	}
 	stage, ttl := "active", adminTTL
@@ -176,19 +189,14 @@ func verifyMFA(ctx context.Context, d *sql.DB, totpKey []byte, recoverySecret st
 		return "", false, err
 	}
 	if !used { // replay ba bhul/use kora recovery code
-		return "", false, mfaFailed(ctx, d, s, method, in.IP)
+		return "", false, mfaFailed(ctx, d, s, method, in.IP, n)
 	}
 	return token, stage == "setup_pending", nil
 }
 
-// mfaFailed: failed_mfa + 1 (temp_token jure); 10 ba beshi hole 30 minute lock ar 429, 10 e alert.
-func mfaFailed(ctx context.Context, d *sql.DB, s mfaRow, method, ip string) error {
-	var n int
+// mfaFailed: bhul code (failed_mfa reservation e gona hoye geche, n); 10 ba beshi hole lock ar 429, 10 e alert.
+func mfaFailed(ctx context.Context, d *sql.DB, s mfaRow, method, ip string, n int) error {
 	err := db.InTx(ctx, d, func(tx *sql.Tx) error {
-		var err error
-		if n, err = bumpFailed(ctx, tx, s.shopID, s.staffID, true, mfaLockAfter, mfaLock); err != nil {
-			return err
-		}
 		if n == mfaLockAfter {
 			if err := securityAlert(ctx, tx, s.shopID, s.staffID, "staff_mfa_lock", n); err != nil {
 				return err
@@ -206,9 +214,18 @@ func mfaFailed(ctx context.Context, d *sql.DB, s mfaRow, method, ip string) erro
 	return errMFAInvalid
 }
 
-// securityAlert (Q9): alert.security job; dedupe na, karon count thik 10/50 te ekbar-i pouchay (thik login e 0).
-func securityAlert(ctx context.Context, e jobs.Execer, shopID, staffID int64, event string, count int) error {
-	return jobs.Enqueue(ctx, e, jobs.New{ShopID: shopID, Kind: "alert.security",
+// securityAlert (Q9, 8.17 v1.24): alert.security job, dedupe_key e shop er timezone er din: ek dine ekoi
+// staff er ekoi event (login e 10 ba 50) ekbar, thik login e gona 0 hoye abar 10 chhuleo.
+func securityAlert(ctx context.Context, tx *sql.Tx, shopID, staffID int64, event string, count int) error {
+	day, err := shopDay(ctx, tx, shopID)
+	if err != nil {
+		return err
+	}
+	key := fmt.Sprintf("alert.%s:%d:%d:", event, shopID, staffID)
+	if event == "staff_login_failed" {
+		key += strconv.Itoa(count) + ":"
+	}
+	return jobs.Enqueue(ctx, tx, jobs.New{ShopID: shopID, Kind: "alert.security", DedupeKey: key + day,
 		Payload: map[string]any{"event": event, "staff_id": staffID, "count": count}})
 }
 
@@ -234,21 +251,36 @@ var (
 	errPasswordChangeRequired = errors.New("age password bodlate hobe") // 403 password_change_required
 )
 
-// changePassword (8.3 step 4, 6): purono password thik hole notun hash (semaphore e), must_change_password
-// false, ei session chhara staff er shob session revoke, audit. Dairgho ar "purono na" handler e.
+// changePassword (8.3 step 4, 6): purono password login er moto failed_logins er reservation diye (v1.24: lock e
+// 429, bhul e audit + alert); thik hole notun hash (semaphore e), must_change_password false, gona 0, ei session
+// chhara staff er shob session revoke, audit. Dairgho ar "purono na" handler e.
 func changePassword(ctx context.Context, d *sql.DB, st httpx.Staff, old, pw, ip string) error {
+	n, locked, err := reserveFailed(ctx, d, st.ShopID, st.ID, false, loginLockAfter, loginLock)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return limitError{locked}
+	}
 	hash, err := staffPasswordHash(ctx, d, st.ShopID, st.ID)
 	if err != nil {
 		return err
 	}
 	if ok, err := checkPasswordSem(ctx, hash, old); err != nil || !ok {
-		return cmpErr(err, errWrongPassword)
+		if err != nil {
+			return err
+		}
+		failed := audit{shopID: st.ShopID, staffID: st.ID, action: "staff.password_change_failed", ip: ip}
+		return cmpErr(passwordFailed(ctx, d, failed, n), errWrongPassword)
 	}
 	if hash, err = hashPasswordSem(ctx, pw); err != nil {
 		return err
 	}
 	return db.InTx(ctx, d, func(tx *sql.Tx) error {
 		if err := setPassword(ctx, tx, st.ShopID, st.ID, hash); err != nil {
+			return err
+		}
+		if err := resetFailedLogins(ctx, tx, st.ShopID, st.ID, mfaLockAfter); err != nil {
 			return err
 		}
 		if err := revokeOtherSessions(ctx, tx, st.ShopID, st.ID, st.SessionID); err != nil {

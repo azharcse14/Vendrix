@@ -15,43 +15,65 @@ type loginRow struct {
 	shopID, id      int64 // id 0 = ei shop e email nai
 	hash            string
 	active, hasTOTP bool
-	locked          time.Duration // locked_until baki; 0 = lock nai
 }
 
 // staffForLogin (8.3 step 1): slug er shop (status jai hok, Q7) ar tar staff (email boro/choto haat mane na,
 // staff_email_uniq). Shop na thakle sql.ErrNoRows.
 func staffForLogin(ctx context.Context, d *sql.DB, slug, email string) (loginRow, error) {
 	var r loginRow
-	var secs float64
 	err := d.QueryRowContext(ctx, `SELECT sh.id, coalesce(st.id, 0), coalesce(st.password_hash, ''),
-		  coalesce(st.is_active, false), st.totp_secret_enc IS NOT NULL,
-		  coalesce(greatest(extract(epoch FROM st.locked_until - now()), 0), 0)
+		  coalesce(st.is_active, false), st.totp_secret_enc IS NOT NULL
 		FROM shops sh LEFT JOIN staff st ON st.shop_id = sh.id AND lower(st.email) = lower($2)
-		WHERE sh.slug = $1`, slug, email).Scan(&r.shopID, &r.id, &r.hash, &r.active, &r.hasTOTP, &secs)
-	r.locked = time.Duration(secs * float64(time.Second))
+		WHERE sh.slug = $1`, slug, email).Scan(&r.shopID, &r.id, &r.hash, &r.active, &r.hasTOTP)
 	return r, err
 }
 
-// bumpFailed: failed_logins (mfa false) ba failed_mfa + 1; notun gona after er shoman ba beshi hole locked_until
-// = now + lock. Notun gona ferot.
-func bumpFailed(ctx context.Context, tx *sql.Tx, shopID, staffID int64, mfa bool, after int, lock time.Duration) (int, error) {
-	q := `UPDATE staff SET failed_logins = failed_logins + 1,
-		  locked_until = CASE WHEN failed_logins + 1 >= $3 THEN now() + make_interval(secs => $4) ELSE locked_until END
-		WHERE id = $1 AND shop_id = $2 RETURNING failed_logins`
+// reserveFailed (8.3 step 1, 2 v1.24): check er AGE autocommit e failed_logins (mfa false) ba failed_mfa + 1,
+// shudhu lock na thakle; gona after chhuley lock (GREATEST: lambha lock choto na). Tai parallel e-o lock er age
+// after er beshi check hoy na. Notun gona ferot; lock thakle 0 ar koto baki (CTE er bairer SELECT update er
+// ager snapshot dekhe).
+func reserveFailed(ctx context.Context, d *sql.DB, shopID, staffID int64, mfa bool, after int, lock time.Duration) (int, time.Duration, error) {
+	q := `WITH r AS (UPDATE staff SET failed_logins = failed_logins + 1,
+		  locked_until = CASE WHEN failed_logins + 1 >= $3
+		    THEN greatest(coalesce(locked_until, now()), now() + make_interval(secs => $4)) ELSE locked_until END
+		WHERE id = $1 AND shop_id = $2 AND (locked_until IS NULL OR locked_until <= now()) RETURNING failed_logins)
+		SELECT coalesce((SELECT failed_logins FROM r), 0), coalesce(greatest(extract(epoch FROM locked_until - now()), 0), 0)
+		FROM staff WHERE id = $1 AND shop_id = $2`
 	if mfa {
-		q = `UPDATE staff SET failed_mfa = failed_mfa + 1,
-		  locked_until = CASE WHEN failed_mfa + 1 >= $3 THEN now() + make_interval(secs => $4) ELSE locked_until END
-		WHERE id = $1 AND shop_id = $2 RETURNING failed_mfa`
+		q = `WITH r AS (UPDATE staff SET failed_mfa = failed_mfa + 1,
+		  locked_until = CASE WHEN failed_mfa + 1 >= $3
+		    THEN greatest(coalesce(locked_until, now()), now() + make_interval(secs => $4)) ELSE locked_until END
+		WHERE id = $1 AND shop_id = $2 AND (locked_until IS NULL OR locked_until <= now()) RETURNING failed_mfa)
+		SELECT coalesce((SELECT failed_mfa FROM r), 0), coalesce(greatest(extract(epoch FROM locked_until - now()), 0), 0)
+		FROM staff WHERE id = $1 AND shop_id = $2`
 	}
 	var n int
-	err := tx.QueryRowContext(ctx, q, staffID, shopID, after, lock.Seconds()).Scan(&n)
-	return n, err
+	var secs float64
+	err := d.QueryRowContext(ctx, q, staffID, shopID, after, lock.Seconds()).Scan(&n, &secs)
+	return n, time.Duration(secs * float64(time.Second)), err
 }
 
-// resetFailedLogins: thik password e 0; PBKDF2 er majhe lock hoye gele (parallel bhul) false.
-func resetFailedLogins(ctx context.Context, tx *sql.Tx, shopID, staffID int64) (bool, error) {
-	return affected(tx.ExecContext(ctx, `UPDATE staff SET failed_logins = 0
-		WHERE id = $1 AND shop_id = $2 AND is_active AND (locked_until IS NULL OR locked_until <= now())`, staffID, shopID))
+// resetFailedLogins: thik password e 0 ar password er lock khole; failed_mfa er lock (mfaAfter) thake.
+func resetFailedLogins(ctx context.Context, tx *sql.Tx, shopID, staffID int64, mfaAfter int) error {
+	_, err := tx.ExecContext(ctx, `UPDATE staff SET failed_logins = 0,
+		  locked_until = CASE WHEN failed_mfa >= $3 THEN locked_until END
+		WHERE id = $1 AND shop_id = $2`, staffID, shopID, mfaAfter)
+	return err
+}
+
+// shopDay: shop er timezone e ajker tarikh (Rule 5), alert er dedupe_key er jonno.
+func shopDay(ctx context.Context, tx *sql.Tx, shopID int64) (string, error) {
+	var day string
+	err := tx.QueryRowContext(ctx, `SELECT to_char(now() AT TIME ZONE timezone, 'YYYY-MM-DD') FROM shops WHERE id = $1`,
+		shopID).Scan(&day)
+	return day, err
+}
+
+// revokeMFAPending (8.3 step 2 v1.24): notun login e staff er purono temp_token; ek shathe ek temp_token.
+func revokeMFAPending(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
+	_, err := tx.ExecContext(ctx, `UPDATE sessions SET revoked_at = now()
+		WHERE shop_id = $1 AND staff_id = $2 AND stage = 'mfa_pending' AND revoked_at IS NULL`, shopID, staffID)
+	return err
 }
 
 func insertStaffSession(ctx context.Context, tx *sql.Tx, shopID, staffID int64, hash []byte, stage, ip, ua string, ttl time.Duration) error {
@@ -64,7 +86,6 @@ func insertStaffSession(ctx context.Context, tx *sql.Tx, shopID, staffID int64, 
 type mfaRow struct {
 	id, shopID, staffID int64
 	expired, mustChange bool
-	locked              time.Duration
 	totpCT, totpNonce   []byte
 	keyVersion          int
 }
@@ -73,14 +94,11 @@ type mfaRow struct {
 // ashe session er row theke (3.2 Niyom 3); token_hash unique. Expire holeo row ashe (session_expired).
 func mfaSession(ctx context.Context, d *sql.DB, hash []byte) (mfaRow, error) {
 	var r mfaRow
-	var secs float64
 	err := d.QueryRowContext(ctx, `SELECT s.id, s.shop_id, s.staff_id, s.expires_at <= now(), st.must_change_password,
-		  coalesce(greatest(extract(epoch FROM st.locked_until - now()), 0), 0),
 		  st.totp_secret_enc, st.totp_nonce, coalesce(st.totp_key_version, 0)
 		FROM sessions s JOIN staff st ON st.shop_id = s.shop_id AND st.id = s.staff_id AND st.is_active
 		WHERE s.token_hash = $1 AND s.subject_type = 'staff' AND s.stage = 'mfa_pending' AND s.revoked_at IS NULL`,
-		hash).Scan(&r.id, &r.shopID, &r.staffID, &r.expired, &r.mustChange, &secs, &r.totpCT, &r.totpNonce, &r.keyVersion)
-	r.locked = time.Duration(secs * float64(time.Second))
+		hash).Scan(&r.id, &r.shopID, &r.staffID, &r.expired, &r.mustChange, &r.totpCT, &r.totpNonce, &r.keyVersion)
 	return r, err
 }
 
@@ -112,7 +130,8 @@ func activateSession(ctx context.Context, tx *sql.Tx, shopID, id int64, from str
 }
 
 func mfaSucceeded(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
-	_, err := tx.ExecContext(ctx, `UPDATE staff SET failed_mfa = 0, last_login_at = now() WHERE id = $1 AND shop_id = $2`,
+	_, err := tx.ExecContext(ctx, `UPDATE staff SET failed_mfa = 0, locked_until = NULL, last_login_at = now()
+		WHERE id = $1 AND shop_id = $2`,
 		staffID, shopID)
 	return err
 }

@@ -72,6 +72,7 @@ func (h *Handlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 // VerifyOTP: POST /api/auth/otp/verify {phone, code} → {token, user} (8.2, 7.3). Turnstile lage na (14.2
 // test 23): OTP nijei 5 attempt ar phone lock e bandha.
 func (h *Handlers) VerifyOTP(w http.ResponseWriter, r *http.Request) {
+	noStore(w)
 	var in struct {
 		Phone string `json:"phone"`
 		Code  string `json:"code"`
@@ -166,8 +167,9 @@ func (h *Handlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	h.writeUser(w, r, u, err)
 }
 
-// writeUser: user delete hoye gele (session thakleo) 401.
+// writeUser: user delete hoye gele (session thakleo) 401. GET/PATCH /api/me dui-i ekhan diye.
 func (h *Handlers) writeUser(w http.ResponseWriter, r *http.Request, u User, err error) {
+	noStore(w)
 	switch {
 	case err == nil:
 		httpx.WriteJSON(w, http.StatusOK, u)
@@ -184,6 +186,9 @@ func (h *Handlers) internal(w http.ResponseWriter, r *http.Request, what string,
 	h.log.ErrorContext(r.Context(), what, append([]any{"request_id", httpx.RequestIDFrom(r.Context()), "shop_id", s.ID, "err", err}, attrs...)...)
 	httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
 }
+
+// noStore (12.2 Login 7 v1.24): token, secret ba personal data er response kono cache e na.
+func noStore(w http.ResponseWriter) { w.Header().Set("Cache-Control", "no-store") }
 
 // writeLimit: 429 rate_limited + Retry-After (kom-poksha 1 second).
 func writeLimit(w http.ResponseWriter, r *http.Request, retry time.Duration) {

@@ -58,8 +58,10 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	// staff login (7.7, 8.3): shop context chhara; shop body er slug ba temp_token er session theke
 	adm := auth.NewAdminHandlers(d, log, cfg.TOTPKey, cfg.RecoverySecret)
 	mux.HandleFunc("POST /api/admin/auth/login", adm.Login)
-	mux.HandleFunc("POST /api/admin/auth/totp", adm.TOTP)
-	mux.HandleFunc("POST /api/admin/auth/recovery", adm.Recovery)
+	// totp/recovery: client IP te minute e 120, duita route mile (7.8 v1.24; shop nai, key 0:ip)
+	mfaIP := httpx.RateLimit(120, time.Minute)
+	mux.Handle("POST /api/admin/auth/totp", mfaIP(http.HandlerFunc(adm.TOTP)))
+	mux.Handle("POST /api/admin/auth/recovery", mfaIP(http.HandlerFunc(adm.Recovery)))
 	// admin session (3.2 Niyom 3, 11.3): __Host-asid → staff; setup route setup_pending eo, baki RequireStaff (active)
 	staff := httpx.AdminSession(log, auth.LookupStaffSession(d))
 	mux.Handle("POST /api/admin/auth/password", staff(http.HandlerFunc(adm.Password)))
