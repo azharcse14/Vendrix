@@ -21,6 +21,7 @@ Customer phone + OTP diye login kore, staff email + password (+ TOTP) diye. Ekho
 | `backend/internal/auth/password.go` → `HashPassword`, `CheckPassword` | Staff password hash ar tulona |
 | `backend/internal/auth/otp.go` → `NewOTPCode` | 6 digit OTP |
 | `backend/internal/auth/otp.go` → `HashOTP`, `CheckOTP` | OTP er HMAC ar constant-time tulona |
+| `backend/internal/auth/seal.go` → `Seal`, `Open` | AES-GCM + AAD; shop credential ([credentials](credentials.md)) ar TOTP secret |
 
 ## Niyom ar tar test
 

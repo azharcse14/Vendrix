@@ -6,13 +6,12 @@ package shop
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"vendrix/backend/internal/auth"
 )
 
 // ponytail: ekta CREDENTIALS_KEY, tai version shob shomoy 1; rotation (13.5) e purono ar notun key duitai lagbe.
@@ -21,33 +20,6 @@ const keyVersion = 1
 // aad (2.2): ek shop ba provider er ciphertext onno row e copy korle decrypt hoy na.
 func aad(shopID int64, provider string, version int) string {
 	return fmt.Sprintf("%d:%s:%d", shopID, provider, version)
-}
-
-func seal(key []byte, ad string, plain []byte) (ct, nonce []byte, err error) {
-	gcm, err := newGCM(key)
-	if err != nil {
-		return nil, nil, err
-	}
-	nonce = make([]byte, gcm.NonceSize())
-	rand.Read(nonce)
-	return gcm.Seal(nil, nonce, plain, []byte(ad)), nonce, nil
-}
-
-// open: M4 e credential porar shomoy (ekhon test e).
-func open(key []byte, ad string, ct, nonce []byte) ([]byte, error) {
-	gcm, err := newGCM(key)
-	if err != nil {
-		return nil, err
-	}
-	return gcm.Open(nil, nonce, ct, []byte(ad))
-}
-
-func newGCM(key []byte) (cipher.AEAD, error) {
-	b, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	return cipher.NewGCM(b)
 }
 
 // SetCredential (3.8, `shop-api credentials set`): secret JSON object, slug er shop e provider er row upsert.
@@ -65,7 +37,7 @@ func SetCredential(ctx context.Context, d *sql.DB, key []byte, slug, provider st
 	if err != nil {
 		return err
 	}
-	ct, nonce, err := seal(key, aad(shopID, provider, keyVersion), secret)
+	ct, nonce, err := auth.Seal(key, aad(shopID, provider, keyVersion), secret)
 	if err != nil {
 		return err
 	}
