@@ -108,6 +108,8 @@ Future<Response> renderPage(
   final res = await render(
     Document(
       lang: page.site.locale,
+      // `<base>` CSP `base-uri 'none'` e atke; base na thakle Jaspr client script `/main.client.dart.js` (absolute) dey.
+      base: null,
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       head: [
         link(rel: 'stylesheet', href: '/styles.css'),

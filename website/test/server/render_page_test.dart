@@ -44,6 +44,12 @@ void main() {
       expect((await get('/p/x', shop)).statusCode, 503);
     });
 
+    test('<base> nai (CSP base-uri none), client script absolute path e', () async {
+      final html = await (await get('/en/nai', shop)).readAsString();
+      expect(html, isNot(contains('<base')));
+      expect(html, isNot(matches(RegExp(r'<script[^>]*src="(?!/)'))));
+    });
+
     test('bondho shop: 503 + Retry-After', () async {
       final res = await get('/', (_) async => throw const ApiError(423, 'shop_suspended'));
       expect(res.statusCode, 503);

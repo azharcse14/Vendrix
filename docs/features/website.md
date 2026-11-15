@@ -72,7 +72,7 @@ Ei kram e poro:
 | BFF: Origin nai/onno/`null`/onno port/`http` ba `Sec-Fetch-Site` cross-site → `403`, API te jay na; `Origin: null` + same-origin chole; `//` Referer e redirect `/`; 1 MB er beshi body `413`, bhul form `400`; header forward; Go API er status/error hubohu; ochena route `404`; form `303`; `no-store` (10.9) | `bff` | `website/test/bff/bff_test.dart` → `group('BFF (10.9)')` |
 | Settings cache: host normalize (ekta entry); 30 second er moddhe API te na; por version check, na bodlale shudhu version; bodlale background e notun; ekshathe ekta; host onujayi; API down/429 e purono + log; faka cache e error; ochena host cache na; shop nai/suspended e bad (3.5, 10.10) | `SettingsCache` | `website/test/services/settings_cache_test.dart` → `group('Settings cache (3.5)')` |
 | Shop nai → `404`; bondho → `503` + `Retry-After: 3600`; API down/onno bhul → `503` error page; `en` bondho hole `/en/*` `404`; bhasha URL theke, override shoho (10.10 item 10) | `resolvePage` | `website/test/server/render_test.dart` → `group('Page status (10.10 item 10)')` |
-| `renderPage`: `<html lang>` URL er bhasha; router er 404 ar page er 503 status thake; bondho shop e `503` + `Retry-After` (9.8, 10.10 item 10) | `renderPage` | `website/test/server/render_page_test.dart` → `group('renderPage (9.8, 10.10 item 10)')` |
+| `renderPage`: `<html lang>` URL er bhasha; router er 404 ar page er 503 status thake; bondho shop e `503` + `Retry-After`; `<base>` nai, client script absolute (9.8, 10.10 item 7, 10) | `renderPage` | `website/test/server/render_page_test.dart` → `group('renderPage (9.8, 10.10 item 10)')` |
 | `:root` e settings er rong/radius/font; shudhu settings er font er `@font-face`, `swap`; 9.6 er protiti font file `web/fonts/` e (9.3, 9.6) | `themeCss`, `fontFiles` | `website/test/services/theme_test.dart` → `group('Theme CSS (9.3, 9.6)')` |
 | Chobi: cloudflare e width/format URL ar `srcset` 320–1280, `none` e `<base>/<key>` (srcset na); key er segment encode, `..`/khali segment/`/` shuru → `null` (10.5, 10.10 item 3) | `ImageUrls` | `website/test/services/image_test.dart` → `group('Chobi URL (10.5, 10.10 item 3)')` |
 | Admin er link: `/...` bhashar prefix shoho, `https://` + host hubohu; `//`, `\`, control char, `javascript:`, `http://` → link na (9.2, 12.2) | `safeLink` | `website/test/services/link_test.dart` → `group('Admin er link (9.2, 12.2)')` |
@@ -100,6 +100,7 @@ Nai (website database dhore na; shob Go API theke).
 - `X-Real-IP` shudhu Caddy dey: tai server shudhu loopback e (`main.server.dart`); Jaspr er default `runApp` `0.0.0.0` e bind kore, oita use koro na.
 - BFF e notun route `bffRoutes` e (M4 theke) ar test; OTP verify er `Set-Cookie` (`__Host-sid`) M4 e jog hobe, ekhon API er `Set-Cookie` forward hoy na.
 - Notun personal cookie (jemon M4/M5 e) hole `_personal` e jog ar test.
+- `Document(base: null)` (`render.dart`): `<base>` CSP `base-uri 'none'` e atke, tokhon client script relative path e `/c/...`, `/p/...` page e 404 hoy ar hydration (filter dialog, variant) chole na; base na thakle Jaspr `/main.client.dart.js` dey.
 - Jaspr update hole `jaspr install-skills --agent claude-code` abar ar `*.options.dart` (`dart run build_runner build`).
 
 ## Proshno-uttor
