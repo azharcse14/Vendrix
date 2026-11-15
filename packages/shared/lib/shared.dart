@@ -11,5 +11,6 @@ export 'models/catalog.dart';
 export 'models/localized_text.dart';
 export 'models/page.dart';
 export 'models/settings.dart';
+export 'models/user.dart';
 export 'theme/tokens.dart';
 export 'validation/phone.dart';

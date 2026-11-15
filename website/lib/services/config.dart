@@ -14,7 +14,10 @@ class Config {
   /// `IMAGE_RESIZE=cloudflare` hole `/cdn-cgi/image/...`; `none` e shudhu `<base>/<key>`.
   final bool imageResize;
 
-  const Config._(this.apiBaseUrl, this.internalSecret, this.imageBaseUrl, this.imageResize);
+  /// Turnstile widget er site key (platform er, 10.11 item 2).
+  final String turnstileSiteKey;
+
+  const Config._(this.apiBaseUrl, this.internalSecret, this.imageBaseUrl, this.imageResize, this.turnstileSiteKey);
 
   /// [env] theke; bhul hole [FormatException] e variable er naam.
   factory Config.fromEnv(Map<String, String> env) {
@@ -35,7 +38,9 @@ class Config {
       'none' => false,
       _ => throw const FormatException('IMAGE_RESIZE: cloudflare ba none'),
     };
-    return Config._(api, secret, images, resize);
+    final siteKey = env['TURNSTILE_SITE_KEY'] ?? '';
+    if (siteKey.isEmpty) throw const FormatException('TURNSTILE_SITE_KEY lagbe');
+    return Config._(api, secret, images, resize, siteKey);
   }
 }
 

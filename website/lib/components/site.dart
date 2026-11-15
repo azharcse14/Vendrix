@@ -24,6 +24,9 @@ class Site extends InheritedComponent {
   /// Chobir URL.
   final ImageUrls images;
 
+  /// Turnstile site key (website env, 10.11 item 2).
+  final String turnstileSiteKey;
+
   /// Site.
   const Site({
     required this.origin,
@@ -33,6 +36,7 @@ class Site extends InheritedComponent {
     required this.catalog,
     required this.images,
     required super.child,
+    this.turnstileSiteKey = '',
     super.key,
   });
 
@@ -52,6 +56,9 @@ class Site extends InheritedComponent {
 
   /// Rating (ek doshomik) shop er digit setting e.
   String rating(double r) => formatRating(r, _numbers);
+
+  /// API error code er lekha (7.1); ochena code (URL er `?error=` o) hole `error.internal`.
+  String error(String code) => t(defaultMessages['bn']!.containsKey('error.$code') ? 'error.$code' : 'error.internal');
 
   /// Ei bhashar link: `en` e `/en` prefix (10.1).
   String href(String path) => localePath(locale, path);

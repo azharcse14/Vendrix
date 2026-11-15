@@ -6,6 +6,7 @@
 
 import 'package:jaspr/server.dart';
 import 'package:website/components/filter_sheet.dart' as _filter_sheet;
+import 'package:website/components/login_form.dart' as _login_form;
 import 'package:website/components/variant_picker.dart' as _variant_picker;
 
 /// Default [ServerOptions] for use with your Jaspr project.
@@ -31,6 +32,10 @@ ServerOptions get defaultServerOptions => ServerOptions(
       'filter_sheet',
       params: __filter_sheetDialogToggle,
     ),
+    _login_form.LoginForm: ClientTarget<_login_form.LoginForm>(
+      'login_form',
+      params: __login_formLoginForm,
+    ),
     _variant_picker.VariantSwitch: ClientTarget<_variant_picker.VariantSwitch>(
       'variant_picker',
     ),
@@ -39,3 +44,6 @@ ServerOptions get defaultServerOptions => ServerOptions(
 
 Map<String, Object?> __filter_sheetDialogToggle(_filter_sheet.DialogToggle c) =>
     {'dialogId': c.dialogId};
+Map<String, Object?> __login_formLoginForm(_login_form.LoginForm c) => {
+  'next': c.next,
+};

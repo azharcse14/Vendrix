@@ -2,8 +2,10 @@ import 'package:jaspr/server.dart';
 import 'package:jaspr_router/jaspr_router.dart';
 
 import 'components/layout.dart';
+import 'pages/account.dart';
 import 'pages/category.dart';
 import 'pages/home.dart';
+import 'pages/login.dart';
 import 'pages/policy.dart';
 import 'pages/product.dart';
 import 'pages/search.dart';
@@ -26,6 +28,8 @@ class App extends StatelessComponent {
           ...both('/c/:slug', (s) => CategoryPage(s.params['slug']!, s.queryParams)),
           ...both('/p/:slug', (s) => ProductPage(s.params['slug']!)),
           ...both('/search', (s) => SearchPage(s.queryParams)),
+          ...both('/login', (s) => LoginPage(s.queryParams)),
+          ...both('/account', (s) => AccountPage(s.queryParams)),
           // Ochena kind e API call na, sheshe router er 404.
           for (final kind in policyKinds) ...both('/policy/$kind', (_) => PolicyPage(kind)),
         ],

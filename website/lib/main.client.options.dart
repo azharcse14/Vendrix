@@ -7,6 +7,7 @@
 import 'package:jaspr/client.dart';
 
 import 'package:website/components/filter_sheet.dart' deferred as _filter_sheet;
+import 'package:website/components/login_form.dart' deferred as _login_form;
 import 'package:website/components/variant_picker.dart'
     deferred as _variant_picker;
 
@@ -31,6 +32,10 @@ ClientOptions get defaultClientOptions => ClientOptions(
     'filter_sheet': ClientLoader(
       (p) => _filter_sheet.DialogToggle(p['dialogId'] as String),
       loader: _filter_sheet.loadLibrary,
+    ),
+    'login_form': ClientLoader(
+      (p) => _login_form.LoginForm(next: p['next'] as String),
+      loader: _login_form.loadLibrary,
     ),
     'variant_picker': ClientLoader(
       (p) => _variant_picker.VariantSwitch(),

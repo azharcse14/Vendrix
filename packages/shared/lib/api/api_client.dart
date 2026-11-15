@@ -56,6 +56,9 @@ class ApiClient {
   /// Ek request er shima (default 15 second).
   final Duration timeout;
 
+  /// Customer session token (`Authorization: Bearer`; website e `__Host-sid` cookie theke, 10.11 item 4).
+  final String? token;
+
   /// ApiClient.
   const ApiClient(
     this.baseUrl,
@@ -63,6 +66,7 @@ class ApiClient {
     this.locale = 'bn',
     this.headers = const {},
     this.timeout = const Duration(seconds: 15),
+    this.token,
   });
 
   /// GET; JSON ferot.
@@ -83,6 +87,7 @@ class ApiClient {
           )
           ..headers.addAll({
             ...headers,
+            if (token != null) 'Authorization': 'Bearer $token',
             'Accept-Language': locale,
             'Accept': 'application/json',
           });

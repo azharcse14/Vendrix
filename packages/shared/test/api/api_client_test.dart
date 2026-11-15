@@ -281,24 +281,25 @@ void main() {
       final u = await AccountRepository(api).me();
       expect(seen.url.path, '/api/me');
       expect(seen.headers['Authorization'], 'Bearer TOK2ABC');
-      expect([u.phone, u.name, u.email, u.locale], [
-        '01712345678',
-        'রহিম',
-        null,
-        'bn',
-      ]);
-    });
-    test('token na thakle Authorization nai; shape bhul hole FormatException', () async {
-      late http.Request seen;
-      final api = ApiClient(
-        Uri.parse('http://api.test'),
-        MockClient((r) async {
-          seen = r;
-          return json({'phone': 1}, 200);
-        }),
+      expect(
+        [u.phone, u.name, u.email, u.locale],
+        ['01712345678', 'রহিম', null, 'bn'],
       );
-      await expectLater(AccountRepository(api).me(), throwsFormatException);
-      expect(seen.headers.containsKey('Authorization'), isFalse);
     });
+    test(
+      'token na thakle Authorization nai; shape bhul hole FormatException',
+      () async {
+        late http.Request seen;
+        final api = ApiClient(
+          Uri.parse('http://api.test'),
+          MockClient((r) async {
+            seen = r;
+            return json({'phone': 1}, 200);
+          }),
+        );
+        await expectLater(AccountRepository(api).me(), throwsFormatException);
+        expect(seen.headers.containsKey('Authorization'), isFalse);
+      },
+    );
   });
 }

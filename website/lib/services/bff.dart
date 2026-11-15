@@ -19,11 +19,14 @@ class BffRoute {
   /// Mil theke Go API er path.
   final String Function(Match) api;
 
+  /// Go API er method; null = request er method (JS chhara form shudhu POST pare).
+  final String? apiMethod;
+
   /// Go er uttor theke browser er body ar `Set-Cookie` (auth, 10.11 item 4); null = Go er uttor bhanga.
   final (List<int>, String?)? Function(http.Response)? session;
 
   /// BffRoute.
-  const BffRoute(this.methods, this.path, this.api, {this.session});
+  const BffRoute(this.methods, this.path, this.api, {this.session, this.apiMethod});
 }
 
 // Go API er `httpx.MaxBody` (12.2): er beshi body memory te pora hoy na.
@@ -34,7 +37,8 @@ final bffRoutes = <BffRoute>[
   BffRoute({'POST'}, RegExp(r'^/_/auth/otp/send$'), (_) => '/api/auth/otp/send'),
   BffRoute({'POST'}, RegExp(r'^/_/auth/otp/verify$'), (_) => '/api/auth/otp/verify', session: _login),
   BffRoute({'POST'}, RegExp(r'^/_/auth/logout$'), (_) => '/api/auth/logout', session: _logout),
-  BffRoute({'PATCH'}, RegExp(r'^/_/account$'), (_) => '/api/me'),
+  // POST: account page er JS chhara form (10.2).
+  BffRoute({'PATCH', 'POST'}, RegExp(r'^/_/account$'), (_) => '/api/me', apiMethod: 'PATCH'),
 ];
 
 // Go er `rand.Text()` base32; onno okkhor (`;`, space) cookie header bhangte pare.
@@ -96,7 +100,7 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       } on ArgumentError {
         return _error(400, 'validation_failed');
       }
-      final api = http.Request(request.method, cfg.apiBaseUrl.resolve(route.api(match!)))
+      final api = http.Request(route.apiMethod ?? request.method, cfg.apiBaseUrl.resolve(route.api(match!)))
         ..headers.addAll({
           ...apiHeaders(request.headers, cfg),
           'Accept': 'application/json',

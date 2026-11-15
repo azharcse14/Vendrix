@@ -26,6 +26,7 @@ Future<ResolvedPage> resolvePage(
   required CatalogRepository Function(String locale) catalogFor,
   required ImageUrls images,
   required void Function(Object error) log,
+  String turnstileSiteKey = '',
 }) async {
   final locale = localeOf(path).locale;
   ResolvedPage status(int code, StatusKind kind, [Map<String, String> headers = const {}]) => (
@@ -81,6 +82,7 @@ Future<ResolvedPage> resolvePage(
       ),
       catalog: catalogFor(lang),
       images: images,
+      turnstileSiteKey: turnstileSiteKey,
       child: missing ? const StatusPage(StatusKind.notFound) : const App(),
     ),
     css: css,
@@ -104,6 +106,7 @@ Future<Response> renderPage(
     catalogFor: (locale) => CatalogRepository(apiFor(request.headers, locale, cfg, client)),
     images: ImageUrls(cfg.imageBaseUrl, resize: cfg.imageResize),
     log: log,
+    turnstileSiteKey: cfg.turnstileSiteKey,
   );
   final res = await render(
     Document(

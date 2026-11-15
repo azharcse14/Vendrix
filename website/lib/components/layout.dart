@@ -59,6 +59,10 @@ class _Header extends StatelessComponent {
             attributes: {'hreflang': site.locale == 'en' ? 'bn' : 'en'},
             [.text(site.t('lang.switch'))],
           ),
+        // Mobile e bottom nav e (10.5 niyom 1).
+        a(href: site.href('/account'), classes: 'hidden min-h-11 items-center px-2 md:flex', [
+          .text(site.t('nav.account')),
+        ]),
         // JS chhara GET form (10.2).
         form(
           action: site.href('/search'),
@@ -82,7 +86,7 @@ class _Header extends StatelessComponent {
   }
 }
 
-// Cart ar Account M4/M5 er page porjonto lukano (10.10 item 6).
+// Cart M5 er page porjonto lukano (10.10 item 6); Account M4 e (v1.19).
 class _BottomNav extends StatelessComponent {
   const _BottomNav();
 
@@ -102,6 +106,7 @@ class _BottomNav extends StatelessComponent {
       [
         item(site.href('/'), 'nav.home'),
         item('${site.href('/')}#categories', 'nav.category'),
+        item(site.href('/account'), 'nav.account'),
       ],
     );
   }

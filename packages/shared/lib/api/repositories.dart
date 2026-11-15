@@ -1,6 +1,7 @@
 import '../models/catalog.dart';
 import '../models/page.dart';
 import '../models/settings.dart';
+import '../models/user.dart';
 import 'api_client.dart';
 
 /// Public catalog (7.2): category, product list (filter, search, paging), detail, shop er policy.
@@ -83,4 +84,17 @@ class SettingsRepository {
       (await api.get('/api/translations', query: {'locale': locale})
               as Map<String, dynamic>)
           .cast<String, String>();
+}
+
+/// Customer er account (7.3); [api] e `token` lage.
+class AccountRepository {
+  /// Client.
+  final ApiClient api;
+
+  /// AccountRepository.
+  const AccountRepository(this.api);
+
+  /// `GET /api/me`; session na thakle `ApiError` `401`.
+  Future<User> me() async =>
+      User.fromJson(await api.get('/api/me') as Map<String, dynamic>);
 }
