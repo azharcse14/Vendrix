@@ -53,7 +53,7 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 |---|---|
 | `backend/internal/auth/doc.go` | Package comment |
 | `backend/internal/auth/password.go` → `HashPassword`, `CheckPassword` | Staff password hash ar tulona |
-| `backend/internal/auth/otp.go` → `NewOTPCode`, `HashOTP`, `CheckOTP` | 6 digit OTP, HMAC ar constant-time tulona |
+| `backend/internal/auth/otp.go` → `NewOTPCode`, `HashOTP`, `CheckOTP`, `phoneTag` | 6 digit OTP, HMAC ar constant-time tulona, alert key er phone tag |
 | `backend/internal/auth/totp.go` → `TOTPCode`, `CheckTOTP`, `NewTOTPSecret`, `SealTOTPSecret`, `OpenTOTPSecret` | RFC 6238 code, ±1 step, secret (base32) ar AES-GCM (AAD shoho) |
 | `backend/internal/auth/recovery.go` → `NewRecoveryCodes`, `HashRecoveryCode` | Recovery code ar tar hash |
 | `backend/internal/auth/seal.go` → `Seal`, `Open` | AES-GCM + AAD; shop credential ([credentials](credentials.md)), TOTP secret ar OTP SMS payload |
@@ -83,7 +83,7 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 | TOTP RFC 6238: HMAC-SHA1, 30 second, 6 digit, ±1 step (±2 na), 6 digit chhara na; secret 20 byte, base32 (8.3 step 2, 6) | `TOTPCode`, `CheckTOTP`, `NewTOTPSecret` | `TestTOTP` (appendix B vector) |
 | TOTP secret AES-GCM `TOTP_KEY`, AAD `shop_id:staff_id:key_version`; onno staff/shop/version/key e decrypt na (8.3 step 5) | `SealTOTPSecret`, `OpenTOTPSecret`, `Seal`, `Open` | `TestTOTPSecretAAD` |
 | OTP send: phone e 15 minute e 3, 24 ghontay 10 (shob purpose, shop alada), parallel e o (advisory lock); blocked phone `403 phone_blocked`; response `{"sent": true}` (8.2, 7.8, Q10 vii) | `sendOTP`, `lockPhone`, `sendLimit`, `isBlocked` | `TestOTPSendLimitsIntegration` |
-| Phone lock: 24 ghontay `otp_codes` er bhul (consumed row e ek kom) 10 hole `429` + rolling `Retry-After`, alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone>:<din>`), payload e phone mask (7.8 v1.19, Q3) | `phoneLock`, `lockAlert` | `TestOTPPhoneLockIntegration` |
+| Phone lock: 24 ghontay `otp_codes` er bhul (consumed row e ek kom) 10 hole `429` + rolling `Retry-After`, alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone tag>:<din>`, tag `phoneTag` = HMAC(`OTP_SECRET`, phone) er 16 hex, v1.26), payload e phone mask (7.8 v1.19, Q3) | `phoneLock`, `lockAlert`, `phoneTag` | `TestOTPPhoneLockIntegration` |
 | Shop er SMS cap: shop er timezone er din e OTP >= `checkout.sms_daily_cap` hole `429`, rat 12 ta porjonto (7.8 v1.7, Rule 5) | `smsCap` | `TestOTPSMSCapIntegration` |
 | Turnstile: siteverify e secret, token, remoteip; `success` ar `hostname` = shop er domain; bhul token e `400 turnstile_failed` (12.2, 10.11, 14.2 test 23) | `Turnstile.Verify`, `SendOTP` | `TestTurnstile` |
 | Turnstile test secret (`1x`/`2x`/`3x...AA`) e `hostname` check na (Cloudflare `example.com` dey), `success` lage; asol secret e local eo check (10.11 v1.22, 16.1) | `Turnstile.Verify`, `config.TurnstileTestSecret` | `TestTurnstile` |
@@ -179,3 +179,4 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 - **Recovery code e `-`, space, boro/choto haat bad keno?** Staff kagoj theke je bhabe-i likhuk (`abcde fghij`) ekoi hash; alphabet base32, tai `0/O`, `1/I` gulie jay na.
 - **Bhul old password e `401` na, `400 validation_failed` (`fields.old`) keno?** Session thik ache; `401` hole admin client logout kore dito. Ei route e `failed_logins` gone na (session lage).
 - **otpauth URL e issuer shop er slug keno?** Ek staff er onek shop e account thakle authenticator app e alada dekhay.
+- **OTP lock alert er `dedupe_key` e phone keno na?** `jobs` row done er por 30 din thake (`jobs.cleanup`); ager key e plain E.164 phone chilo (design review L8, v1.26). Ekhon `phoneTag` (HMAC, `OTP_SECRET`): ek phone e ek din ekoi key, tai dedupe thik, kintu phone pora jay na.
