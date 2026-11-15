@@ -51,9 +51,15 @@ void main() {
     {},
   );
 
-  Future<Response> get(String path, {String? cookie}) async {
+  Future<Response> get(
+    String path, {
+    String? cookie,
+    Future<ShopSettings> Function(String)? settings,
+  }) async {
     seen = [];
-    final handler = serveApp((r, render) => renderPage(r, render, shop, cfg: cfg, client: api, log: (_) {}));
+    final handler = serveApp(
+      (r, render) => renderPage(r, render, settings ?? shop, cfg: cfg, client: api, log: (_) {}),
+    );
     return handler(
       Request(
         'GET',
@@ -160,6 +166,23 @@ void main() {
       );
       expect(doc.querySelector('form[action="/_/auth/logout"]')!.attributes['method'], 'post');
       expect(doc.querySelector('meta[name="robots"]')!.attributes['content'], 'noindex');
+    });
+
+    test('phone er lekha l10n key er {phone} theke, ": " hardcode na (Rule 4)', () async {
+      Future<ShopSettings> custom(String _) async => const ShopSettings(
+        PublicSettings({
+          'locales': {
+            'enabled': ['bn', 'en'],
+          },
+        }),
+        1,
+        {
+          'bn': {'account.phone': 'ফোন {phone} নম্বর'},
+        },
+      );
+      final doc = parse(await (await get('/account', cookie: '__Host-sid=GOOD', settings: custom)).readAsString());
+      expect(doc.body!.text, contains('ফোন 01712345678 নম্বর'));
+      expect(doc.body!.text, isNot(contains('নম্বর: ')));
     });
 
     test('BFF er ?error=<code> lekha hishebe', () async {

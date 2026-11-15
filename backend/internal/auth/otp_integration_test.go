@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -282,8 +283,9 @@ func TestOTPPhoneLockIntegration(t *testing.T) {
 		t.Fatalf("alert.security ekta chai: %v", err)
 	}
 	day := time.Now().In(mustLoc(t, "Asia/Dhaka")).Format(time.DateOnly)
-	if want := "alert.otp_lock:" + strconv.FormatInt(a, 10) + ":+8801711000001:" + day; key != want {
-		t.Errorf("dedupe_key %q, chai %q", key, want)
+	// v1.26 (7.8): jobs row 30 din thake, tai key e plain phone na, HMAC er 16 hex
+	if want := regexp.MustCompile(`^alert\.otp_lock:` + strconv.FormatInt(a, 10) + `:[0-9a-f]{16}:` + day + `$`); !want.MatchString(key) {
+		t.Errorf("dedupe_key %q, chai %s", key, want)
 	}
 	if strings.Contains(string(payload), "1711000001") {
 		t.Errorf("alert payload e puro phone (12.2): %s", payload)
