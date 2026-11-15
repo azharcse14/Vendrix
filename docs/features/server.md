@@ -22,7 +22,7 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/cmd/api/main.go` → `main`, `run`, `runServe`, `runMigrate`, `version` | Command ar shuru |
-| `backend/internal/config/config.go` → `Load`, `loopback`, `postgresURL`, `origin` | Env pora ar check |
+| `backend/internal/config/config.go` → `Load`, `base64Key`, `loopback`, `postgresURL`, `origin` | Env pora ar check |
 | `backend/cmd/api/router.go` → `newHandler`, `healthz` | Route ar middleware |
 | `backend/cmd/api/server.go` → `newServer`, `serve` | Timeout, graceful shutdown |
 | `backend/cmd/api/main_test.go`, `backend/internal/config/config_test.go` | Test |
@@ -36,6 +36,8 @@ Ei kram e poro:
 | `ADMIN_ORIGINS` https; local e `http://localhost` (13.5) | `config.origin` | `TestLoadServe`, `TestLoadRejects` |
 | Migrate e shudhu `MIGRATE_DATABASE_URL` (6.1) | `config.Load` | `TestLoadMigrate` |
 | env.example er `local-only` secret local chhara na (13.5) | `config.Load` | `TestRejectExampleSecrets` |
+| `serve` e login er secret lagbe: `OTP_SECRET`, `RECOVERY_SECRET` (32+ okkhor), `TURNSTILE_SECRET`, `TOTP_KEY` (base64 32 byte); error e secret na (13.5, M4) | `config.Load`, `base64Key` | `TestLoadServe`, `TestLoadRejects` |
+| Turnstile er Cloudflare test secret (`1x`/`2x`/`3x...AA`) local chhara na (13.5 v1.20) | `config.Load` (`turnstileTestSecrets`) | `TestLoadRejects`, `TestRejectExampleSecrets` |
 | Router build e panic na (12.2 Server 7); admin route staff chhara `401`, public route shop chhara `404` (v1.10) | `newHandler` | `TestRouterBuild` |
 | Onno site er browser er POST atkano (12.2 Server 3) | `newHandler` (CrossOriginProtection) | `TestCrossOrigin` |
 | Timeout ar graceful shutdown (4.2, 2.2) | `newServer`, `serve` | `TestServeShutdown` |
@@ -47,6 +49,7 @@ Nai (`healthz` shudhu ping kore).
 
 ## Bhul hole ki hoy
 
+- Purono `backend/.env` e M4 er secret (`OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET`) nai: `make run` start hoy na; `backend/env.example` theke line gulo copy koro.
 - Env bhul: shob bhul ek error e, process exit 1; systemd `Restart=always` abar cheshta kore, karon log e.
 - Database nai: `serve` start-i hoy na (`database e jete parchi na`); chalu obosthay database gele `/healthz` 503, uptime monitor alert dey (13.8).
 - pgx driver register hoyni (`driver.go` er import nai): `db.ErrNoDriver`.

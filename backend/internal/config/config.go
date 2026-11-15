@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/netip"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -27,7 +28,7 @@ const (
 // MinSecretLen: secret er kom-poksha dairgho (okkhor). `openssl rand -base64 32` 44 okkhor dey.
 const MinSecretLen = 32
 
-// Config: M0 porjonto env (13.5). Notun env lagle: ekhane field ar Load e validation, backend/env.example,
+// Config: M4 porjonto env (13.5). Notun env lagle: ekhane field ar Load e validation, backend/env.example,
 // 13.5 er table, config_test.go te test (docs/features/server.md).
 type Config struct {
 	Env                 string   // APP_ENV: local, staging, production
@@ -37,7 +38,15 @@ type Config struct {
 	AdminOrigins        []string // ADMIN_ORIGINS: comma diye (CrossOriginProtection, CORS)
 	JasprInternalSecret string   // JASPR_INTERNAL_SECRET: Jaspr → API er X-Internal-Auth (3.2)
 	CredentialsKey      []byte   // CREDENTIALS_KEY: base64, 32 byte; shop_credentials er AES-GCM (2.2)
+	OTPSecret           string   // OTP_SECRET: OTP HMAC, payload AES-GCM er HKDF (8.2)
+	TurnstileSecret     string   // TURNSTILE_SECRET: Cloudflare siteverify (12.2)
+	TOTPKey             []byte   // TOTP_KEY: base64, 32 byte; staff TOTP secret er AES-GCM (8.3)
+	RecoverySecret      string   // RECOVERY_SECRET: recovery code er HMAC (8.3)
 }
+
+// turnstileTestSecrets: Cloudflare er dummy secret (pass, fail, spent); shudhu local e (v1.20).
+var turnstileTestSecrets = []string{"1x0000000000000000000000000000000AA", "2x0000000000000000000000000000000AA",
+	"3x0000000000000000000000000000000AA"}
 
 // Load: lookup (os.LookupEnv) theke config. Shob bhul ek shathe ferot dey, jate ek bare thik kora jay.
 // Error e kokhono secret ba password thake na.
@@ -88,6 +97,23 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 		if len(c.AdminOrigins) == 0 && c.Env != "local" {
 			bad("ADMIN_ORIGINS nai (jemon https://admin.tomarshop.com)")
 		}
+		c.OTPSecret, c.RecoverySecret = get("OTP_SECRET"), get("RECOVERY_SECRET")
+		for name, v := range map[string]string{"OTP_SECRET": c.OTPSecret, "RECOVERY_SECRET": c.RecoverySecret} {
+			if len(v) < MinSecretLen {
+				bad("%s kom-poksha %d okkhor (openssl rand -base64 32)", name, MinSecretLen)
+			}
+		}
+		c.TurnstileSecret = get("TURNSTILE_SECRET")
+		if c.TurnstileSecret == "" {
+			bad("TURNSTILE_SECRET nai (Cloudflare Turnstile er secret key)")
+		}
+		if c.Env != "local" && slices.Contains(turnstileTestSecrets, c.TurnstileSecret) {
+			bad("TURNSTILE_SECRET Cloudflare er test secret; asol secret dao")
+		}
+		c.TOTPKey = base64Key(get("TOTP_KEY"))
+		if c.TOTPKey == nil {
+			bad("TOTP_KEY base64 e 32 byte dao (openssl rand -base64 32)")
+		}
 	case Migrate:
 		c.MigrateDatabaseURL = get("MIGRATE_DATABASE_URL")
 		if err := postgresURL(c.MigrateDatabaseURL); err != nil {
@@ -99,22 +125,31 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 			bad("DATABASE_URL: %v", err)
 		}
 		if cmd == Credentials {
-			k, err := base64.StdEncoding.DecodeString(get("CREDENTIALS_KEY"))
-			if err != nil || len(k) != 32 {
+			c.CredentialsKey = base64Key(get("CREDENTIALS_KEY"))
+			if c.CredentialsKey == nil {
 				bad("CREDENTIALS_KEY base64 e 32 byte dao (openssl rand -base64 32)")
 			}
-			c.CredentialsKey = k
 		}
 	default:
 		bad("ochena command %q", cmd)
 	}
 	// env.example er secret e "local-only" ache; copy kore deploy korle repo-r public secret byabohar hoto
-	for name, v := range map[string]string{"JASPR_INTERNAL_SECRET": c.JasprInternalSecret, "CREDENTIALS_KEY": string(c.CredentialsKey)} {
+	for name, v := range map[string]string{"JASPR_INTERNAL_SECRET": c.JasprInternalSecret, "CREDENTIALS_KEY": string(c.CredentialsKey),
+		"OTP_SECRET": c.OTPSecret, "TOTP_KEY": string(c.TOTPKey), "RECOVERY_SECRET": c.RecoverySecret} {
 		if c.Env != "local" && strings.Contains(v, "local-only") {
 			bad("%s env.example er local-only value; notun dao (openssl rand -base64 32)", name)
 		}
 	}
 	return c, errors.Join(errs...)
+}
+
+// base64Key: base64 e thik 32 byte (AES-256 key), na hole nil.
+func base64Key(s string) []byte {
+	k, err := base64.StdEncoding.DecodeString(s)
+	if err != nil || len(k) != 32 {
+		return nil
+	}
+	return k
 }
 
 // loopback: API shudhu loopback e shune, Caddy samne (v1.5, 13.5). ":8080" dile firewall bhul hole API
