@@ -122,8 +122,9 @@ func TestStaffSetupIntegration(t *testing.T) {
 	}
 	_, first := setup("setup")
 	_, raw := setup("abar setup") // enable er age replace
-	var ct, nonce []byte
-	if err := f.d.QueryRow(`SELECT totp_secret_enc, totp_nonce FROM staff WHERE id = $1 AND totp_key_version = 1`, own).Scan(&ct, &nonce); err != nil {
+	var ct, nonce []byte          // v1.25: setup er secret pending e, live na
+	if err := f.d.QueryRow(`SELECT totp_pending_enc, totp_pending_nonce FROM staff WHERE id = $1 AND totp_pending_key_version = 1
+		AND totp_secret_enc IS NULL`, own).Scan(&ct, &nonce); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := auth.OpenTOTPSecret(totpKey, a, own, 1, ct, nonce); err != nil || !bytes.Equal(got, raw) || bytes.Equal(raw, first) {
@@ -194,4 +195,94 @@ func TestStaffSetupIntegration(t *testing.T) {
 	}
 	f.exec(t, `UPDATE staff SET is_active = false WHERE id = $1 AND shop_id = $2`, ownB, b)
 	wantErr(t, f.cookieReq("POST", "/api/admin/auth/logout", tokB, nil), 401, "unauthenticated", "inactive staff")
+}
+
+// totpState: staff er live ar pending TOTP secret ache kina.
+func (f *staffFixture) totpState(t *testing.T, staffID int64) (live, pending bool) {
+	t.Helper()
+	if err := f.d.QueryRow(`SELECT totp_secret_enc IS NOT NULL, totp_pending_enc IS NOT NULL FROM staff WHERE id = $1`,
+		staffID).Scan(&live, &pending); err != nil {
+		t.Fatal(err)
+	}
+	return live, pending
+}
+
+// setupSecret: /auth/totp/setup er secret (raw).
+func (f *staffFixture) setupSecret(t *testing.T, tok string) []byte {
+	t.Helper()
+	rec := f.cookieReq("POST", "/api/admin/auth/totp/setup", tok, nil)
+	var out struct {
+		Secret string `json:"secret"`
+	}
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &out) != nil {
+		t.Fatalf("setup: %d %s", rec.Code, rec.Body.String())
+	}
+	raw, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(out.Secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
+// TestTOTPPendingIntegration (8.3 step 4, 6 v1.25, 7.7, 16.1): setup er secret pending e; enable na korle porer
+// login TOTP chay na (abar setup_required); enable e bhul code e pending thake, live na; thik code e pending →
+// live, pending NULL, login e TOTP chay ar oi secret e code chole. Live TOTP thakle onno setup_pending session e
+// setup 403. TOTP live ar must_change_password: TOTP er por setup_pending, password bodlale oi session active
+// (notun token, 43200), setup lage na; active e setup 403.
+func TestTOTPPendingIntegration(t *testing.T) {
+	f := newStaffFixture(t)
+	a, own := f.shops["a.com"], f.owner["a"]
+	f.exec(t, `UPDATE staff SET totp_secret_enc = NULL, totp_nonce = NULL, totp_key_version = NULL WHERE id = $1 AND shop_id = $2`, own, a)
+
+	f.setupSecret(t, f.setupSession(t, "a", staffPW)) // setup, enable na
+	if live, pending := f.totpState(t, own); live || !pending {
+		t.Errorf("setup er por live %v pending %v; chai false, true", live, pending)
+	}
+	tok := f.setupSession(t, "a", staffPW) // abar login e TOTP chay na
+	other := f.setupSession(t, "a", staffPW)
+	raw := f.setupSecret(t, tok)
+	step := time.Now().Unix() / 30
+	enable := func(code string) *httptest.ResponseRecorder {
+		return f.cookieReq("POST", "/api/admin/auth/totp/enable", tok, map[string]string{"code": code})
+	}
+	wantErr(t, enable(auth.TOTPCode(raw, step+5)), 400, "mfa_invalid", "bhul code")
+	if live, pending := f.totpState(t, own); live || !pending {
+		t.Errorf("bhul code er por live %v pending %v; chai false, true", live, pending)
+	}
+	if rec := enable(auth.TOTPCode(raw, step)); rec.Code != http.StatusOK {
+		t.Fatalf("enable: %d %s", rec.Code, rec.Body.String())
+	}
+	if live, pending := f.totpState(t, own); !live || pending {
+		t.Errorf("enable er por live %v pending %v; chai true, false", live, pending)
+	}
+	if n := f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND totp_key_version = 1 AND totp_pending_nonce IS NULL
+		AND totp_pending_key_version IS NULL AND totp_last_step = $2`, own, step); n != 1 {
+		t.Error("enable er por key_version/last_step/pending thik na")
+	}
+	wantErr(t, f.cookieReq("POST", "/api/admin/auth/totp/setup", other, nil), 403, "forbidden", "live TOTP e onno session e setup")
+	f.secret[own] = raw
+	rec := f.totp(f.tempToken(t, "a"), f.code(own, 1))
+	adminCookie(t, rec, 43200, "live secret e TOTP")
+
+	// shop b: TOTP live, must_change_password → TOTP er por setup_pending, password bodlale active
+	b, ownB := f.shops["b.com"], f.owner["b"]
+	f.exec(t, `UPDATE staff SET must_change_password = true WHERE id = $1 AND shop_id = $2`, ownB, b)
+	setup := adminCookie(t, f.totp(f.tempToken(t, "b"), f.code(ownB, 0)), 900, "must_change e TOTP")
+	wantErr(t, f.cookieReq("POST", "/api/admin/auth/totp/setup", setup, nil), 403, "password_change_required", "password er age setup")
+	rec = f.cookieReq("POST", "/api/admin/auth/password", setup, map[string]string{"old": staffPW, "new": "notun-password-123"})
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("password: %d %s", rec.Code, rec.Body.String())
+	}
+	active := adminCookie(t, rec, 43200, "TOTP live e password")
+	if stage, secs := f.session(t, active); active == setup || stage != "active" || !near(secs, 43200) {
+		t.Errorf("password er por: %s %.0f (token notun %v)", stage, secs, active != setup)
+	}
+	wantErr(t, f.cookieReq("GET", "/api/admin/me", setup, nil), 401, "unauthenticated", "setup er purono token")
+	if rec := f.cookieReq("GET", "/api/admin/me", active, nil); rec.Code != http.StatusOK {
+		t.Errorf("/me: %d %s", rec.Code, rec.Body.String())
+	}
+	wantErr(t, f.cookieReq("POST", "/api/admin/auth/totp/setup", active, nil), 403, "forbidden", "active e setup")
+	if live, pending := f.totpState(t, ownB); !live || pending {
+		t.Errorf("shop b live %v pending %v", live, pending)
+	}
 }

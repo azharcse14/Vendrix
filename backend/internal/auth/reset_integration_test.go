@@ -10,7 +10,7 @@ import (
 )
 
 // TestStaffReset2FAIntegration (8.3 item 6, 7.7, Q8): reset-2fa ek transaction e TOTP (secret, nonce, key_version,
-// last_step) ar recovery code muche, shob session (active, mfa_pending) revoke, audit staff.reset_2fa (actor CLI:
+// last_step, v1.25: pending o) ar recovery code muche, shob session (active, mfa_pending) revoke, audit staff.reset_2fa (actor CLI:
 // staff_id NULL, entity_id = staff); porer login setup_pending. Onno shop er staff e hat na; ochena shop/email e
 // spashto error, kichu bodlay na.
 func TestStaffReset2FAIntegration(t *testing.T) {
@@ -24,6 +24,7 @@ func TestStaffReset2FAIntegration(t *testing.T) {
 	f.tempToken(t, "a") // mfa_pending session o thake
 	f.tempToken(t, "b")
 	f.exec(t, `INSERT INTO staff_recovery_codes (shop_id, staff_id, code_hash) VALUES ($1, $2, '\x01'), ($3, $4, '\x02')`, a, own, b, ownB)
+	f.exec(t, `UPDATE staff SET totp_pending_enc = '\x01', totp_pending_nonce = '\x02', totp_pending_key_version = 1 WHERE id = $1`, own)
 
 	for _, c := range []struct {
 		slug, email string
@@ -45,7 +46,8 @@ func TestStaffReset2FAIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	if n := f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND shop_id = $2 AND totp_secret_enc IS NULL
-		AND totp_nonce IS NULL AND totp_key_version IS NULL AND totp_last_step IS NULL`, own, a); n != 1 {
+		AND totp_nonce IS NULL AND totp_key_version IS NULL AND totp_last_step IS NULL AND totp_pending_enc IS NULL
+		AND totp_pending_nonce IS NULL AND totp_pending_key_version IS NULL`, own, a); n != 1 {
 		t.Error("TOTP muche ni")
 	}
 	if n := f.count(t, `SELECT count(*) FROM staff_recovery_codes WHERE shop_id = $1 AND staff_id = $2`, a, own); n != 0 {

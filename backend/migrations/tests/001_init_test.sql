@@ -314,6 +314,10 @@ SELECT pg_temp.t('v1.5: TOTP secret ache kintu key_version nai', $q$
   UPDATE staff SET totp_secret_enc = '\x01', totp_nonce = '\x02' WHERE id = pg_temp.id('st1') $q$, 'reject:staff_totp_check');
 SELECT pg_temp.t('v1.5: TOTP secret key_version shoho cholbe', $q$
   UPDATE staff SET totp_secret_enc = '\x01', totp_nonce = '\x02', totp_key_version = 1 WHERE id = pg_temp.id('st1') $q$, 'accept');
+SELECT pg_temp.t('v1.25: setup er pending TOTP secret ache kintu key_version nai', $q$
+  UPDATE staff SET totp_pending_enc = '\x01', totp_pending_nonce = '\x02' WHERE id = pg_temp.id('st1') $q$, 'reject:staff_totp_pending_check');
+SELECT pg_temp.t('v1.25: pending TOTP secret key_version shoho cholbe', $q$
+  UPDATE staff SET totp_pending_enc = '\x01', totp_pending_nonce = '\x02', totp_pending_key_version = 1 WHERE id = pg_temp.id('st1') $q$, 'accept');
 
 -- ===================== v1.7 fix =====================
 SELECT pg_temp.t('v1.7: status confirmed, display cancelled', $q$
