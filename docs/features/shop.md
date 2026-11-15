@@ -69,7 +69,7 @@ Ei kram e poro:
 
 - Cache process er memory te; ek er beshi API process hole protitir nijer cache, tai bodol 60 second porjonto alada dekhay.
 - Ochena domain cache korbe na: random `X-Shop-Host` diye memory bhore jabe.
-- Admin route e shop staff session theke (M4), `X-Shop-Host` theke na (3.2).
+- Admin route e shop staff session theke (`httpx.AdminSession`, [auth.md](auth.md)), `X-Shop-Host` theke na (3.2).
 - Notun setting jog korle public kina `publicKeys` e decide koro; na dile private thake.
 - `features` notun shop e faka; organic er `unit_pricing`, `variable_weight` ityadi admin settings (M8) e chalu. SSLCommerz credential set (M10) er por `payment_methods` e `sslcommerz`.
 - Owner er password hash `auth.HashPassword` ([auth.md](auth.md)); login er niyom shekhane.

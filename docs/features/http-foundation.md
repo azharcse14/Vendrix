@@ -1,6 +1,6 @@
 # HTTP er bhitti: client IP, log, error
 
-Design: 3.2, 7.1, 11.3, 12.2, 13.8 · Milestone: M0 (M1 e 404/405 er JSON ar rate limit, M4 e customer session) · Code: `backend/internal/httpx`
+Design: 3.2, 7.1, 11.3, 12.2, 13.8 · Milestone: M0, M1, M4 · Code: `backend/internal/httpx`
 
 ## Ki kore
 
@@ -62,7 +62,7 @@ Ei kram e poro:
 
 ## Data
 
-Nai. `IP(ctx)` pore `orders.ip`, `sessions.ip`, rate limit e jabe (M4, M6).
+Nai. `IP(ctx)` `sessions.ip`, `audit_logs.ip`, Turnstile er `remoteip` ar rate limit e; `orders.ip` M6 e.
 
 ## Bhul hole ki hoy
 
@@ -74,7 +74,7 @@ Nai. `IP(ctx)` pore `orders.ip`, `sessions.ip`, rate limit e jabe (M4, M6).
 
 - `statusWriter` er `Unwrap` muchbe na: upload er deadline `http.ResponseController` diye (2.2).
 - Log e notun field dile personal data (phone, thikana, IP, token) na (12.2).
-- Public rate limit process er memory te (fixed window, window bodlale map notun); ek er beshi process hole protitir alada gona. OTP, order, login er alada limit (7.8) M4, M6 e.
+- Public rate limit process er memory te (fixed window, window bodlale map notun); ek er beshi process hole protitir alada gona. Alada limit (7.8): OTP send route e `RateLimit(10, time.Hour)`, staff login `FailLimit` (shudhu bhul); order er M6 e.
 - Staff context `AdminSession` boshay (test e `WithStaff`); notun admin route e `AdminSession` → `RequireRole` (ba `RequireStaff`), shudhu setup route e `RequireStaff` chhara. Admin handler `StaffFrom` er `ShopID` (ar `VendorID`) diye query filter kore, request body theke na (3.2).
 - Notun error code: `message.go` er `messages` e bn ar en duitai (test dhore); `WriteError` e `r` lage, `Message` faka rakho.
 

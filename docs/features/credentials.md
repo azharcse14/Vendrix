@@ -48,7 +48,7 @@ Ei kram e poro:
 ## Bodlanor age mone rakho
 
 - `key_version` ekhon shob shomoy 1 (`keyVersion`). Key rotation (13.5) korte ekadhik key (version → key) lagbe; tokhon config, `SetCredential` ar re-encrypt er kaj.
-- Credential pora (`auth.Open` diye) M4 (SMS) ar M10 (SSLCommerz) e ashbe; AAD te row er `key_version` nibe (const `keyVersion` na), na hole rotation er por purono row decrypt hobe na.
+- Credential pora (`auth.Open` diye) SMS provider (16.1, M12 er age) ar M10 (SSLCommerz) e; AAD te row er `key_version` nibe (const `keyVersion` na), na hole rotation er por purono row decrypt hobe na.
 - Terminal e secret type korle screen e dekha jay; file theke dao (`< secret.json`), tarpor file muche dao.
 
 ## Proshno-uttor

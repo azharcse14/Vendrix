@@ -11,6 +11,7 @@ Protiti admin kaj (category, product, variant bodol; pore order, settings) `audi
 1. Admin handler kaj `db.InTx` e kore; row bodlanor age `to_jsonb(row)` (before), pore (after).
 2. Ek-i transaction e `audit.Log(ctx, tx, audit.Entry{...})`; IP `httpx.IP(ctx)`.
 3. Log fail korle (jemon onno shop er staff) kaj o rollback.
+4. Login er audit (`staff.login`, `staff.login_failed`, `staff.login_mfa*`, `staff.password_changed`, `staff.totp_*`, `staff.reset_2fa`) `audit.Log` na, `auth` er `insertAudit` e ([auth.md](auth.md)): bhul login er row transaction chhara-o (`*sql.DB`), ochena staff e `staff_id` NULL.
 
 ## Code er map
 

@@ -4,7 +4,7 @@ Design: 6.4, 6.7, 7.1, 7.2, 7.7 · Milestone: M1 · Code: `backend/internal/cata
 
 ## Ki kore
 
-Website/app shop er category tree, product list (filter, sort, paging, search) ar product detail pay; lekha `Accept-Language` er bhasha e (na thakle bn). Protiti query shudhu oi shop er (Rule 3). Admin (`/api/admin`, staff login M4 e): owner/admin category banay, bodlay, muche; owner/admin/vendor_owner product ar variant banay ar bodlay (vendor staff shudhu nijer vendor er); protiti kaj audit log e.
+Website/app shop er category tree, product list (filter, sort, paging, search) ar product detail pay; lekha `Accept-Language` er bhasha e (na thakle bn). Protiti query shudhu oi shop er (Rule 3). Admin (`/api/admin`, staff session [auth.md](auth.md)): owner/admin category banay, bodlay, muche; owner/admin/vendor_owner product ar variant banay ar bodlay (vendor staff shudhu nijer vendor er); protiti kaj audit log e.
 
 ## Kivabe kaj kore
 

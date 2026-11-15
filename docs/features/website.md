@@ -5,7 +5,7 @@ Design: 10.1–10.5, 10.9, 10.10, 10.11, 3.2, 13.5 · Milestone: M3, M4 · Code:
 ## Ki kore
 
 Customer er website: Jaspr server mode e protiti page server e render hoy (SSR), dokan chena jay `Host` theke. Bangla root e, English `/en/...` e. Browser kokhono Go API te jay na; page er data Jaspr server API theke ane.
-M3 cholche: ekhon skeleton, config, request theke API client, `Cache-Control`, BFF skeleton, settings cache, theme/font, layout (header, bottom nav, footer), 404/bondho/error page, home, category page, product card, chobi, filter, product page, search, policy, SEO ([seo.md](seo.md)) ([M3](../milestones/M3.md)). M4: BFF auth route, `/login`, `/account`, Account link, login page e Turnstile CSP ([M4](../milestones/M4.md)).
+Ache: config, request theke API client, `Cache-Control`, BFF, settings cache, theme/font, layout (header, bottom nav, footer), 404/bondho/error page, home, category, product card, chobi, filter, product page, search, policy, SEO ([seo.md](seo.md)) (M3); BFF auth route, `/login`, `/account`, Account link, login page e Turnstile CSP (M4).
 
 ## Kivabe kaj kore
 
@@ -110,6 +110,7 @@ Nai (website database dhore na; shob Go API theke).
 - Notun personal cookie (jemon M4/M5 e) hole `_personal` e jog ar test.
 - `Document(base: null)` (`render.dart`): `<base>` CSP `base-uri 'none'` e atke, tokhon client script relative path e `/c/...`, `/p/...` page e 404 hoy ar hydration (filter dialog, variant) chole na; base na thakle Jaspr `/main.client.dart.js` dey.
 - Jaspr update hole `jaspr install-skills --agent claude-code` abar ar `*.options.dart` (`dart run build_runner build`).
+- `__Host-sid` e `Secure` ar `__Host-` prefix: browser shudhu https e rakhe, tai local `make web` (http) e login er cookie thake na (Chromium `InvalidPrefix`); browser e login dekhte local https proxy lage (16.1 v1.23 er proshno, M7 er age).
 
 ## Proshno-uttor
 
@@ -120,3 +121,7 @@ Nai (website database dhore na; shob Go API theke).
 - **Translation override save (M8) e version bare na hole?** Purono lekha porer publish porjonto; tai M8 e override save e `version` barabe (3.5 item 6).
 
 - **Browser er bhasha keno dekhi na?** Ekoi URL e alada HTML hole Cloudflare cache bhul bhashar page dite pare (10.3); bhasha bodlano shudhu link diye.
+- **Logout JS chhara form keno?** Account page e `@client` lage na (10.2); BFF form e `303` dey ar cookie muche, tarpor `/account` nijei `/login` e pathay.
+- **`GET /api/me` BFF e nai keno?** `/account` SSR e cookie er token diye sora-sori Go te jay (`ApiClient(token:)`); browser er JS e profile lage na.
+- **Account link login na thakleo keno?** Page `public, max-age=60` cache hoy, tai header e login obostha dekhano jay na; link `/account` e, session na thakle `/login` e.
+- **Login form markup server e, `LoginForm` shudhu kaj keno?** Client bundle choto, lekha ar error message server er translator theke; client e data shudhu `next`.

@@ -1,6 +1,6 @@
 # API client ar model (shared)
 
-Design: 7.1, 7.2, 4.3 · Milestone: M2 · Code: `packages/shared/lib/api`, `packages/shared/lib/models`
+Design: 7.1, 7.2, 7.3, 4.3 · Milestone: M2, M4 · Code: `packages/shared/lib/api`, `packages/shared/lib/models`
 
 ## Ki kore
 
@@ -55,7 +55,7 @@ Nai (API er JSON; [catalog.md](catalog.md), [shop.md](shop.md)).
 
 - Go er response e field jog/bodlale ekhane model ar `catalog_test.dart` er JSON o (M1 er local API theke copy).
 - Timeout e request bondho hoy na, shudhu opekkha thame; POST e app nije abar pathabe na (idempotency, 8.6).
-- Model shudhu je API ache tar (v1.12); cart, order, user tader milestone e.
+- Model shudhu je API ache tar (v1.12); cart, order tader milestone e.
 - `attributes`, `seo` vendor er lekha: HTML/JSON-LD e boshate escape (M3).
 
 ## Proshno-uttor

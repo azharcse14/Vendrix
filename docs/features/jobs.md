@@ -54,7 +54,7 @@ Ei kram e poro:
 
 - Ochena `kind`: error, retry, shesh e `failed_at` ar alert.
 - Database e jete na parle: `job worker` error log, 2 second por abar.
-- Local chhara env e `sms.send`: `ErrNoProvider` (M4 e provider ashle thik).
+- Local chhara env e `sms.send`: `ErrNoProvider` (retry, shesh e failed ar alert); provider M12 er age (16.1).
 - Admin alert ekhon shudhu `level=ERROR` log `admin alert: job failed`; email/webhook (`ALERT_EMAIL`, `ALERT_WEBHOOK_URL`, 13.5) M12 e.
 
 ## Bodlanor age mone rakho
@@ -71,3 +71,5 @@ Ei kram e poro:
 ## Proshno-uttor
 
 - **Integration test kivabe chalabo?** `make db-up`, tarpor `cd backend && TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/postgres?sslmode=disable go test ./internal/jobs/`.
+- **Shop er `sms.otp` override e `{code}` na thakle?** Override bad, default lekha (`OTPText`); na hole SMS e code-i jay na.
+- **Customer er account na thakle OTP SMS kon bhashay?** Bangla (`users` e row nai; prothom login e notun user er locale `Accept-Language` theke, [auth](auth.md)).

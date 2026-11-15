@@ -4,14 +4,14 @@ Design: 2.2, 4.2, 12.2, 13.4, 13.5 · Milestone: M0 · Code: `backend/cmd/api`, 
 
 ## Ki kore
 
-`shop-api` binary: `serve` (default) HTTP API chalay, `migrate` database migration chalay ([migration.md](migration.md)), `credentials set` shop er secret rakhe ([credentials.md](credentials.md)), `version` git commit dekhay. Shuru tei env check kore; bhul thakle start-i hoy na. SIGTERM pele cholche emon request shesh kore thame.
+`shop-api` binary: `serve` (default) HTTP API chalay, `migrate` database migration chalay ([migration.md](migration.md)), `credentials set` shop er secret rakhe ([credentials.md](credentials.md)), `shop create` notun shop ([shop.md](shop.md)), `staff reset-2fa` staff er TOTP muche ([auth.md](auth.md)), `version` git commit dekhay. Shuru tei env check kore; bhul thakle start-i hoy na. SIGTERM pele cholche emon request shesh kore thame.
 
 ## Kivabe kaj kore
 
 1. `main` (`cmd/api/main.go`): SIGINT ba SIGTERM e bondho hoy emon context banay, tarpor `run`.
-2. `run`: command bachai (`serve`, `migrate`, `shop` ([shop.md](shop.md)), `credentials`, `version`); log JSON e stdout e.
+2. `run`: command bachai (`serve`, `migrate`, `shop`, `staff`, `credentials`, `version`); log JSON e stdout e.
 3. `runServe`: `config.Load(lookup, config.Serve)` → `db.Open` (pgx) → `newHandler` → `net.Listen(ADDR)` → job worker goroutine ([jobs.md](jobs.md)) → `serve`; shutdown e worker thamar por database close.
-4. `newHandler` (`router.go`): route (`GET /healthz`; public = `ShopFromHost` → `RateLimit(120, minute)` er pore shop ([shop.md](shop.md)) ar catalog ([catalog.md](catalog.md)) er route; `POST /api/auth/otp/send` public er upore `RateLimit(10, ghonta)` ([auth.md](auth.md)); admin route `RequireStaff` → `RequireRole`), CrossOriginProtection e `ADMIN_ORIGINS`, middleware er kram ([http-foundation.md](http-foundation.md)).
+4. `newHandler` (`router.go`): route (`GET /healthz`; public = `ShopFromHost` → `RateLimit(120, minute)` er pore shop ([shop.md](shop.md)) ar catalog ([catalog.md](catalog.md)) er route; customer auth ([auth.md](auth.md)): `POST /api/auth/otp/send` public er upore `RateLimit(10, ghonta)`, `otp/verify` public, `logout` ar `GET`/`PATCH /api/me` public → `RequireCustomer`; staff login `/api/admin/auth/login`, `/totp`, `/recovery` middleware chhara (shop body/temp_token theke); baki admin route `AdminSession` → `RequireRole` (`/auth/password`, `/totp/setup`, `/totp/enable`, `/auth/logout` shudhu `AdminSession`, `/api/admin/me` `RequireStaff`), CrossOriginProtection e `ADMIN_ORIGINS`, middleware er kram ([http-foundation.md](http-foundation.md)).
 5. `serve` (`server.go`): `newServer` er timeout (4.2) e chalay; ctx bondho hole `Shutdown` (25 second, systemd er 30 second er kom).
 6. `healthz`: database e 2 second er moddhe ping; thik hole `{"status":"ok"}`, na hole `503 db_unavailable`.
 
@@ -21,8 +21,8 @@ Ei kram e poro:
 
 | File → function | Ki kore |
 |---|---|
-| `backend/cmd/api/main.go` → `main`, `run`, `runServe`, `runMigrate`, `version` | Command ar shuru |
-| `backend/internal/config/config.go` → `Load`, `base64Key`, `loopback`, `postgresURL`, `origin` | Env pora ar check |
+| `backend/cmd/api/main.go` → `main`, `run`, `runServe`, `runMigrate`, `runCredentials`, `runShopCreate`, `runStaffReset2FA`, `version` | Command ar shuru |
+| `backend/internal/config/config.go` → `Load`, `base64Key`, `TurnstileTestSecret`, `loopback`, `postgresURL`, `origin` | Env pora ar check |
 | `backend/cmd/api/router.go` → `newHandler`, `healthz` | Route ar middleware |
 | `backend/cmd/api/server.go` → `newServer`, `serve` | Timeout, graceful shutdown |
 | `backend/cmd/api/main_test.go`, `backend/internal/config/config_test.go` | Test |
