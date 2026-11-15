@@ -3,6 +3,7 @@ package auth_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"vendrix/backend/internal/auth"
+	"vendrix/backend/internal/cart"
 	"vendrix/backend/internal/dbtest"
 	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/jobs"
@@ -665,5 +667,116 @@ func TestGuestOrdersLinkIntegration(t *testing.T) {
 	}
 	if owner(otherPhone) != 0 || owner(otherShop) != 0 || owner(otherUser) != other {
 		t.Errorf("onno order bodleche: phone %d, shop %d, user %d", owner(otherPhone), owner(otherShop), owner(otherUser))
+	}
+}
+
+// guestCart: shop e n ta product+variant (slug prefix+i, naam bn "পণ্য <slug>", stock 10) ar tader guest cart
+// (qty 1, kram e); key ferot. user != 0 hole guest na, oi user er account cart (key "").
+func (f *otpFixture) guestCart(t *testing.T, shopID int64, prefix string, n int, user int64) string {
+	t.Helper()
+	key, hash := cart.NewKey()
+	var cartID int64
+	var err error
+	if user != 0 {
+		key = ""
+		err = f.d.QueryRow(`INSERT INTO carts (shop_id, user_id) VALUES ($1, $2) RETURNING id`, shopID, user).Scan(&cartID)
+	} else {
+		err = f.d.QueryRow(`INSERT INTO carts (shop_id, session_key) VALUES ($1, $2) RETURNING id`, shopID, hash).Scan(&cartID)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.exec(t, `WITH p AS (
+		  INSERT INTO products (shop_id, vendor_id, slug, name)
+		  SELECT $1, v.id, $2 || g, jsonb_build_object('bn', 'পণ্য ' || $2 || g, 'en', 'Item ' || $2 || g)
+		  FROM generate_series(1, $3::int) g, vendors v WHERE v.shop_id = $1 AND v.is_house
+		  RETURNING id, vendor_id, slug),
+		v AS (
+		  INSERT INTO product_variants (shop_id, product_id, vendor_id, sku, price, stock)
+		  SELECT $1, id, vendor_id, slug, 100, 10 FROM p RETURNING id, sku)
+		INSERT INTO cart_items (shop_id, cart_id, variant_id, quantity, added_at)
+		SELECT $1, $4, id, 1, now() + (substr(sku, length($2) + 1)::int * interval '1 second') FROM v`,
+		shopID, prefix, n, cartID)
+	return key
+}
+
+func (f *otpFixture) verifyKey(t *testing.T, host, phone, code, key string) *httptest.ResponseRecorder {
+	t.Helper()
+	r := newReq(http.MethodPost, "/api/auth/otp/verify", host, "", map[string]string{"phone": phone, "code": code})
+	r.Header.Set("X-Cart-Key", key)
+	return f.serve(r)
+}
+
+// TestVerifyMergesCartIntegration (8.2 step 6, 8.4 item 6, 7.3 v1.30): verify er transaction e X-Cart-Key er
+// guest cart account e merge; bhul code e merge na; response e cart_notices (khali hole []); 50 variant er
+// beshi e item_dropped; onno shop er key chhoy na.
+func TestVerifyMergesCartIntegration(t *testing.T) {
+	f := newOTPFixture(t)
+	a, b := f.shops["a.com"], f.shops["b.com"]
+	key := f.guestCart(t, a, "g", 2, 0)
+	keyB := f.guestCart(t, b, "x", 1, 0)
+	guestItems := func(k string) int {
+		sum := sha256.Sum256([]byte(k))
+		return f.count(t, `SELECT count(*) FROM cart_items ci JOIN carts c ON c.id = ci.cart_id WHERE c.session_key = $1`, sum[:])
+	}
+	accountItems := func(phone string) int {
+		return f.count(t, `SELECT count(*) FROM cart_items ci JOIN carts c ON c.id = ci.cart_id
+			JOIN users u ON u.shop_id = c.shop_id AND u.id = c.user_id WHERE u.phone = $1`, phone)
+	}
+	type resp struct {
+		Token       string `json:"token"`
+		CartNotices []struct {
+			Code string `json:"code"`
+			Name string `json:"name"`
+		} `json:"cart_notices"`
+	}
+
+	f.otpRow(t, a, "+8801711000001", "123456", "5 minutes")
+	wantErr(t, f.verifyKey(t, "a.com", "01711000001", "000000", key), 400, "otp_invalid", "bhul code")
+	if guestItems(key) != 2 || f.count(t, `SELECT count(*) FROM carts WHERE user_id IS NOT NULL`) != 0 {
+		t.Fatal("bhul code e merge holo")
+	}
+	rec := f.verifyKey(t, "a.com", "01711000001", "123456", key)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"cart_notices":[]`) {
+		t.Fatalf("verify: %d %s (cart_notices [] chai)", rec.Code, rec.Body.String())
+	}
+	if guestItems(key) != 0 || f.count(t, `SELECT count(*) FROM carts WHERE session_key IS NOT NULL AND shop_id = $1`, a) != 0 ||
+		accountItems("+8801711000001") != 2 {
+		t.Errorf("merge: guest %d, account %d", guestItems(key), accountItems("+8801711000001"))
+	}
+
+	// key chhara verify: cart_notices [] o
+	f.otpRow(t, a, "+8801711000002", "123456", "5 minutes")
+	if rec := f.verify(t, "a.com", "01711000002", "123456"); !strings.Contains(rec.Body.String(), `"cart_notices":[]`) {
+		t.Errorf("key chhara: %s", rec.Body.String())
+	}
+
+	// onno shop er key: chhoy na
+	f.otpRow(t, a, "+8801711000003", "123456", "5 minutes")
+	if rec := f.verifyKey(t, "a.com", "01711000003", "123456", keyB); rec.Code != http.StatusOK {
+		t.Fatalf("verify: %d %s", rec.Code, rec.Body.String())
+	}
+	if guestItems(keyB) != 1 || accountItems("+8801711000003") != 0 {
+		t.Error("shop b er guest cart merge holo")
+	}
+
+	// 50 er limit: account e 50, guest e notun 1 → item_dropped (naam request er bhashay, bn)
+	var u int64
+	if err := f.d.QueryRow(`INSERT INTO users (shop_id, phone) VALUES ($1, '+8801711000004') RETURNING id`, a).Scan(&u); err != nil {
+		t.Fatal(err)
+	}
+	f.guestCart(t, a, "acc", 50, u)
+	key4 := f.guestCart(t, a, "new", 1, 0)
+	f.otpRow(t, a, "+8801711000004", "123456", "5 minutes")
+	rec = f.verifyKey(t, "a.com", "01711000004", "123456", key4)
+	var got resp
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || rec.Code != http.StatusOK || got.Token == "" {
+		t.Fatalf("verify: %d %s", rec.Code, rec.Body.String())
+	}
+	if len(got.CartNotices) != 1 || got.CartNotices[0].Code != "item_dropped" || got.CartNotices[0].Name != "পণ্য new1" {
+		t.Errorf("cart_notices %+v, chai item_dropped পণ্য new1", got.CartNotices)
+	}
+	if accountItems("+8801711000004") != 50 || guestItems(key4) != 0 {
+		t.Errorf("limit: account %d, guest %d", accountItems("+8801711000004"), guestItems(key4))
 	}
 }

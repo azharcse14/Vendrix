@@ -12,10 +12,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"strings"
+	"sync"
 	"testing"
 
 	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/cart"
+	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/dbtest"
 	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/shop"
@@ -537,5 +540,151 @@ func TestCartShopIsolationIntegration(t *testing.T) {
 	f.fail(t, patch("a.com", tok, "", vb, 1), 404, "not_found")
 	if n := f.id(t, `SELECT count(*) FROM cart_items ci JOIN carts c ON c.id = ci.cart_id WHERE c.shop_id <> ci.shop_id`); n != 0 {
 		t.Fatal("shop mile na")
+	}
+}
+
+// userID: Bearer token er user.
+func (f *fixture) userID(t *testing.T, tok string) int64 {
+	t.Helper()
+	sum := sha256.Sum256([]byte(tok))
+	return f.id(t, `SELECT user_id FROM sessions WHERE token_hash = $1`, sum[:])
+}
+
+// merge: verify er transaction er moto ek tx e cart.Merge.
+func (f *fixture) merge(t *testing.T, s string, user int64, key, locale string) ([]cart.Notice, error) {
+	t.Helper()
+	var ns []cart.Notice
+	err := db.InTx(context.Background(), f.d, func(tx *sql.Tx) error {
+		var err error
+		ns, err = cart.Merge(context.Background(), tx, f.ids[s], user, key, locale)
+		return err
+	})
+	return ns, err
+}
+
+// variants: shop s e n ta product+variant (slug/sku prefix+i, naam "Item <prefix><i>"), stock 10; id kram e.
+func (f *fixture) variants(t *testing.T, s, prefix string, n int) []int64 {
+	t.Helper()
+	var ids []int64
+	for i := range n {
+		ids = append(ids, f.variant(t, s, fmt.Sprintf("%s%02d", prefix, i), 100, 10))
+	}
+	return ids
+}
+
+// guestKeyCount: key er guest cart row ache kina.
+func (f *fixture) guestKeyCount(t *testing.T, key string) int64 {
+	t.Helper()
+	sum := sha256.Sum256([]byte(key))
+	return f.id(t, `SELECT count(*) FROM carts WHERE session_key = $1`, sum[:])
+}
+
+// TestCartMergeIntegration (8.4 item 6, v1.29, v1.30; 8.2 step 6): ekoi variant e qty jog, min(jog, 50, stock);
+// stock 0 e item thake min(jog, 50); bondho bad (notice na); guest cart muche; 50 variant er beshi hole account
+// er item thake, guest er notun 50 porjonto, baki item_dropped; parallel e ekbar; onno shop er key ar bhul
+// format key = key nai.
+func TestCartMergeIntegration(t *testing.T) {
+	f := newFixture(t)
+	v1 := f.variant(t, "a", "v1", 100, 100)
+	v2 := f.variant(t, "a", "v2", 100, 10)
+	v3 := f.variant(t, "a", "v3", 100, 100)
+	v4 := f.variant(t, "a", "v4", 100, 100)
+	v5 := f.variant(t, "a", "v5", 100, 100)
+	key := f.ok(t, add("a.com", "", "", v1, 30)).CartKey
+	for _, a := range [][2]int64{{v2, 8}, {v3, 40}, {v4, 2}, {v5, 3}} {
+		f.ok(t, add("a.com", "", key, a[0], int(a[1])))
+	}
+	tok := f.customer(t, "a", "+8801711000001")
+	for _, a := range [][2]int64{{v1, 30}, {v2, 5}, {v3, 20}} {
+		f.ok(t, add("a.com", tok, "", a[0], int(a[1])))
+	}
+	f.exec(t, `UPDATE product_variants SET stock = 0 WHERE id = $1`, v3)
+	f.exec(t, `UPDATE products SET is_active = false WHERE id = $1`, f.ids["a/v4.product"])
+
+	ns, err := f.merge(t, "a", f.userID(t, tok), key, "en")
+	if err != nil || len(ns) != 0 {
+		t.Fatalf("merge: %v %+v", err, ns)
+	}
+	c := f.ok(t, get("a.com", tok, ""))
+	want := map[int64]int{v1: 50, v2: 10, v3: 50, v5: 3}
+	if c.Count != len(want) || find(c, v4) != nil {
+		t.Fatalf("merge er por: %+v", c)
+	}
+	for v, q := range want {
+		if it := find(c, v); it == nil || it.Quantity != q {
+			t.Errorf("variant %d: %+v, chai qty %d", v, it, q)
+		}
+	}
+	if it := find(c, v3); it.InStock {
+		t.Error("stock 0 er item in_stock")
+	}
+	if n := f.guestKeyCount(t, key); n != 0 {
+		t.Error("guest cart muche nai")
+	}
+	if c = f.ok(t, get("a.com", "", key)); c.Count != 0 {
+		t.Errorf("purono key e cart: %+v", c)
+	}
+
+	// 50 er limit: account e 48, guest e (bondho g, account er a00, notun n00..n03) → a00 jog, n00 n01 thake,
+	// n02 n03 item_dropped (guest er kram e); bondho slot ney na
+	acc := f.variants(t, "a", "a", 48)
+	gone := f.variant(t, "a", "gone", 100, 10)
+	news := f.variants(t, "a", "n", 4)
+	tok2 := f.customer(t, "a", "+8801711000002")
+	for _, v := range acc {
+		f.ok(t, add("a.com", tok2, "", v, 1))
+	}
+	key2 := f.ok(t, add("a.com", "", "", gone, 1)).CartKey
+	for _, v := range append([]int64{acc[0]}, news...) {
+		f.ok(t, add("a.com", "", key2, v, 2))
+	}
+	f.exec(t, `UPDATE product_variants SET is_active = false WHERE id = $1`, gone)
+	ns, err = f.merge(t, "a", f.userID(t, tok2), key2, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantNs := []cart.Notice{{Code: "item_dropped", Name: "Item n02"}, {Code: "item_dropped", Name: "Item n03"}}
+	if fmt.Sprint(ns) != fmt.Sprint(wantNs) {
+		t.Errorf("notice %+v, chai %+v", ns, wantNs)
+	}
+	c = f.ok(t, get("a.com", tok2, ""))
+	if c.Count != 50 || find(c, acc[0]).Quantity != 3 || find(c, news[1]) == nil || find(c, news[2]) != nil {
+		t.Errorf("limit e cart: count %d", c.Count)
+	}
+	if f.guestKeyCount(t, key2) != 0 {
+		t.Error("limit e guest cart muche nai")
+	}
+
+	// parallel merge (ekoi key, ekoi user, account cart nai): qty ekbar-i jog
+	key3 := f.ok(t, add("a.com", "", "", v1, 2)).CartKey
+	tok3 := f.customer(t, "a", "+8801711000003")
+	u3 := f.userID(t, tok3)
+	var wg sync.WaitGroup
+	for range 4 {
+		wg.Go(func() {
+			if _, err := f.merge(t, "a", u3, key3, "en"); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+	if c = f.ok(t, get("a.com", tok3, "")); c.Count != 1 || find(c, v1).Quantity != 2 {
+		t.Errorf("parallel merge: %+v", c)
+	}
+
+	// onno shop er key, bhul format, key nai: kichu na
+	vb := f.variant(t, "b", "b1", 100, 10)
+	keyB := f.ok(t, add("b.com", "", "", vb, 1)).CartKey
+	tok4 := f.customer(t, "a", "+8801711000004")
+	for _, k := range []string{keyB, "short", strings.ToLower(keyB), ""} {
+		if ns, err := f.merge(t, "a", f.userID(t, tok4), k, "en"); err != nil || len(ns) != 0 {
+			t.Errorf("key %q: %v %+v", k, err, ns)
+		}
+	}
+	if c = f.ok(t, get("a.com", tok4, "")); c.Count != 0 {
+		t.Errorf("onno key theke merge: %+v", c)
+	}
+	if c = f.ok(t, get("b.com", "", keyB)); c.Count != 1 {
+		t.Errorf("shop b er cart bodlalo: %+v", c)
 	}
 }
