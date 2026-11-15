@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"math"
 	"net/http"
@@ -62,7 +63,15 @@ func newOTPFixture(t *testing.T) *otpFixture {
 	log := slog.New(slog.DiscardHandler)
 	h := auth.NewHandlers(d, log, otpSecret, auth.Turnstile{URL: fakeSiteverify(t).URL, Secret: "ts-secret"})
 	mux := http.NewServeMux()
-	mux.Handle("POST /api/auth/otp/send", httpx.ShopFromHost(log, shop.NewResolver(d).Resolve)(http.HandlerFunc(h.SendOTP)))
+	shopMW := httpx.ShopFromHost(log, shop.NewResolver(d).Resolve)
+	mux.Handle("POST /api/auth/otp/send", shopMW(http.HandlerFunc(h.SendOTP)))
+	mux.Handle("POST /api/auth/otp/verify", shopMW(http.HandlerFunc(h.VerifyOTP)))
+	customer := func(hf http.HandlerFunc) http.Handler {
+		return shopMW(httpx.RequireCustomer(log, auth.LookupSession(d))(hf))
+	}
+	mux.Handle("POST /api/auth/logout", customer(h.Logout))
+	mux.Handle("GET /api/me", customer(h.Me))
+	mux.Handle("PATCH /api/me", customer(h.UpdateMe))
 	f.srv = httpx.ClientIP("")(httpx.JSONErrors(mux))
 	return f
 }
@@ -74,12 +83,53 @@ func (f *otpFixture) send(t *testing.T, host, phone, token string) *httptest.Res
 
 func (f *otpFixture) post(t *testing.T, host string, body any) *httptest.ResponseRecorder {
 	t.Helper()
-	b, _ := json.Marshal(body)
-	r := httptest.NewRequest(http.MethodPost, "/api/auth/otp/send", bytes.NewReader(b))
+	return f.serve(newReq(http.MethodPost, "/api/auth/otp/send", host, "", body))
+}
+
+// newReq: X-Shop-Host, token thakle Authorization: Bearer, body thakle JSON.
+func newReq(method, path, host, token string, body any) *http.Request {
+	var rd io.Reader
+	if body != nil {
+		b, _ := json.Marshal(body)
+		rd = bytes.NewReader(b)
+	}
+	r := httptest.NewRequest(method, path, rd)
 	r.Header.Set("X-Shop-Host", host)
+	if token != "" {
+		r.Header.Set("Authorization", "Bearer "+token)
+	}
+	return r
+}
+
+func (f *otpFixture) serve(r *http.Request) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	f.srv.ServeHTTP(rec, r)
 	return rec
+}
+
+func (f *otpFixture) verify(t *testing.T, host, phone, code string) *httptest.ResponseRecorder {
+	t.Helper()
+	return f.serve(newReq(http.MethodPost, "/api/auth/otp/verify", host, "", map[string]string{"phone": phone, "code": code}))
+}
+
+// otpRow: login OTP jar code jana (SMS chhara verify er test); expires "5 minutes", "-1 second".
+func (f *otpFixture) otpRow(t *testing.T, shopID int64, e164, code, expires string) int64 {
+	t.Helper()
+	var id int64
+	if err := f.d.QueryRow(`INSERT INTO otp_codes (shop_id, phone, purpose, code_hash, expires_at)
+		VALUES ($1, $2, 'login', $3, now() + $4::interval) RETURNING id`,
+		shopID, e164, auth.HashOTP(otpSecret, e164, "login", code), expires).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// wantErr: status ar error code.
+func wantErr(t *testing.T, rec *httptest.ResponseRecorder, status int, code, what string) {
+	t.Helper()
+	if rec.Code != status || errCode(rec) != code {
+		t.Errorf("%s: %d %s chai, pelam %d %s", what, status, code, rec.Code, rec.Body.String())
+	}
 }
 
 func (f *otpFixture) exec(t *testing.T, q string, args ...any) {
@@ -425,5 +475,170 @@ func TestOTPJobPayload(t *testing.T) {
 	}
 	if !done || after != "{}" {
 		t.Errorf("done %v, payload %s (chai {})", done, after)
+	}
+}
+
+// parallel: n ta request ek shathe, protiti response er "status code" (error hole code) gona.
+func parallel(n int, do func() *httptest.ResponseRecorder) map[string]int {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	got := map[string]int{}
+	for range n {
+		wg.Go(func() {
+			rec := do()
+			k := strconv.Itoa(rec.Code) + " " + errCode(rec)
+			mu.Lock()
+			got[k]++
+			mu.Unlock()
+		})
+	}
+	wg.Wait()
+	return got
+}
+
+// TestOTPAttemptsIntegration (8.2 verify step 2-3, 7.8, 14.2 test 10): ek OTP e 5 bhul er por thik code o
+// otp_too_many_attempts (bhul er attempt commit thake); parallel bhul e-o attempts 5 er beshi na; 24 ghontay
+// 10 bhul e 429 rate_limited, alert.security ekbar, lock e thik code o chole na.
+func TestOTPAttemptsIntegration(t *testing.T) {
+	f := newOTPFixture(t)
+	a := f.shops["a.com"]
+	id := f.otpRow(t, a, "+8801711000001", "123456", "5 minutes")
+	for i := range 5 {
+		wantErr(t, f.verify(t, "a.com", "01711000001", "000000"), 400, "otp_invalid", "bhul "+strconv.Itoa(i+1))
+	}
+	wantErr(t, f.verify(t, "a.com", "01711000001", "123456"), 400, "otp_too_many_attempts", "5 bhul er por thik code")
+	if n := f.count(t, `SELECT attempts FROM otp_codes WHERE id = $1`, id); n != 5 {
+		t.Errorf("attempts %d, chai 5", n)
+	}
+	if n := f.count(t, `SELECT count(*) FROM sessions`); n != 0 {
+		t.Errorf("session hoyeche: %d", n)
+	}
+
+	id = f.otpRow(t, a, "+8801711000002", "123456", "5 minutes")
+	got := parallel(10, func() *httptest.ResponseRecorder { return f.verify(t, "a.com", "01711000002", "000000") })
+	if got["400 otp_invalid"] != 5 || got["400 otp_too_many_attempts"] != 5 {
+		t.Errorf("parallel 10 bhul: %v, chai 5 otp_invalid ar 5 otp_too_many_attempts", got)
+	}
+	if n := f.count(t, `SELECT attempts FROM otp_codes WHERE id = $1`, id); n != 5 {
+		t.Errorf("parallel er por attempts %d, chai 5", n)
+	}
+
+	// 24 ghontar lock: purono OTP e 5 bhul, notun e 4 bhul (9), 5 tomo bhul e 10 → 429 ar alert
+	f.exec(t, `INSERT INTO otp_codes (shop_id, phone, purpose, code_hash, attempts, expires_at, created_at)
+		VALUES ($1, '+8801711000003', 'login', '\x00', 5, now() - interval '2 hours', now() - interval '2 hours 5 minutes')`, a)
+	f.otpRow(t, a, "+8801711000003", "123456", "5 minutes")
+	for i := range 4 {
+		wantErr(t, f.verify(t, "a.com", "01711000003", "000000"), 400, "otp_invalid", "lock er age bhul "+strconv.Itoa(i+1))
+	}
+	limited(t, f.verify(t, "a.com", "01711000003", "000000"), "10 tomo bhul")
+	limited(t, f.verify(t, "a.com", "01711000003", "123456"), "lock e thik code")
+	if n := f.count(t, `SELECT count(*) FROM jobs WHERE kind = 'alert.security' AND dedupe_key LIKE '%:+8801711000003:%'`); n != 1 {
+		t.Errorf("lock alert %d bar, chai ekbar", n)
+	}
+	if n := f.count(t, `SELECT count(*) FROM sessions`); n != 0 {
+		t.Errorf("lock e session hoyeche: %d", n)
+	}
+}
+
+// TestOTPExpiredIntegration (8.2 verify step 1, 3): expire hole thik code o otp_invalid (attempt gona hoy na);
+// ek code ekbar-i; shudhu shesh OTP (purono code na); checkout er OTP login e na; bhul input 400.
+func TestOTPExpiredIntegration(t *testing.T) {
+	f := newOTPFixture(t)
+	a := f.shops["a.com"]
+	const ph, e164 = "01711000001", "+8801711000001"
+	wantErr(t, f.verify(t, "a.com", ph, "123456"), 400, "otp_invalid", "OTP nai")
+	id := f.otpRow(t, a, e164, "123456", "-1 second")
+	wantErr(t, f.verify(t, "a.com", ph, "123456"), 400, "otp_invalid", "expire")
+	if n := f.count(t, `SELECT attempts FROM otp_codes WHERE id = $1`, id); n != 0 {
+		t.Errorf("expire OTP e attempt gona holo: %d", n)
+	}
+
+	f.otpRow(t, a, e164, "222222", "5 minutes")
+	if rec := f.verify(t, "a.com", ph, "222222"); rec.Code != http.StatusOK {
+		t.Fatalf("thik code: %d %s", rec.Code, rec.Body.String())
+	}
+	wantErr(t, f.verify(t, "a.com", ph, "222222"), 400, "otp_invalid", "ekoi code duibar")
+
+	f.otpRow(t, a, e164, "333333", "5 minutes")
+	f.otpRow(t, a, e164, "444444", "5 minutes")
+	wantErr(t, f.verify(t, "a.com", ph, "333333"), 400, "otp_invalid", "purono OTP er code")
+	if rec := f.verify(t, "a.com", ph, "444444"); rec.Code != http.StatusOK {
+		t.Errorf("shesh OTP: %d %s", rec.Code, rec.Body.String())
+	}
+
+	f.exec(t, `INSERT INTO otp_codes (shop_id, phone, purpose, code_hash, expires_at)
+		VALUES ($1, $2, 'checkout', $3, now() + interval '5 minutes')`, a, e164, auth.HashOTP(otpSecret, e164, "checkout", "555555"))
+	wantErr(t, f.verify(t, "a.com", ph, "555555"), 400, "otp_invalid", "checkout er OTP")
+
+	wantErr(t, f.verify(t, "a.com", "12345", "123456"), 400, "invalid_phone", "bhul phone")
+	wantErr(t, f.serve(newReq(http.MethodPost, "/api/auth/otp/verify", "a.com", "",
+		map[string]any{"phone": ph, "code": "123456", "x": 1})), 400, "validation_failed", "ochena field")
+}
+
+// TestOTPParallelVerifyIntegration (8.2 verify step 3 v1.7, 14.2 test 10): ekoi code e parallel verify →
+// ekta session, ekta user; baki otp_invalid.
+func TestOTPParallelVerifyIntegration(t *testing.T) {
+	f := newOTPFixture(t)
+	f.otpRow(t, f.shops["a.com"], "+8801711000001", "123456", "5 minutes")
+	got := parallel(5, func() *httptest.ResponseRecorder { return f.verify(t, "a.com", "01711000001", "123456") })
+	if got["200 "] != 1 || got["400 otp_invalid"] != 4 {
+		t.Errorf("parallel verify: %v, chai ekta 200 ar 4 ta otp_invalid", got)
+	}
+	if n := f.count(t, `SELECT count(*) FROM sessions`); n != 1 {
+		t.Errorf("session %d, chai 1", n)
+	}
+	if n := f.count(t, `SELECT count(*) FROM users`); n != 1 {
+		t.Errorf("user %d, chai 1", n)
+	}
+}
+
+// guestOrder: orders e choto row (order M6 e; ekhane shudhu phone ar user_id dekhi).
+func (f *otpFixture) guestOrder(t *testing.T, shopID int64, num, phone string, userID any) int64 {
+	t.Helper()
+	var id int64
+	if err := f.d.QueryRow(`INSERT INTO orders (shop_id, order_number, public_token, idempotency_key, idempotency_hash,
+		  user_id, customer_name, customer_phone, recipient_name, recipient_phone, ship_district, ship_area, ship_address,
+		  subtotal, total, payment_method)
+		VALUES ($1, $2, $2, $2, '\x00', $4, 'K', $3, 'K', $3, 'Dhaka', 'Mirpur', 'Road 1', 100, 100, 'cod') RETURNING id`,
+		shopID, num, phone, userID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// TestGuestOrdersLinkIntegration (8.2 verify step 5, 14.2 test 11 er ongsho): oi phone er guest order account e
+// jog shudhu thik OTP verify er por; onno phone, onno shop ar onno user er order bodlay na.
+func TestGuestOrdersLinkIntegration(t *testing.T) {
+	f := newOTPFixture(t)
+	a, b := f.shops["a.com"], f.shops["b.com"]
+	const e164 = "+8801711000001"
+	var other int64
+	if err := f.d.QueryRow(`INSERT INTO users (shop_id, phone) VALUES ($1, '+8801711000009') RETURNING id`, a).Scan(&other); err != nil {
+		t.Fatal(err)
+	}
+	mine := []int64{f.guestOrder(t, a, "SA-1", e164, nil), f.guestOrder(t, a, "SA-2", e164, nil)}
+	otherPhone := f.guestOrder(t, a, "SA-3", "+8801711000002", nil)
+	otherUser := f.guestOrder(t, a, "SA-4", e164, other)
+	otherShop := f.guestOrder(t, b, "SB-1", e164, nil)
+	owner := func(id int64) int64 {
+		return int64(f.count(t, `SELECT coalesce(user_id, 0) FROM orders WHERE id = $1`, id))
+	}
+
+	f.otpRow(t, a, e164, "123456", "5 minutes")
+	wantErr(t, f.verify(t, "a.com", "01711000001", "000000"), 400, "otp_invalid", "bhul code")
+	if owner(mine[0]) != 0 {
+		t.Fatal("bhul code e order jog holo")
+	}
+	if rec := f.verify(t, "a.com", "01711000001", "123456"); rec.Code != http.StatusOK {
+		t.Fatalf("verify: %d %s", rec.Code, rec.Body.String())
+	}
+	user := int64(f.count(t, `SELECT id FROM users WHERE shop_id = $1 AND phone = $2`, a, e164))
+	for _, id := range mine {
+		if owner(id) != user {
+			t.Errorf("order %d: user %d, chai %d", id, owner(id), user)
+		}
+	}
+	if owner(otherPhone) != 0 || owner(otherShop) != 0 || owner(otherUser) != other {
+		t.Errorf("onno order bodleche: phone %d, shop %d, user %d", owner(otherPhone), owner(otherShop), owner(otherUser))
 	}
 }
