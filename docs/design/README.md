@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.20, 15 November 2026
+Version 1.21, 15 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -72,3 +72,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.18 | 15 November 2026 | 16.1 M3 Lighthouse LCP er uttor (a) (user): acceptance devtools throttle er number, simulate Report e; font kom ar Lighthouse CI M12 er age (10.5, 15) |
 | 1.19 | 15 November 2026 | M4 er 10 ta decision (user recommendation niyeche): OTP SMS payload AES-GCM (HKDF), `jobs.cleanup` ar done payload `{}`, phone lock `otp_codes` theke (`429`), SMS provider M12 e, Turnstile site key/test key/CSP, `@client LoginForm`, `closed` shop e admin login, M4 er API/account scope ar `reset-2fa` CLI, `alert.security` job, choto niyom (recovery code, password, locale, `sms.otp`) (3.2, 3.6, 6.1, 7.3, 7.7, 7.8, 8.2, 8.3, 8.16, 8.17, 10.11, 11.3, 12.2, 13.5, 16.1) |
 | 1.20 | 15 November 2026 | 13.5, 16.1: `APP_ENV` local chhara Turnstile er Cloudflare test secret (`1x`/`2x`/`3x...AA`) dile config error, API start hoy na (user decision; test secret production e bot check bondho kore dito) |
+| 1.21 | 15 November 2026 | 16.1: Turnstile test secret siteverify e `hostname` `example.com` dey, tai 10.11 er hostname check local e fail; proshno M4 step 12 er age (M4 step 4) |

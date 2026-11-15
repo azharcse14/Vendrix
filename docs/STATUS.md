@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) cholche** (plan approve 15 November 2026, design v1.20; step 0-3 shesh). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) cholche** (plan approve 15 November 2026, design v1.21; step 0-4 ar 8 shesh: `POST /api/auth/otp/send`). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,11 +18,12 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M4 step 4, OTP send** ([M4](milestones/M4.md), 8.2, 7.8; Q1, Q3, Q5, Q10): test age: `backend/internal/auth/otp_integration_test.go` e `TestOTPSendLimitsIntegration` (phone e 3/15 minute, 10/24 ghonta, parallel e o), `TestOTPPhoneLockIntegration` (24 ghontay 10 bhul e `429 rate_limited`, `otp_codes` theke gona, Q3 (a)), shop er SMS cap, `TestTurnstile` (Cloudflare test key, `hostname` = `X-Shop-Host`), `TestOTPJobPayload` (payload AES-GCM, plain code na, Q1 (a)); fail dekhe commit `test(M4): OTP send er limit`. Tarpor `auth` er `service.go`/`store.go`/`handler.go`, `turnstile.go`, `sms.send` job (retry 1 minute), commit `feat(M4): POST /api/auth/otp/send` (`docs/features/auth.md` shoho). Response shob shomoy `{"sent": true}` (`429` chhara, Q10 vii). Local `backend/.env` e `env.example` er notun 4 line (`OTP_SECRET`, `RECOVERY_SECRET`, `TOTP_KEY`, `TURNSTILE_SECRET`) lagbe, na hole `make run` start hoy na.
+1. **M4 step 5, OTP verify ar customer session** ([M4](milestones/M4.md), 8.2 verify step 1-7, 3.2, Rule 16, 7.3): test age `backend/internal/auth/otp_integration_test.go` (package `auth_test`, `newOTPFixture` reuse) e `TestOTPAttemptsIntegration` (5 bhul er por `otp_too_many_attempts`, error path e attempt commit, parallel e 5 er beshi na; 24 ghontay 10 bhul e lock ar `alert.security` ekbar, `lockAlert` reuse), `TestOTPExpiredIntegration`, `TestOTPParallelVerifyIntegration` (ekoi code e duita verify → ekta session), `TestGuestOrdersLinkIntegration` (SQL row diye), `session_integration_test.go` e `TestCustomerSessionIntegration` (logout revoke, expire/revoke `401`, `last_used_at` ghontay ekbar) ar `TestSessionShopIsolationIntegration`; fail dekhe commit `test(M4): OTP verify ar session`. Tarpor `POST /api/auth/otp/verify` (`{phone, code}` → `{token, user}`, Turnstile lage na), `users` upsert (`locale` = `Accept-Language`), guest order jog, `session.go` (`rand.Text()`, `sha256`, 30 din, `ip` = `httpx.IP`), `httpx/session.go` `RequireCustomer`, `POST /api/auth/logout`, `GET`/`PATCH /api/me`; commit `feat(M4): OTP verify, session, /api/me` (`docs/features/auth.md`, `http-foundation.md` shoho). Integration: `TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/postgres?sslmode=disable go test -race ./internal/auth ./cmd/api`. `make run` e local `backend/.env` e `env.example` er 4 line (`OTP_SECRET`, `RECOVERY_SECRET`, `TOTP_KEY`, `TURNSTILE_SECRET`) lagbe.
 2. Push er por CI green kina dekho (`ci(M3): website build` ar Go job; Linux e `TestSearchRankingIntegration` green howa uchit).
 
 ## User er kache proshno
 
+- **M4 step 12 er age**: Cloudflare Turnstile er test secret siteverify e `hostname` `example.com` dey, tai 10.11 er hostname check local login e fail kore (16.1, v1.21). Recommendation (a): test secret hole (shudhu local e dewa jay, v1.20) hostname check bad.
 - **M12 er age**: client JS er `?v=<git sha>` (10.10 item 10): Jaspr nijei script tag dey, hook nai; recommendation deploy e Cloudflare purge (16.1).
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M7 er age**: COD e packing e beshi ojon er shima; packed fulfillment undo (16.1).
@@ -53,6 +54,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M4 step 4 (ar 8): test `3681ea1`, code `453dae4` (`POST /api/auth/otp/send`: Turnstile, phone limit/lock, SMS cap, payload AES-GCM, IP limit); asol Postgres e pass; 16.1 e Turnstile test secret er hostname proshno (v1.21).
 - 15 November 2026: M4 step 3: AES-GCM helper `auth.Seal`/`Open` e `08023df`, test `3384d7a` (`TestTOTP`, `TestTOTPSecretAAD`, `TestRecoveryCode`), code `d8ea20c` (`totp.go`, `recovery.go`).
 - 15 November 2026: M4 step 2: OTP primitive: test `8c3cfaf` (`TestOTPCode`, `TestOTPHash`), code `b9f6ec2` (`NewOTPCode`, `HashOTP`, `CheckOTP`), `docs/features/auth.md` notun.
 - 15 November 2026: M4 step 1: design v1.20 (Turnstile test secret local chhara config error, user decision; 13.5, 16.1) `898b41b`, test `ff652ec`, config e `OTP_SECRET`/`TURNSTILE_SECRET`/`TOTP_KEY`/`RECOVERY_SECRET` `58252c7`.
@@ -67,4 +69,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 12 November 2026: M3 step 12: security header ar CSP middleware, `@client` list test; website 85/85.
 - 12 November 2026: M3 step 11: SEO (`SeoHead`, JSON-LD escape, sitemap/robots, hreflang, `noindex`); test age (`c75c2b7`); website 83/83, shared 76/76.
 - 12 November 2026: M3 step 10: `GET /api/policies/{kind}` (Go test, Postgres e integration), search (`noindex`), policy page, footer link, `ProductListing`; website test 74/74, shared 75/75.
-- 12 November 2026: M3 step 9: product page (gallery `scroll-snap`, variant radio + `@client VariantSwitch`, sticky bar, plain text description, rating); website test 71/71, shared 75/75; local API e `/p/red-rice` 200.
