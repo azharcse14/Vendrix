@@ -10,13 +10,15 @@
 | Staging | `staging.tomarshop.com`, `api.staging...`, `admin.staging...` | Alada | Sandbox | Shudhu team er number |
 | Production | `tomarshop.com`, `api.tomarshop.com`, `admin.tomarshop.com` | Asol | Live | Asol |
 
+v1.27: local e o https, production er moto ekoi cookie naam (`__Host-sid`, `__Host-asid`; code e env onujayi naam bodlay na). `__Host-` cookie Chromium shudhu https e rakhe (`http://*.localhost` e `InvalidPrefix`), tai browser e login dekhte `make web` er pashe `make https`: Caddy (`infra/caddy/Caddyfile.local`, `tls internal`) `https://sobujbazar.localhost:8443` → `127.0.0.1:8081`, shudhu loopback e; onno shop host `LOCAL_SHOP_HOSTS`. Header production er moto (13.3): `X-Forwarded-Proto: https`, `X-Real-IP`, client er `X-Client-IP`/`X-Internal-Auth` muche. Browser warning na chaile developer ekbar `caddy trust` (Caddy er local root CA system trust e; sudo/keychain lagte pare). M7 e admin (`admin.localhost`) ekoi file e block. curl/test e http cholbe (cookie header nije dile).
+
 ### 13.2 Server
 
 MVP er jonno ekta VPS jothesto (shuru te 2 vCPU, 4 GB RAM, SSD), tate Go API, Jaspr server, PostgreSQL ar Caddy. **Region thik korar age** data protection law er localization niyom (12.1) lawyer er sathe confirm koro: Bangladesh er bhetore hosting lagbe, naki Singapore/Mumbai er moto kache-r region cholbe. Order barle database alada server ba managed Postgres e.
 
 ### 13.3 Caddy
 
-v1.8: file `infra/caddy/Caddyfile`.
+v1.8: file `infra/caddy/Caddyfile`. Local er https (v1.27): `infra/caddy/Caddyfile.local` (13.1).
 
 ```
 {
