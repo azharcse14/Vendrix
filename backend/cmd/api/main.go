@@ -1,8 +1,8 @@
 // Command api: Vendrix er Go API (binary shop-api, 13.4). Subcommand: serve (default), migrate,
-// shop create, credentials set, version.
+// shop create, credentials set, staff reset-2fa, version.
 //
 // Feature doc: docs/features/server.md (serve), docs/features/migration.md (migrate),
-// docs/features/credentials.md (credentials), docs/features/shop.md (shop create)
+// docs/features/credentials.md (credentials), docs/features/shop.md (shop create), docs/features/auth.md (staff reset-2fa)
 package main
 
 import (
@@ -53,11 +53,13 @@ func run(ctx context.Context, args []string, lookup func(string) (string, bool),
 		return runCredentials(ctx, args[1:], lookup, in, log)
 	case "shop":
 		return runShopCreate(ctx, args[1:], lookup, out, log)
+	case "staff":
+		return runStaffReset2FA(ctx, args[1:], lookup, log)
 	case "version":
 		_, err := fmt.Fprintln(out, version())
 		return err
 	}
-	return fmt.Errorf("ochena command %q: serve, migrate, shop, credentials ba version", cmd)
+	return fmt.Errorf("ochena command %q: serve, migrate, shop, staff, credentials ba version", cmd)
 }
 
 func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog.Logger) error {
@@ -194,6 +196,37 @@ func runShopCreate(ctx context.Context, args []string, lookup func(string) (stri
 	log.Info("shop create", "shop_id", id, "slug", p.Slug, "domain", p.Domain)
 	_, err = fmt.Fprintf(out, "Owner %s er temporary password (ekbar-i dekhano hocche; prothom login e bodlate hobe): %s\n", p.OwnerEmail, password)
 	return err
+}
+
+// runStaffReset2FA (8.3 item 6, 7.7): `staff reset-2fa --shop <slug> --email <email>`; owner TOTP ar recovery
+// code duitai harale. Kono secret nai, tai shudhu log.
+func runStaffReset2FA(ctx context.Context, args []string, lookup func(string) (string, bool), log *slog.Logger) error {
+	usage := errors.New("staff reset-2fa --shop <slug> --email <email>")
+	if len(args) == 0 || args[0] != "reset-2fa" {
+		return usage
+	}
+	fs := flag.NewFlagSet("staff reset-2fa", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	slug := fs.String("shop", "", "")
+	email := fs.String("email", "", "")
+	if err := fs.Parse(args[1:]); err != nil || fs.NArg() > 0 || *slug == "" || *email == "" {
+		return usage
+	}
+	// shop create er moto shudhu DATABASE_URL lage
+	cfg, err := config.Load(lookup, config.Shop)
+	if err != nil {
+		return err
+	}
+	database, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	if err := auth.ResetStaff2FA(ctx, database, *slug, *email); err != nil {
+		return fmt.Errorf("%s / %s: %w", *slug, *email, err)
+	}
+	log.Info("staff reset-2fa: TOTP ar recovery code muche, session revoke; porer login e TOTP setup", "shop", *slug, "email", *email)
+	return nil
 }
 
 // version: build er git commit (go build VCS info), na thakle "dev".

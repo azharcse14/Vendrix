@@ -19,6 +19,8 @@ Public settings (`Handlers.Settings`, `handler.go`): `httpx.ShopFrom` er shop �
 
 Shop khola (`runShopCreate` → `shop.Create`): flag check; `DefaultSettings` (preset theke theme, 9.2 er shob block); temporary password `rand.Text()` ar `auth.HashPassword`; tarpor `db.InTx` e `shops`, `shop_domains` (primary), house vendor, `shop_settings` (draft = published), `shop_counters` (`order_number` 0), owner `staff`. Password shudhu stdout e ekbar.
 
+Owner TOTP ar recovery code duitai harale `shop-api staff reset-2fa --shop <slug> --email <email>` ([auth](auth.md)).
+
 Udahoron (local): `cd backend && set -a && . ./.env && set +a && go run ./cmd/api shop create --slug sobujbazar --prefix SB --domain sobujbazar.localhost --name-bn "সবুজ বাজার" --name-en "Sobuj Bazar" --owner-email owner@example.com --owner-name Owner`.
 
 ## Code er map

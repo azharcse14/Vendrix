@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"vendrix/backend/internal/httpx"
@@ -118,6 +119,7 @@ func mfaSucceeded(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error 
 
 type audit struct {
 	shopID, staffID int64 // staffID 0 = ochena (NULL)
+	entity          int64 // entity_id; 0 = staffID (nijer kaj)
 	action, ip      string
 	after           map[string]any
 }
@@ -129,8 +131,12 @@ func insertAudit(ctx context.Context, e jobs.Execer, a audit) error {
 		return err
 	}
 	staff := sql.NullInt64{Int64: a.staffID, Valid: a.staffID != 0}
+	entity := staff
+	if a.entity != 0 {
+		entity = sql.NullInt64{Int64: a.entity, Valid: true}
+	}
 	_, err = e.ExecContext(ctx, `INSERT INTO audit_logs (shop_id, staff_id, action, entity_type, entity_id, after, ip)
-		VALUES ($1, $2, $3, 'staff', $2, $4, NULLIF($5, ''))`, a.shopID, staff, a.action, after, a.ip)
+		VALUES ($1, $2, $3, 'staff', $6, $4, NULLIF($5, ''))`, a.shopID, staff, a.action, after, a.ip, entity)
 	return err
 }
 
@@ -239,4 +245,33 @@ func staffProfile(ctx context.Context, d *sql.DB, shopID, staffID int64) (StaffP
 		p.VendorID = &vendor.Int64
 	}
 	return p, err
+}
+
+// staffForReset: slug er shop ar tar staff (email boro/choto haat mane na), staff row FOR UPDATE (parallel
+// totp/enable er sathe na mishe). Shop na thakle sql.ErrNoRows; staff na thakle staffID 0.
+func staffForReset(ctx context.Context, tx *sql.Tx, slug, email string) (shopID, staffID int64, err error) {
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM shops WHERE slug = $1`, slug).Scan(&shopID); err != nil {
+		return 0, 0, err
+	}
+	err = tx.QueryRowContext(ctx, `SELECT id FROM staff WHERE shop_id = $1 AND lower(email) = lower($2) FOR UPDATE`,
+		shopID, email).Scan(&staffID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return shopID, 0, nil
+	}
+	return shopID, staffID, err
+}
+
+// clearStaff2FA (8.3 item 6): TOTP ar recovery code muche, shob session revoke; porer login setup_pending.
+func clearStaff2FA(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
+	for _, q := range []string{
+		`UPDATE staff SET totp_secret_enc = NULL, totp_nonce = NULL, totp_key_version = NULL, totp_last_step = NULL,
+		  failed_mfa = 0 WHERE id = $2 AND shop_id = $1`,
+		`DELETE FROM staff_recovery_codes WHERE shop_id = $1 AND staff_id = $2`,
+		`UPDATE sessions SET revoked_at = now() WHERE shop_id = $1 AND staff_id = $2 AND revoked_at IS NULL`,
+	} {
+		if _, err := tx.ExecContext(ctx, q, shopID, staffID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -331,3 +331,31 @@ func totpEnable(ctx context.Context, d *sql.DB, key []byte, recoverySecret strin
 	}
 	return token, codes, nil
 }
+
+// reset-2fa er error (CLI spashto bole).
+var (
+	ErrShopNotFound  = errors.New("ei slug er shop nai")
+	ErrStaffNotFound = errors.New("ei shop e ei email er staff nai")
+)
+
+// ResetStaff2FA (8.3 item 6, 7.7): owner TOTP ar recovery code duitai harale CLI er ekmatro path. Ek
+// transaction e TOTP, recovery code muche, shob session revoke, audit (actor CLI, staff_id NULL).
+func ResetStaff2FA(ctx context.Context, d *sql.DB, slug, email string) error {
+	return db.InTx(ctx, d, func(tx *sql.Tx) error {
+		shopID, staffID, err := staffForReset(ctx, tx, slug, email)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrShopNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if staffID == 0 {
+			return ErrStaffNotFound
+		}
+		if err := clearStaff2FA(ctx, tx, shopID, staffID); err != nil {
+			return err
+		}
+		return insertAudit(ctx, tx, audit{shopID: shopID, entity: staffID, action: "staff.reset_2fa",
+			after: map[string]any{"actor": "cli"}})
+	})
+}
