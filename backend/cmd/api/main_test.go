@@ -165,6 +165,17 @@ func TestRun(t *testing.T) {
 	if err := run(ctx, full, noEnv, nil, &out); err == nil || !strings.Contains(err.Error(), "DATABASE_URL") {
 		t.Errorf("env chhara shop create: %v", err)
 	}
+	// staff reset-2fa (8.3 item 6): bhul argument e usage, env er age
+	for _, args := range [][]string{{"staff"}, {"staff", "nai"}, {"staff", "reset-2fa"}, {"staff", "reset-2fa", "--shop", "x"},
+		{"staff", "reset-2fa", "--email", "a@x.com"}, {"staff", "reset-2fa", "--shop", "x", "--email", "a@x.com", "extra"}} {
+		if err := run(ctx, args, noEnv, nil, &out); err == nil || !strings.Contains(err.Error(), "reset-2fa --shop") {
+			t.Errorf("%q: usage error chai, pelam %v", args, err)
+		}
+	}
+	if err := run(ctx, []string{"staff", "reset-2fa", "--shop", "x", "--email", "a@x.com"}, noEnv, nil, &out); err == nil ||
+		!strings.Contains(err.Error(), "DATABASE_URL") {
+		t.Errorf("env chhara staff reset-2fa: %v", err)
+	}
 	args := []string{"credentials", "set", "--shop", "x", "--provider", "sms"}
 	if err := run(ctx, args, noEnv, strings.NewReader("{}"), &out); err == nil || !strings.Contains(err.Error(), "CREDENTIALS_KEY") {
 		t.Errorf("env chhara credentials: %v", err)
