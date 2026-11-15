@@ -31,5 +31,23 @@ void main() {
         expect(defaultMessages['bn'], contains('theme.low_contrast'));
       },
     );
+    test(
+      'Go er protiti cart notice (cart/service.go) er cart.notice.<code> ache',
+      () {
+        final go = File(
+          '../../backend/internal/cart/service.go',
+        ).readAsStringSync();
+        final codes = RegExp(
+          r'Notice\{Code: "([a-z_]+)"',
+        ).allMatches(go).map((m) => m[1]!).toSet();
+        expect(
+          codes,
+          containsAll(['item_removed', 'quantity_reduced', 'item_dropped']),
+        );
+        for (final c in codes) {
+          expect(defaultMessages['bn'], contains('cart.notice.$c'), reason: c);
+        }
+      },
+    );
   });
 }

@@ -302,4 +302,250 @@ void main() {
       },
     );
   });
+
+  group('Cart ar wishlist (7.4, 8.4, M5)', () {
+    final cartJson = {
+      'items': [
+        {
+          'variant_id': 7,
+          'product_slug': 'lal-chal',
+          'name': 'লাল চাল',
+          'variant_label': '৫ কেজি',
+          'image': 'p/1.jpg',
+          'unit_price': 45000,
+          'compare_at_price': null,
+          'variable_weight': false,
+          'quantity': 2,
+          'max_quantity': 50,
+          'in_stock': true,
+          'line_total': 90000,
+        },
+        {
+          'variant_id': 9,
+          'product_slug': 'ilish',
+          'name': 'ইলিশ',
+          'variant_label': '',
+          'image': null,
+          'unit_price': 120000,
+          'compare_at_price': 150000,
+          'variable_weight': true,
+          'quantity': 1,
+          'max_quantity': 0,
+          'in_stock': false,
+          'line_total': 0,
+        },
+      ],
+      'count': 2,
+      'subtotal': 90000,
+      'notices': [
+        {'code': 'item_removed', 'name': 'মধু'},
+      ],
+    };
+    final card = {
+      'id': 3,
+      'slug': 'modhu',
+      'name': 'মধু',
+      'unit': 'pcs',
+      'variable_weight': false,
+      'price': 80000,
+      'compare_at_price': null,
+      'in_stock': true,
+      'rating': 0,
+      'review_count': 0,
+      'image': null,
+    };
+    late List<http.Request> seen;
+    ApiClient api(
+      Object Function(http.Request) body, {
+      String? token,
+      String? cartKey,
+      int status = 200,
+    }) {
+      seen = [];
+      return ApiClient(
+        Uri.parse('http://api.test'),
+        MockClient((r) async {
+          seen.add(r);
+          return json(body(r), status);
+        }),
+        token: token,
+        cartKey: cartKey,
+      );
+    }
+
+    test('cartKey thakle X-Cart-Key, na thakle header nai', () async {
+      final repo = CartRepository(
+        api((_) => cartJson, cartKey: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+      );
+      await repo.cart();
+      expect(seen.single.headers['X-Cart-Key'], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+      await CartRepository(api((_) => cartJson)).cart();
+      expect(seen.single.headers.containsKey('X-Cart-Key'), isFalse);
+    });
+    test(
+      'cart() → Cart, CartItem, CartNotice; cart_key na thakle null',
+      () async {
+        final c = await CartRepository(api((_) => cartJson)).cart();
+        expect(seen.single.url.path, '/api/cart');
+        expect([c.count, c.subtotal, c.cartKey], [2, 90000, null]);
+        final a = c.items.first, b = c.items.last;
+        expect(
+          [
+            a.variantId,
+            a.productSlug,
+            a.name,
+            a.variantLabel,
+            a.image,
+            a.unitPrice,
+            a.compareAtPrice,
+            a.variableWeight,
+            a.quantity,
+            a.maxQuantity,
+            a.inStock,
+            a.lineTotal,
+          ],
+          [
+            7,
+            'lal-chal',
+            'লাল চাল',
+            '৫ কেজি',
+            'p/1.jpg',
+            45000,
+            null,
+            false,
+            2,
+            50,
+            true,
+            90000,
+          ],
+        );
+        expect(
+          [b.image, b.compareAtPrice, b.variableWeight, b.inStock],
+          [null, 150000, true, false],
+        );
+        expect(
+          [c.notices.single.code, c.notices.single.name],
+          ['item_removed', 'মধু'],
+        );
+      },
+    );
+    test(
+      'add, setQuantity, remove: method, path, body; notun cart e cart_key',
+      () async {
+        final repo = CartRepository(
+          api(
+            (r) => {...cartJson, if (r.method == 'POST') 'cart_key': 'NEWKEY'},
+          ),
+        );
+        final added = await repo.add(7, 2);
+        expect(added.cartKey, 'NEWKEY');
+        expect(
+          [seen.last.method, seen.last.url.path],
+          ['POST', '/api/cart/items'],
+        );
+        expect(jsonDecode(seen.last.body), {'variant_id': 7, 'quantity': 2});
+        await repo.setQuantity(7, 3);
+        expect(
+          [seen.last.method, seen.last.url.path],
+          ['PATCH', '/api/cart/items/7'],
+        );
+        expect(jsonDecode(seen.last.body), {'quantity': 3});
+        final removed = await repo.remove(7);
+        expect(
+          [seen.last.method, seen.last.url.path],
+          ['DELETE', '/api/cart/items/7'],
+        );
+        expect(removed.count, 2);
+      },
+    );
+    test(
+      'out_of_stock e details.max_quantity; cart_full, wishlist_full code',
+      () async {
+        Future<ApiError> err(Future<Object?> f) => f.then<ApiError>(
+          (_) => fail('error chai'),
+          onError: (Object e) => e as ApiError,
+        );
+        final oos = await err(
+          CartRepository(
+            api(
+              (_) => {
+                'error': {
+                  'code': 'out_of_stock',
+                  'message': 'x',
+                  'details': {'variant_id': 7, 'max_quantity': 3},
+                },
+              },
+              status: 409,
+            ),
+          ).add(7, 5),
+        );
+        expect(
+          [oos.status, oos.code, oos.details['max_quantity']],
+          [409, 'out_of_stock', 3],
+        );
+        final full = await err(
+          CartRepository(
+            api(
+              (_) => {
+                'error': {'code': 'cart_full', 'message': 'x'},
+              },
+              status: 409,
+            ),
+          ).add(8, 1),
+        );
+        expect(full.code, 'cart_full');
+        final wl = await err(
+          WishlistRepository(
+            api(
+              (_) => {
+                'error': {'code': 'wishlist_full', 'message': 'x'},
+              },
+              status: 409,
+              token: 'T',
+            ),
+          ).add(3),
+        );
+        expect(wl.code, 'wishlist_full');
+      },
+    );
+    test('wishlist: Bearer, route, ProductCard list, merge body', () async {
+      final repo = WishlistRepository(
+        api(
+          (_) => {
+            'items': [card],
+          },
+          token: 'TOK',
+        ),
+      );
+      final l = await repo.wishlist();
+      expect(seen.last.url.path, '/api/wishlist');
+      expect(seen.last.headers['Authorization'], 'Bearer TOK');
+      expect([l.single.id, l.single.slug, l.single.price], [3, 'modhu', 80000]);
+      await repo.add(3);
+      expect(
+        [seen.last.method, seen.last.url.path],
+        ['POST', '/api/wishlist/3'],
+      );
+      await repo.remove(3);
+      expect(
+        [seen.last.method, seen.last.url.path],
+        ['DELETE', '/api/wishlist/3'],
+      );
+      final m = await repo.merge([3, 4]);
+      expect(
+        [seen.last.method, seen.last.url.path],
+        ['POST', '/api/wishlist/merge'],
+      );
+      expect(jsonDecode(seen.last.body), {
+        'product_ids': [3, 4],
+      });
+      expect(m.single.name, 'মধু');
+    });
+    test('shape bhul hole FormatException', () async {
+      await expectLater(
+        CartRepository(api((_) => {...cartJson, 'subtotal': '900'})).cart(),
+        throwsFormatException,
+      );
+    });
+  });
 }
