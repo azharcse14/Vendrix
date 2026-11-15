@@ -3,6 +3,8 @@ import 'package:jaspr/jaspr.dart';
 import 'package:shared/api/api_client.dart';
 import 'package:universal_web/web.dart' as web;
 
+import 'wishlist_button.dart' show loginHref;
+
 /// Product page er `form#cart-add` (10.12 item 4): JS chhara `POST /_/cart/items` → `303 /cart`; JS e JSON e BFF,
 /// uttor er `count` badge e (`[data-cart-badge]`), `#cart-add-status` dekhay, error `#cart-add-error` e (lekha
 /// server er `[data-cart-error]`). `[data-qty-step]` button (JS chhara lukano) quantity bodlay. Dam client e na.
@@ -64,6 +66,8 @@ class _AddToCartState extends State<AddToCart> {
       if (res case {'count': final int count}) _badge(count);
       status?.removeAttribute('hidden');
     } on ApiError catch (e) {
+      // Session expire: BFF cookie muche, abar login tarpor ei page (10.12 item 7).
+      if (e.status == 401) return web.window.location.assign(loginHref(web.window.location.pathname));
       _error(e.code);
     } finally {
       _busy = false;

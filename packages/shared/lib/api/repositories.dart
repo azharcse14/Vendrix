@@ -118,6 +118,12 @@ class CartRepository {
   /// `GET /api/cart` (kichu banay na).
   Future<Cart> cart() => _send('GET', '/api/cart');
 
+  /// `GET /api/cart/count` (badge, 7.4 v1.31): alada line, normalize/notice na.
+  Future<int> count() async => field(
+    (await api.get('/api/cart/count')) as Map<String, dynamic>,
+    'count',
+  );
+
   /// `POST /api/cart/items`; ekoi variant e qty jog. Beshi hole `ApiError` `out_of_stock`
   /// (`details.max_quantity`), 50 variant e `cart_full`.
   Future<Cart> add(int variantId, int quantity) => _send(

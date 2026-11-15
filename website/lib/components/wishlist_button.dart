@@ -8,6 +8,12 @@ import 'site.dart';
 
 const _maxWl = 50;
 
+/// Session expire e login (10.12 item 7): ekhon er [path] `next` e, `/en` page hole `/en/login`.
+String loginHref(String path) {
+  final en = path == '/en' || path.startsWith('/en/');
+  return '${en ? '/en' : ''}/login?${Uri(queryParameters: {'next': path}).query}';
+}
+
 /// `Cookie` header theke guest er wishlist (`wl`, 10.12 item 3): koma diye decimal ID, bhul ba 0 bad.
 List<int> wlIds(String cookieHeader) {
   for (final c in cookieHeader.split(';')) {
@@ -98,11 +104,7 @@ class _WishlistButtonState extends State<WishlistButton> {
     } on ApiError catch (e) {
       _set(b, !on);
       // Session expire: abar login, tarpor ei page e.
-      if (e.status == 401) {
-        final path = web.window.location.pathname;
-        final en = path == '/en' || path.startsWith('/en/');
-        web.window.location.assign('${en ? '/en' : ''}/login?${Uri(queryParameters: {'next': path}).query}');
-      }
+      if (e.status == 401) web.window.location.assign(loginHref(web.window.location.pathname));
     } finally {
       b.disabled = false;
     }

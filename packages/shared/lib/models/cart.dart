@@ -26,7 +26,8 @@ class CartItem {
   /// Stock ache.
   final bool inStock;
 
-  /// Line total (Go er `pricing`; stock na thakle 0).
+  /// Line total (Go er `pricing`). Stock 0 e o hishab kora dam, kintu subtotal e na (`inStock` false);
+  /// ojon-variable e `nominal_weight_g` na thakle 0 (7.4 v1.31).
   final int lineTotal;
 
   /// CartItem.

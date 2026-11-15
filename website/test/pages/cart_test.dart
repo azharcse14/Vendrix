@@ -165,13 +165,12 @@ void main() {
       expect(doc.querySelector('form[action="/_/cart/items/9/delete"]'), isNotNull);
     });
 
-    test('session expire (401): 303 /login?next=/cart (bhasha shoho), __Host-sid Max-Age=0 (10.12 item 7)', () async {
-      for (final (path, next) in [('/cart', '%2Fcart'), ('/en/cart', '%2Fen%2Fcart')]) {
-        final res = await get(path, cookie: '__Host-sid=OLD');
-        expect(res.statusCode, 303, reason: path);
-        expect(res.headers['location'], '${path.startsWith('/en') ? '/en' : ''}/login?next=$next');
-        expect(res.headersAll['set-cookie'], [sidCleared]);
-      }
+    // `/en` er bhasha prefix BFF test e (ei fake shop e English nai).
+    test('session expire (401): 303 /login?next=/cart, __Host-sid Max-Age=0 (10.12 item 7)', () async {
+      final res = await get('/cart', cookie: '__Host-sid=OLD');
+      expect(res.statusCode, 303);
+      expect(res.headers['location'], '/login?next=%2Fcart');
+      expect(res.headersAll['set-cookie'], [sidCleared]);
     });
 
     test('bhul okkhor er __Host-sid: Bearer na, guest key diye (10.12 item 8)', () async {

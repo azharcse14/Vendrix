@@ -107,6 +107,13 @@ String _sid(String token, int maxAge) => '__Host-sid=$token; HttpOnly; Secure; S
 String _cartCookie(String key, int maxAge) =>
     '__Host-cart=$key; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=$maxAge';
 
+/// Cookie er `__Host-sid` token er okkhor e hole seta, na hole null (khali ba bhul okkhor Bearer e gele header
+/// bhange ba bhul `401`; tokhon guest, 10.12 item 8).
+String? validSid(Map<String, String> cookies) {
+  final s = cookies['__Host-sid'];
+  return s != null && _tokenChars.hasMatch(s) ? s : null;
+}
+
 /// Cookie er `__Host-cart` Go er format e hole seta, na hole null (Go bhul key "nai" dhore, tai pathai na).
 String? validCartKey(Map<String, String> cookies) {
   final k = cookies['__Host-cart'];
@@ -167,15 +174,16 @@ Future<bool> _mergeWishlist(String wl, ApiClient api) async {
   if (res.statusCode < 200 || res.statusCode >= 300) return (res.bodyBytes, const []);
   try {
     if (jsonDecode(res.body) case final Map<String, dynamic> m when m.containsKey('cart_key')) {
-      if (m.remove('cart_key') case final String k when _cartKey.hasMatch(k)) {
-        return (utf8.encode(jsonEncode(m)), [_cartCookie(k, _month)]);
-      }
+      final k = m.remove('cart_key');
+      // Login e key lage na (account cart), tai cookie na (10.12 item 8).
+      if (validSid(cookies) != null) return (utf8.encode(jsonEncode(m)), const <String>[]);
+      if (k is String && _cartKey.hasMatch(k)) return (utf8.encode(jsonEncode(m)), [_cartCookie(k, _month)]);
       return null;
     }
   } on FormatException {
     // JSON na: hubohu
   }
-  final old = cookies.containsKey('__Host-sid') ? null : validCartKey(cookies);
+  final old = validSid(cookies) != null ? null : validCartKey(cookies);
   return (res.bodyBytes, [if (old != null) _cartCookie(old, _month)]);
 }
 
@@ -220,7 +228,7 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       } on ArgumentError {
         return _error(400, 'validation_failed');
       }
-      final sid = cookies['__Host-sid'];
+      final sid = validSid(cookies);
       // Login e Go key dekhe na (7.4); verify e lage (merge), purono sid thakleo.
       final cartKey = sid == null || route.session == _login ? validCartKey(cookies) : null;
       final api = http.Request(route.apiMethod ?? request.method, cfg.apiBaseUrl.resolve(route.api(match!)))
@@ -249,7 +257,13 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
           ? (res.bodyBytes, const <String>[])
           : await route.session!(res, cookies, withToken);
       if (out == null) return _error(502, 'internal');
-      final (body, setCookies) = out;
+      final (body, routeCookies) = out;
+      // Session expire/revoke: cookie muche, na hole protiti page e `401` (10.12 item 7).
+      final expired = res.statusCode == 401 && sid != null;
+      final setCookies = [
+        ...routeCookies,
+        if (expired && !routeCookies.any((c) => c.startsWith('__Host-sid='))) _sid('', 0),
+      ];
       // Session/cart cookie thaka uttor personal (10.3).
       final personal = <String, Object>{
         if (setCookies.isNotEmpty) 'set-cookie': setCookies,
@@ -260,8 +274,11 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
         final back = Uri.parse(referer);
         final ok = res.statusCode >= 200 && res.statusCode < 300;
         final done = route.formDone;
+        final locale = localeOf(back.path).locale;
         final to = ok
-            ? (done == null ? back : Uri.parse(localePath(localeOf(back.path).locale, done)))
+            ? (done == null ? back : Uri.parse(localePath(locale, done)))
+            : res.statusCode == 401
+            ? Uri.parse(localePath(locale, '/login')).replace(queryParameters: {'next': '$back'})
             : back.replace(queryParameters: {...back.queryParameters, 'error': _code(res.body)});
         return Response(303, headers: {'location': to.toString(), ...personal});
       }

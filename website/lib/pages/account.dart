@@ -4,6 +4,7 @@ import 'package:shared/shared.dart';
 
 import '../components/site.dart';
 import '../seo/meta.dart';
+import '../services/bff.dart';
 import 'cart.dart';
 import 'status.dart';
 
@@ -20,15 +21,10 @@ class AccountPage extends AsyncStatelessComponent {
   @override
   Future<Component> build(BuildContext context) async {
     final site = Site.of(context);
-    Component login() {
-      final next = Uri(queryParameters: {'next': site.href('/account')}).query;
-      context.setHeader('location', '${site.href('/login')}?$next');
-      context.setStatusCode(303);
-      return const Component.empty();
-    }
+    Component login() => toLogin(context, site.href('/account'));
 
-    final token = requestCookies(context)['__Host-sid'];
-    if (token == null || token.isEmpty) return login();
+    final token = validSid(requestCookies(context));
+    if (token == null) return login();
     final api = site.catalog.api;
     final User me;
     try {

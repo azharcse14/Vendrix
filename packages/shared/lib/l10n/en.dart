@@ -111,7 +111,7 @@ const en = {
   'cart.remove': 'Remove',
   'cart.empty': 'Your cart is empty.',
   'cart.subtotal': 'Subtotal',
-  'cart.approx': 'approx.',
+  'cart.approx': '(approx.)',
   'cart.max_quantity': 'Up to {count}',
   'cart.items.one': '{count} item',
   'cart.items.other': '{count} items',

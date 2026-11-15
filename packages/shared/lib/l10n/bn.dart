@@ -110,7 +110,7 @@ const bn = {
   'cart.remove': 'বাদ দিন',
   'cart.empty': 'কার্ট খালি।',
   'cart.subtotal': 'মোট',
-  'cart.approx': 'আনুমানিক',
+  'cart.approx': '(আনুমানিক)',
   'cart.max_quantity': 'সর্বোচ্চ {count}টি',
   'cart.items.one': '{count}টি পণ্য',
   'cart.items.other': '{count}টি পণ্য',

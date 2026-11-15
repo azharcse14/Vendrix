@@ -16,25 +16,36 @@ Map<String, String> requestCookies(BuildContext context) => parseCookies(context
 /// (API call na, page cache thake, 10.12 item 5).
 ApiClient? personalApi(BuildContext context) {
   final cookies = requestCookies(context);
-  final sid = cookies['__Host-sid'];
-  final token = sid == null || sid.isEmpty ? null : sid;
+  final token = validSid(cookies);
   final key = token == null ? validCartKey(cookies) : null;
   if (token == null && key == null) return null;
   final api = Site.of(context).catalog.api;
   return ApiClient(api.baseUrl, api.client, locale: api.locale, headers: api.headers, token: token, cartKey: key);
 }
 
-/// Ek request er `GET /api/cart` (Layout er badge ar `/cart` ekta-i call: GET notice ekbar dey, 8.4). Layout
-/// bosay, null = cookie nai.
+/// Login e pathano (10.11 item 5, 10.12 item 7): `303 /login?next=<path>`; `__Host-sid` cookie thakle (expire ba
+/// revoke) `Max-Age=0`, na hole protiti page e `401`.
+Component toLogin(BuildContext context, String path) {
+  final site = Site.of(context);
+  context.setHeader('location', '${site.href('/login')}?${Uri(queryParameters: {'next': path}).query}');
+  if (requestCookies(context).containsKey('__Host-sid')) {
+    context.setHeader('set-cookie', '__Host-sid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
+  }
+  context.setStatusCode(303);
+  return const Component.empty();
+}
+
+/// Ek request er badge count (`GET /api/cart/count`, 7.4 v1.31): normalize/notice na, tai onno page e
+/// `item_removed` harabe na. Layout bosay, null = cookie nai.
 class CartLoad extends InheritedComponent {
-  /// Cart (bhul hole error).
-  final Future<Cart>? cart;
+  /// Count (bhul hole error).
+  final Future<int>? count;
 
   /// CartLoad.
-  const CartLoad({required this.cart, required super.child, super.key});
+  const CartLoad({required this.count, required super.child, super.key});
 
-  /// Upore thaka [CartLoad] er cart.
-  static Future<Cart>? of(BuildContext context) => context.dependOnInheritedComponentOfExactType<CartLoad>()?.cart;
+  /// Upore thaka [CartLoad] er count.
+  static Future<int>? of(BuildContext context) => context.dependOnInheritedComponentOfExactType<CartLoad>()?.count;
 
   @override
   bool updateShouldNotify(CartLoad oldComponent) => false;
@@ -56,12 +67,13 @@ class CartPage extends AsyncStatelessComponent {
   Future<Component> build(BuildContext context) async {
     final site = Site.of(context);
     var cart = _empty;
-    if (CartLoad.of(context) case final load?) {
+    // Notice (`item_removed`, `quantity_reduced`) shudhu ei `GET` e (10.12 item 5).
+    if (personalApi(context) case final api?) {
       try {
-        cart = await load;
+        cart = await CartRepository(api).cart();
       } on ApiError catch (e) {
-        // Session expire: login kora cart dekhano jay na, khali (login link header e).
-        if (e.status != 401) return pageError(context, e);
+        if (e.status == 401) return toLogin(context, site.href('/cart'));
+        return pageError(context, e);
       } catch (e) {
         return pageError(context, e);
       }
@@ -107,7 +119,7 @@ class CartPage extends AsyncStatelessComponent {
                 span([.text(site.t('cart.subtotal'))]),
                 span(classes: 'font-medium', [
                   .text(site.taka(cart.subtotal)),
-                  if (approx) span(classes: 'text-sm text-muted', [.text(' (${site.t('cart.approx')})')]),
+                  if (approx) span(classes: 'text-sm text-muted', [.text(' ${site.t('cart.approx')}')]),
                 ]),
               ]),
             ],
@@ -156,8 +168,7 @@ class _Line extends StatelessComponent {
         ]),
         p(classes: 'ml-auto font-medium', [
           .text(site.taka(x.lineTotal)),
-          if (x.variableWeight && x.inStock)
-            span(classes: 'text-sm text-muted', [.text(' (${site.t('cart.approx')})')]),
+          if (x.variableWeight && x.inStock) span(classes: 'text-sm text-muted', [.text(' ${site.t('cart.approx')}')]),
         ]),
       ]),
     ]);

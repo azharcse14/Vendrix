@@ -18,12 +18,7 @@ class WishlistPage extends AsyncStatelessComponent {
   @override
   Future<Component> build(BuildContext context) async {
     final site = Site.of(context);
-    Component login() {
-      final next = Uri(queryParameters: {'next': site.href('/account/wishlist')}).query;
-      context.setHeader('location', '${site.href('/login')}?$next');
-      context.setStatusCode(303);
-      return const Component.empty();
-    }
+    Component login() => toLogin(context, site.href('/account/wishlist'));
 
     final api = personalApi(context);
     if (api == null || api.token == null) return login();

@@ -19,14 +19,14 @@ class Layout extends StatelessComponent {
   Component build(BuildContext context) {
     // Product page e bottom nav er bodole page er sticky bar (10.5 niyom 1).
     final product = localeOf(Uri.parse(context.url).path).path.startsWith('/p/');
-    // Badge ar `/cart` er ekta-i GET, page er data call er shathe (10.12 item 5); ignore: badge-i await kore.
-    final cart = switch (personalApi(context)) {
-      final api? => CartRepository(api).cart()..ignore(),
+    // Badge er halka count, page er data call er shathe (10.12 item 5); ignore: badge-i await kore.
+    final count = switch (personalApi(context)) {
+      final api? => CartRepository(api).count()..ignore(),
       null => null,
     };
     // Mobile e bottom nav ba sticky bar er jayga (h-14 + safe area).
     return CartLoad(
-      cart: cart,
+      count: count,
       child: div(classes: 'flex min-h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0', [
         _Header(product: product),
         main_(classes: 'mx-auto w-full max-w-screen-xl flex-1', [child]),
@@ -37,8 +37,8 @@ class Layout extends StatelessComponent {
   }
 }
 
-// Cart er alada line er shonkhya (10.12 item 5); cookie chhara ba bhul hole khali `hidden` (sob guest er page
-// ekoi, cache thake), `AddToCart` JS e bhore.
+// Cart er alada line er shonkhya (10.12 item 5); cookie chhara ba bhul (`401` o: protiti page redirect na) hole
+// khali `hidden` (sob guest er page ekoi, cache thake), `AddToCart` JS e bhore.
 class _CartBadge extends AsyncStatelessComponent {
   const _CartBadge();
 
@@ -47,7 +47,7 @@ class _CartBadge extends AsyncStatelessComponent {
     final site = Site.of(context);
     int? n;
     try {
-      n = (await CartLoad.of(context))?.count;
+      n = await CartLoad.of(context);
     } catch (_) {
       // Badge er jonno page bhange na; `/cart` nije error dekhay.
     }
