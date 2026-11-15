@@ -1,6 +1,8 @@
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
+import 'package:shared/shared.dart';
 
+import '../pages/cart.dart';
 import '../pages/policy.dart';
 import '../services/locale.dart';
 import 'site.dart';
@@ -17,18 +19,51 @@ class Layout extends StatelessComponent {
   Component build(BuildContext context) {
     // Product page e bottom nav er bodole page er sticky bar (10.5 niyom 1).
     final product = localeOf(Uri.parse(context.url).path).path.startsWith('/p/');
+    // Badge ar `/cart` er ekta-i GET, page er data call er shathe (10.12 item 5); ignore: badge-i await kore.
+    final cart = switch (personalApi(context)) {
+      final api? => CartRepository(api).cart()..ignore(),
+      null => null,
+    };
     // Mobile e bottom nav ba sticky bar er jayga (h-14 + safe area).
-    return div(classes: 'flex min-h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0', [
-      const _Header(),
-      main_(classes: 'mx-auto w-full max-w-screen-xl flex-1', [child]),
-      const _Footer(),
-      if (!product) const _BottomNav(),
-    ]);
+    return CartLoad(
+      cart: cart,
+      child: div(classes: 'flex min-h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0', [
+        _Header(product: product),
+        main_(classes: 'mx-auto w-full max-w-screen-xl flex-1', [child]),
+        const _Footer(),
+        if (!product) const _BottomNav(),
+      ]),
+    );
+  }
+}
+
+// Cart er alada line er shonkhya (10.12 item 5); cookie chhara ba bhul hole khali `hidden` (sob guest er page
+// ekoi, cache thake), `AddToCart` JS e bhore.
+class _CartBadge extends AsyncStatelessComponent {
+  const _CartBadge();
+
+  @override
+  Future<Component> build(BuildContext context) async {
+    final site = Site.of(context);
+    int? n;
+    try {
+      n = (await CartLoad.of(context))?.count;
+    } catch (_) {
+      // Badge er jonno page bhange na; `/cart` nije error dekhay.
+    }
+    final show = n != null && n > 0;
+    return span(
+      classes: 'ml-1 rounded-full bg-primary px-1.5 text-xs text-on-primary',
+      attributes: {'data-cart-badge': '', if (!show) 'hidden': ''},
+      [if (show) .text(site.number(n))],
+    );
   }
 }
 
 class _Header extends StatelessComponent {
-  const _Header();
+  // Product page e bottom nav nai, tai mobile e o header e Cart.
+  final bool product;
+  const _Header({required this.product});
 
   @override
   Component build(BuildContext context) {
@@ -59,6 +94,11 @@ class _Header extends StatelessComponent {
             attributes: {'hreflang': site.locale == 'en' ? 'bn' : 'en'},
             [.text(site.t('lang.switch'))],
           ),
+        a(
+          href: site.href('/cart'),
+          classes: '${product ? 'flex' : 'hidden md:flex'} min-h-11 items-center px-2',
+          [.text(site.t('nav.cart')), const _CartBadge()],
+        ),
         // Mobile e bottom nav e (10.5 niyom 1).
         a(href: site.href('/account'), classes: 'hidden min-h-11 items-center px-2 md:flex', [
           .text(site.t('nav.account')),
@@ -86,17 +126,17 @@ class _Header extends StatelessComponent {
   }
 }
 
-// Cart M5 er page porjonto lukano (10.10 item 6); Account M4 e (v1.19).
+// Cart M5 e (10.10 item 6, badge 10.12 item 5); Account M4 e (v1.19).
 class _BottomNav extends StatelessComponent {
   const _BottomNav();
 
   @override
   Component build(BuildContext context) {
     final site = Site.of(context);
-    Component item(String href, String key) => a(
+    Component item(String href, String key, [Component? badge]) => a(
       href: href,
       classes: 'flex min-h-11 flex-1 items-center justify-center',
-      [.text(site.t(key))],
+      [.text(site.t(key)), ?badge],
     );
     return nav(
       classes:
@@ -106,6 +146,7 @@ class _BottomNav extends StatelessComponent {
       [
         item(site.href('/'), 'nav.home'),
         item('${site.href('/')}#categories', 'nav.category'),
+        item(site.href('/cart'), 'nav.cart', const _CartBadge()),
         item(site.href('/account'), 'nav.account'),
       ],
     );

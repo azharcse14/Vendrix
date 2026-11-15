@@ -75,8 +75,13 @@ class _LoginFormState extends State<LoginForm> {
     _busy = true;
     _error(null);
     try {
-      await _bff.send('POST', '/_/auth/otp/verify', body: {'phone': _phone, 'code': _value(codeForm, 'code')});
-      // Cookie BFF set korechhe; _busy thake jate abar submit na hoy.
+      final res = await _bff.send(
+        'POST',
+        '/_/auth/otp/verify',
+        body: {'phone': _phone, 'code': _value(codeForm, 'code')},
+      );
+      // Cookie BFF set korechhe; _busy thake jate abar submit na hoy. Merge e item bad gele age line ta (10.12 item 2).
+      if (_notices(res)) await Future<void>.delayed(const Duration(seconds: 4));
       web.window.location.assign(component.next);
       return;
     } on ApiError catch (e) {
@@ -85,6 +90,22 @@ class _LoginFormState extends State<LoginForm> {
       if (e.code == 'otp_too_many_attempts') _show(phoneForm, codeForm, code: false);
     }
     _busy = false;
+  }
+
+  // `cart_notices` er lekha `#login-notice` e; kichu dekhale true.
+  bool _notices(Object? res) {
+    final box = web.document.getElementById('login-notice');
+    if (box == null || res is! Map || res['cart_notices'] is! List) return false;
+    final lines = [
+      for (final n in res['cart_notices'] as List)
+        if (n case {'code': final String code, 'name': final String name} when RegExp(r'^[a-z_]+$').hasMatch(code))
+          if (web.document.querySelector('[data-notice="$code"]')?.textContent case final t?)
+            t.replaceAll('{name}', name),
+    ];
+    if (lines.isEmpty) return false;
+    box.textContent = lines.join('\n');
+    box.removeAttribute('hidden');
+    return true;
   }
 
   void _show(web.HTMLFormElement phoneForm, web.HTMLFormElement codeForm, {required bool code}) {

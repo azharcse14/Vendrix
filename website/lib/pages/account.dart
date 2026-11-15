@@ -4,6 +4,7 @@ import 'package:shared/shared.dart';
 
 import '../components/site.dart';
 import '../seo/meta.dart';
+import 'cart.dart';
 import 'status.dart';
 
 /// `/account` (10.1, 10.11 item 5): `__Host-sid` diye SSR e `GET /api/me`; naam ar SMS er bhasha (JS chhara form
@@ -26,7 +27,7 @@ class AccountPage extends AsyncStatelessComponent {
       return const Component.empty();
     }
 
-    final token = context.cookies['__Host-sid'];
+    final token = requestCookies(context)['__Host-sid'];
     if (token == null || token.isEmpty) return login();
     final api = site.catalog.api;
     final User me;
@@ -53,6 +54,9 @@ class AccountPage extends AsyncStatelessComponent {
         ),
       p([
         .text(site.t('account.phone', {'phone': me.phone})),
+      ]),
+      a(href: site.href('/account/wishlist'), classes: 'flex min-h-11 items-center underline', [
+        .text(site.t('wishlist.title')),
       ]),
       form(action: '/_/account', method: FormMethod.post, classes: 'space-y-4', [
         label(classes: 'block space-y-1', [

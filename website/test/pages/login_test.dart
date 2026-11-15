@@ -146,7 +146,8 @@ void main() {
       final res = await get('/account', cookie: '__Host-sid=OLD');
       expect(res.statusCode, 303);
       expect(res.headers['location'], '/login?next=%2Faccount');
-      expect(seen.single.headers['Authorization'], 'Bearer OLD');
+      // v1.28: Layout er cart badge o `/api/cart` e jay (10.12 item 5).
+      expect(seen.singleWhere((r) => r.url.path == '/api/me').headers['Authorization'], 'Bearer OLD');
     });
 
     test('session thakle /api/me Bearer diye: naam, phone, bhasha form, logout form', () async {

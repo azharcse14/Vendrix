@@ -73,7 +73,8 @@ class VariantPicker extends StatelessComponent {
             [
               input(
                 type: InputType.radio,
-                name: 'variant',
+                // Cart e add er JS chhara form er field (10.12 item 4).
+                name: 'variant_id',
                 value: '${v.id}',
                 checked: v.id == selected.id,
                 classes: 'sr-only',
@@ -88,7 +89,7 @@ class VariantPicker extends StatelessComponent {
   }
 }
 
-/// Browser e `input[name=variant]` bodlale shudhu oi `[data-variant=<id>]` dekhay. Client er data kichu na (10.2).
+/// Browser e `input[name=variant_id]` bodlale shudhu oi `[data-variant=<id>]` dekhay. Client er data kichu na (10.2).
 @client
 class VariantSwitch extends StatefulComponent {
   /// VariantSwitch.
@@ -103,7 +104,7 @@ class _VariantSwitchState extends State<VariantSwitch> {
   void initState() {
     super.initState();
     if (!kIsWeb) return;
-    final radios = web.document.querySelectorAll('input[name="variant"]');
+    final radios = web.document.querySelectorAll('input[name="variant_id"]');
     for (var i = 0; i < radios.length; i++) {
       final radio = radios.item(i) as web.HTMLInputElement;
       web.EventStreamProviders.changeEvent.forTarget(radio).listen((_) {

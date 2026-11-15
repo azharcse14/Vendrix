@@ -107,7 +107,8 @@ String _sid(String token, int maxAge) => '__Host-sid=$token; HttpOnly; Secure; S
 String _cartCookie(String key, int maxAge) =>
     '__Host-cart=$key; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=$maxAge';
 
-String? _validCartKey(Map<String, String> cookies) {
+/// Cookie er `__Host-cart` Go er format e hole seta, na hole null (Go bhul key "nai" dhore, tai pathai na).
+String? validCartKey(Map<String, String> cookies) {
   final k = cookies['__Host-cart'];
   return k != null && _cartKey.hasMatch(k) ? k : null;
 }
@@ -174,7 +175,7 @@ Future<bool> _mergeWishlist(String wl, ApiClient api) async {
   } on FormatException {
     // JSON na: hubohu
   }
-  final old = cookies.containsKey('__Host-sid') ? null : _validCartKey(cookies);
+  final old = cookies.containsKey('__Host-sid') ? null : validCartKey(cookies);
   return (res.bodyBytes, [if (old != null) _cartCookie(old, _month)]);
 }
 
@@ -221,7 +222,7 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       }
       final sid = cookies['__Host-sid'];
       // Login e Go key dekhe na (7.4); verify e lage (merge), purono sid thakleo.
-      final cartKey = sid == null || route.session == _login ? _validCartKey(cookies) : null;
+      final cartKey = sid == null || route.session == _login ? validCartKey(cookies) : null;
       final api = http.Request(route.apiMethod ?? request.method, cfg.apiBaseUrl.resolve(route.api(match!)))
         ..headers.addAll({
           ...apiHeaders(request.headers, cfg),

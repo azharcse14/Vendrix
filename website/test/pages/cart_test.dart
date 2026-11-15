@@ -93,7 +93,7 @@ void main() {
           headers: json,
         );
     }
-    return fakeApi.send(r).then(http.Response.fromStream);
+    return fakeApi.get(r.url); // r already finalize, tai notun request
   });
 
   Future<ShopSettings> shop(String _) async => const ShopSettings(PublicSettings({}), 1, {});

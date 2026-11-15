@@ -115,10 +115,24 @@ class LoginPage extends StatelessComponent {
         attributes: {'role': 'alert', if (error == null) 'hidden': ''},
         [if (error != null) .text(site.error(error))],
       ),
+      // Verify er `cart_notices` (10.12 item 2): lekha server e, `{name}` client bosay.
+      p(
+        id: 'login-notice',
+        classes: 'whitespace-pre-line rounded border border-line bg-tint p-3 text-sm',
+        attributes: {'role': 'status', 'hidden': ''},
+        [],
+      ),
       div(
         attributes: {'hidden': ''},
         [
           for (final code in _errors) span(attributes: {'data-error': code}, [.text(site.error(code))]),
+          for (final code in const ['item_dropped', 'item_removed', 'quantity_reduced'])
+            span(
+              attributes: {'data-notice': code},
+              [
+                .text(site.t('cart.notice.$code', {'name': '{name}'})),
+              ],
+            ),
         ],
       ),
       LoginForm(next: safeNext(query['next'], site.href('/account'))),
