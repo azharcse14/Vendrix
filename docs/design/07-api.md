@@ -69,9 +69,11 @@ Error er format shob jaygay ekoi:
 
 ### 7.3 Customer login ar account
 
+v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `orders` M6 e, `privacy-requests` M11 e.
+
 | Method | Path | Kaj |
 |---|---|---|
-| POST | `/api/auth/otp/send` | `{phone, purpose: "login", turnstile_token}` OTP pathano |
+| POST | `/api/auth/otp/send` | `{phone, purpose: "login", turnstile_token}` OTP pathano. v1.19: response shob shomoy `{"sent": true}` (`429` chhara) |
 | POST | `/api/auth/otp/verify` | `{phone, code}` → `{token, user}`. Ek-i shathe guest cart merge (`X-Cart-Key`), oi phone er (`customer_phone`) guest order account e jog |
 | POST | `/api/auth/logout` | Session revoke |
 | GET, PATCH | `/api/me` | Profile (`name`, `email`, `locale`) |
@@ -136,11 +138,11 @@ Error er format shob jaygay ekoi:
 
 ### 7.7 Admin API (`/api/admin`, staff login lagbe)
 
-v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff context na thakle shob shomoy `401 unauthenticated`). Product ar category er `slug` admin dey (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 80; PATCH e bodlano jay, redirect na; duplicate `409 slug_taken`). `DELETE /categories/{id}` shudhu khali hole (product ba child thakle `409 category_not_empty`; lukate `is_active = false`). Product create e `vendor_id` optional: shop staff na dile house vendor, vendor staff er session er vendor, onno vendor `404` (Rule 13). Variant create/PATCH e stock na (shuru 0; stock 8.12 er batch/adjust e, M7). v1.11: `sku` ek vendor e unique; duplicate `409 sku_taken`.
+v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff context na thakle shob shomoy `401 unauthenticated`). Product ar category er `slug` admin dey (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 80; PATCH e bodlano jay, redirect na; duplicate `409 slug_taken`). `DELETE /categories/{id}` shudhu khali hole (product ba child thakle `409 category_not_empty`; lukate `is_active = false`). Product create e `vendor_id` optional: shop staff na dile house vendor, vendor staff er session er vendor, onno vendor `404` (Rule 13). Variant create/PATCH e stock na (shuru 0; stock 8.12 er batch/adjust e, M7). v1.11: `sku` ek vendor e unique; duplicate `409 sku_taken`. v1.19: M4 e Login bhag ar `shop-api staff reset-2fa` CLI (8.3); `/staff` M7 e.
 
 | Bhag | Endpoint |
 |---|---|
-| Login | `POST /auth/login {shop, email, password}` (`shop` = slug) → `{totp_required, temp_token}`, ba `{setup_required}` ar `setup_pending` session cookie (8.3); `POST /auth/totp {temp_token, code}` → session cookie; `POST /auth/recovery {temp_token, code}`; `POST /auth/password {old, new}`; `POST /auth/totp/setup` → `{otpauth_url}`; `POST /auth/totp/enable {code}` → `{recovery_codes}`, session `active`; `POST /auth/logout`; `GET /me` |
+| Login | `POST /auth/login {shop, email, password}` (`shop` = slug) → `{totp_required, temp_token}`, ba `{setup_required}` ar `setup_pending` session cookie (8.3); `POST /auth/totp {temp_token, code}` → session cookie; `POST /auth/recovery {temp_token, code}`; `POST /auth/password {old, new}`; `POST /auth/totp/setup` → `{otpauth_url, secret}` (v1.19); `POST /auth/totp/enable {code}` → `{recovery_codes}`, session `active`; `POST /auth/logout`; `GET /me` |
 | Dashboard | `GET /dashboard` (ajker order, bikri, pending, low stock, expiry kache, deadline kache) |
 | Product | `GET, POST /products`; `GET, PATCH /products/{id}`; `POST /products/{id}/variants`; `PATCH /variants/{id}`; `POST /products/{id}/images` (multipart); `PATCH /products/{id}/images/order`; `DELETE /images/{id}` |
 | Category | `GET, POST /categories`; `PATCH, DELETE /categories/{id}` |
@@ -169,7 +171,7 @@ Vendor staff (`vendor_owner`, `vendor_staff`) ekoi endpoint use kore, kintu back
 | Endpoint | Shima |
 |---|---|
 | `POST /api/auth/otp/send` | Turnstile; ek phone e 15 minute e 3 bar ar dine 10 bar (shob purpose mile), ek client IP te ghontay 10 bar; shop e dine `checkout.sms_daily_cap` (default 500) er beshi OTP SMS na (v1.7: cap shudhu OTP gone; order, confirm, ship er SMS e cap nai, tai OTP er dhel order er SMS atkay na) |
-| `POST /api/auth/otp/verify` | Ek OTP te 5 bar bhul (database e atomic `UPDATE`, error path eo commit), tarpor notun OTP. Ek phone e 24 ghontay 10 bar bhul hole 24 ghonta oi phone er OTP bondho ar alert (cap chhara dine prai 1,440 guess, mashe prai 4% chance) |
+| `POST /api/auth/otp/verify` | Ek OTP te 5 bar bhul (database e atomic `UPDATE`, error path eo commit), tarpor notun OTP. Ek phone e 24 ghontay 10 bar bhul hole 24 ghonta oi phone er OTP bondho ar alert (cap chhara dine prai 1,440 guess, mashe prai 4% chance). v1.19: lock er alada table na: shesh 24 ghontay oi phone er `otp_codes` er `sum(attempts)` theke consumed row gulo bad (consumed row er shesh attempt thik) = bhul; 10 ba beshi hole send ar verify `429 rate_limited` + `Retry-After` (lock ache bole na), rolling window (`otp_phone_idx`, migration na). Alert ekbar (`dedupe_key` `alert.otp_lock:<shop>:<phone>:<din>`) |
 | `POST /api/orders` | Ek phone e ghontay 5 ta, ek IP te ghontay 10 ta |
 | `POST /api/orders/track` | Ek client IP te minute e 10 bar |
 | `POST /api/complaints` | Ek client IP te ghontay 5 ta |

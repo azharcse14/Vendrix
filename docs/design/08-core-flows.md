@@ -14,10 +14,10 @@ Code: [`backend/internal/phone/phone.go`](../../backend/internal/phone/phone.go)
 
 **OTP pathano** (`POST /api/auth/otp/send`):
 
-1. Phone normalize. Turnstile, rate limit (phone e 15 minute e 3, dine 10), shop er daily SMS cap, ar oi phone 24 ghontar lock e kina check (Section 7.8).
+1. Phone normalize. Turnstile, rate limit (phone e 15 minute e 3, dine 10), shop er daily SMS cap, ar oi phone 24 ghontar lock e kina check (Section 7.8). v1.19: phone er "dine" 24 ghonta rolling, shop er SMS cap shop er timezone er calendar din (Rule 5); lock alada table na, `otp_codes` theke gona (7.8). Response shob shomoy ekoi `{"sent": true}` (`429` chhara), phone er account ache kina bole na.
 2. `crypto/rand` diye 6 digit code (`rand.Int(rand.Reader, big.NewInt(1000000))`, samne zero shoho 6 digit).
 3. `otp_codes` e `code_hash = HMAC-SHA256(OTP_SECRET, phone + ":" + purpose + ":" + code)`, `expires_at = now + 5 minute`.
-4. `sms.send` job queue te. Shudhu `APP_ENV=local` e SMS na pathiye code log e likho (staging e shudhu team er number, 13.1); production e log mode chalu thakle server start-i hobe na. v1.7: job er payload e code ekhon plain text (6.1 er "secret plain text e na" bhange, backup e prai ek bochor thake); kivabe thik hobe 16.1 (M4 er age).
+4. `sms.send` job queue te. Shudhu `APP_ENV=local` e SMS na pathiye code log e likho (staging e shudhu team er number, 13.1); production e log mode chalu thakle server start-i hobe na. v1.19: payload e code AES-GCM e (6.1): key `OTP_SECRET` theke `crypto/hkdf` (notun env na), AAD = `otp_codes.id`, payload `{otp_id, nonce, ct}`; handler decrypt kore pathay, done hole payload `{}` (8.17). Plain text hole WAL ar backup e prai ek bochor thakto. M6 er COD confirm link (`confirm_token`) eki upay nite pare.
 
 **OTP verify** (`POST /api/auth/otp/verify`), attempt gona chhara baki ta ek transaction e:
 
@@ -28,8 +28,8 @@ Code: [`backend/internal/phone/phone.go`](../../backend/internal/phone/phone.go)
    WHERE id = $1 AND attempts < 5 AND consumed_at IS NULL AND expires_at > now()
    RETURNING code_hash;
    ```
-3. Hash tulona `hmac.Equal` diye (constant time). Mille consume, v1.7: conditional, `UPDATE otp_codes SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL RETURNING id`; kichu na ele already use hoyeche, `400 otp_invalid` (ekoi code e duita parallel verify duita session pay na, 8.3 er TOTP er moto). Purpose `checkout` e consume order er transaction e (8.6 step 9). Na mille, oi phone er 24 ghontar bhul 10 chhuyle 24 ghonta lock ar alert (7.8).
-4. `users` e `(shop_id, phone)` diye upsert. Delete kora account er phone `NULL`, tai shei manush notun account pay, purono data ashe na.
+3. Hash tulona `hmac.Equal` diye (constant time). Mille consume, v1.7: conditional, `UPDATE otp_codes SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL RETURNING id`; kichu na ele already use hoyeche, `400 otp_invalid` (ekoi code e duita parallel verify duita session pay na, 8.3 er TOTP er moto). Purpose `checkout` e consume order er transaction e (8.6 step 9). Na mille, oi phone er 24 ghontar bhul 10 chhuyle 24 ghonta lock ar alert (7.8; v1.19: alert `alert.security` job, 8.17).
+4. `users` e `(shop_id, phone)` diye upsert. Delete kora account er phone `NULL`, tai shei manush notun account pay, purono data ashe na. v1.19: notun user er `locale` = request er `Accept-Language`.
 5. Oi phone er guest order account e jog: `UPDATE orders SET user_id = $1 WHERE shop_id = $2 AND customer_phone = $3 AND user_id IS NULL`. Eta **shudhu OTP verify er por**, kokhono age na.
 6. `X-Cart-Key` thakle guest cart merge (8.4).
 7. Session: `token = rand.Text()`, database e `sha256(token)`, `subject_type = 'customer'`, `user_id`, `expires_at = now + 30 din`. `last_used_at` ghontay ekbar-er beshi update na.
@@ -43,6 +43,7 @@ Website e cookie: `__Host-sid=<token>; HttpOnly; Secure; SameSite=Lax; Path=/; M
 3. TOTP thik hole oi row `stage = 'active'`, `expires_at = now + 12 ghonta`, cookie `__Host-asid` (7.1). Phone harale 10 tar ekta recovery code (`staff_recovery_codes`, protiti ekbar).
 4. Prothom login (`must_change_password` ba TOTP nai): password (ar TOTP thakle TOTP) er por `stage = 'setup_pending'` session (15 minute, cookie `__Host-asid`). Ei session shudhu `/auth/password`, `/auth/totp/setup`, `/auth/totp/enable` ar `/auth/logout` e chole, baki shob admin API `403 setup_required`. Age password bodlano, tarpor TOTP setup; enable hole session `active` (12 ghonta) ar 10 ta recovery code dekhay. Password bodlale, deactivate ba role bodlale shob session revoke. Shob login (thik/bhul) audit log e.
 5. v1.5: TOTP secret `crypto/aes` GCM e `TOTP_KEY` (13.5) diye encrypt, AAD = `shop_id:staff_id:key_version`, tai ek staff er ciphertext onno staff er row e copy korle decrypt hoy na; key er version `staff.totp_key_version` e (rotation e notun version, purono row pore re-encrypt). Recovery code er hash `HMAC-SHA256(RECOVERY_SECRET, staff_id:code)`; `RECOVERY_SECRET` rotate korle shob staff ke notun code dite hobe.
+6. v1.19 (M4): owner alert `alert.security` job (8.17). Recovery code 10 ta, protiti `crypto/rand` 10 okkhor base32 (50 bit), `XXXXX-XXXXX` e dekhano, tulona e `-`, space ar case bad; enable e notun 10 ta (purono muche). Notun password kom-poksha 12, beshi-te 128 okkhor (PBKDF2 er CPU), purono-r sathe ekoi na. `/auth/totp/setup` → `{otpauth_url, secret}` (base32, `encoding/base32`), enable er age purono secret replace. `closed` shop e o login chole (3.2 Niyom 2). Owner TOTP ar recovery code duitai harale `shop-api staff reset-2fa --shop --email` CLI: TOTP ar recovery code muche, shob session revoke, audit; porer login e `setup_pending` (step 4).
 
 ### 8.4 Cart
 
@@ -304,12 +305,15 @@ Packing hoy **fulfillment** dhore. Single store e order ar fulfillment ek, tai s
 
 Template gulo translation key (`sms.*`), admin bodlate pare. Customer er `locale` onujayi bhasha. Mone rakho: Bangla SMS Unicode (UCS-2), ek SMS e 70 unit, multipart e protiti 67 (English e 160/153). Juktakkhor ar kar-fola alada unit, tai "okkhor" er cheye beshi gona hoy; template er length code unit e test koro. Template choto rakho, na hole ek SMS e duita-tinta SMS er khoroch hobe.
 
+v1.19 (M4): `sms.otp` er default lekha Go te (`notify` e bn/en), shop er `translations` (`sms.otp`) override kore; `{code}` placeholder, bn ≤ 70 unit. M4 e provider adapter na: local e log, staging/production e `ErrNoProvider` (job fail ar alert); provider thik hole adapter ar `shop_credentials` pora, M12 er age (16.1).
+
 ### 8.17 Background job
 
 | Job | Kokhon chole | Ki kore |
 |---|---|---|
-| `sms.send` | Event e | SMS gateway e pathay, fail hole 1, 5, 15, 60 minute por abar (OTP hole shudhu 1 minute por ekbar, OTP 5 minute e expire) |
+| `sms.send` | Event e | SMS gateway e pathay, fail hole 1, 5, 15, 60 minute por abar (OTP hole shudhu 1 minute por ekbar, OTP 5 minute e expire). v1.19: done hole payload `{}` (phone ar lekha PII) |
 | `alert.new_order` | Order e | Admin ke email/SMS |
+| `alert.security` | Event e (OTP phone lock, staff login 10/50 bhul, `failed_mfa` lock) | v1.19: `dedupe_key` shoho, payload e phone mask ar staff id; handler ekhon `slog.Warn`, M12 e email/webhook (`ALERT_EMAIL`, `ALERT_WEBHOOK_URL`) |
 | `order.auto_cancel_unconfirmed` | Order + N ghonta | Ekhono `pending` COD hole cancel |
 | `order.auto_cancel_unpaid` | Order + 30 minute | Age reconcile (8.9), tarpor-o unpaid online hole cancel |
 | `alert.delivery_deadline` | Ghontay | 8.15 |
@@ -319,6 +323,7 @@ Template gulo translation key (`sms.*`), admin bodlate pare. Customer er `locale
 | `data.retention` | Protidin | `orders.ip`, `sessions.ip`, `audit_logs.ip` 180 din por `NULL` (`shop_app` er `audit_logs` e shudhu `ip` column e UPDATE, `001`) |
 | `cart.cleanup` | Protidin | 30 diner purono guest cart |
 | `session.cleanup` | Protidin | Expire hoya session ar OTP |
+| `jobs.cleanup` | Protidin | v1.19: `done_at` 30 din ar `failed_at` 90 din er purono `jobs` row muche (`dedupe_key` shoho); failed beshi din thake jate alert er por dekha jay. `shop_app` er `jobs` e DELETE ache (`001`), migration na |
 | `jobs.sweep` | Protiti 5 minute | Shesh attempt e crash kora job (`attempts = max_attempts`, lock 5 minute er purono) `failed_at` ar admin alert (6.4) |
 | `alert.complaint_due` | Ghontay | `complaints.due_at` (72 ghonta) er 12 ghontar moddhe ba par hoye geche emon open complaint (12.1) |
 | `backup.verify` | Mashe | Restore test reminder (Section 13) |

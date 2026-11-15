@@ -21,8 +21,8 @@ English version e shob route er samne `/en`.
 | `/order/{token}/review` | Review | Na | Delivered hole |
 | `/invoice/{token}` | Printable invoice | Na | Print CSS |
 | `/track` | Order tracking | Na | Order number + phone (POST form) |
-| `/login` | OTP login | | |
-| `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | |
+| `/login` | OTP login | | v1.19: `@client LoginForm`, Turnstile (10.11) |
+| `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | v1.19: M4 e shudhu `/account` (naam, bhasha, logout); baki tar milestone e (10.11) |
 | `/policy/{terms,return,refund,delivery,privacy}` | Policy | Na | Bangla badhyotamulok |
 | `/contact`, `/faq`, `/complaint` | Support | Na | DBID, BFSA number footer e |
 | `/print/{kind}?token=` | Staff er packing slip, pick list | Signed token (10 min) | Admin theke khole; `Referrer-Policy: no-referrer` |
@@ -36,7 +36,7 @@ v1.5: token page (`/order/*`, `/confirm/*`, `/invoice/*`, `/print/*`) e Facebook
 |---|---|
 | Page er data | `AsyncStatelessComponent`, server e Go API theke |
 | Title, description, OG | `Document.head` (protiti page e) |
-| Interactive | Shudhu `@client` component: variant picker (dam bodlay), quantity, cart button, filter sheet, checkout form er live hishab |
+| Interactive | Shudhu `@client` component: variant picker (dam bodlay), quantity, cart button, filter sheet, checkout form er live hishab, v1.19: login form (10.11) |
 | Chobi swipe | CSS `scroll-snap`, JavaScript na |
 | Filter sheet | Browser er `<dialog>` |
 | Layout bodlano (mobile/desktop) | Shudhu CSS (Tailwind prefix), server e device detect na |
@@ -155,7 +155,7 @@ Niyom:
 1. Protiti POST, PATCH, DELETE e `Origin` (ba `Sec-Fetch-Site`) check: nijer domain na hole `403` (CSRF; `SameSite=Lax` er upor extra).
 2. Cookie theke token ar key niye `Authorization: Bearer`, `X-Cart-Key`; shathe `X-Shop-Host`, `X-Client-IP`, `X-Internal-Auth`, `Accept-Language` (3.2).
 3. Go API er status ar error JSON hubohu ferot; client `code` diye logic kore.
-4. JS chhara form POST e `303` redirect (POST-redirect-GET), error hole form abar dekhay.
+4. JS chhara form POST e `303` redirect (POST-redirect-GET), error hole form abar dekhay. v1.19: login form chhara (Turnstile JS chhara chole na, 10.11).
 5. Jaspr kono dam, stock, discount hishab kore na (Rule 1), shudhu forward kore.
 6. Response e `Cache-Control: no-store`.
 
@@ -166,8 +166,16 @@ Niyom:
 3. **Chobi**: website env `IMAGE_BASE_URL` (platform er) ar `IMAGE_RESIZE=cloudflare|none`; `srcset` = `<base>/cdn-cgi/image/width=W,format=auto/<key>` (`none` e `<base>/<key>`); chobi na thakle `tint` placeholder (13.5).
 4. **Settings cache** (3.5): host onujayi `{settings, version, translations[bn,en], checkedAt}`; 30 second por prothom request background e version check (request atkay na, ekbar e ekta); version bodlale settings ar duita translation abar; API down hole purono cache ar log; cache faka hole error page; ochena host cache na.
 5. **BFF** M3 e shudhu skeleton (Origin check, cookie → header, forward, `303`, `no-store`) ar test; prothom asol route M4 e (`/_/auth/otp/*`).
-6. **Cart/Account**: page M4/M5 er age link lukano (layout ekoi); product page er sticky bar e dam ar variant, "Cart e add" button M5 e.
+6. **Cart/Account**: page M4/M5 er age link lukano (layout ekoi; v1.19: Account link M4 e abar); product page er sticky bar e dam ar variant, "Cart e add" button M5 e.
 7. **Security header** Jaspr middleware e (12.2): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, CSP `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' <IMAGE_BASE_URL> data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. Turnstile/payment domain M4/M10 e; HSTS M12 e (Cloudflare/Caddy).
 8. **Test**: logic (cache, BFF, SEO, locale, header) `package:test`; page `jaspr_test` (title, OG, `srcset`, lekha); 360/1280 ar Lighthouse manual, Report e; Playwright M12 e. CI er Dart job e `jaspr build` ar `main.client.dart.js` er size log e.
 9. **Facebook debugger** M3 e `cloudflared` quick tunnel diye (install na thakle M12 e staging e).
 10. **Choto niyom**: `locales.enabled` e `en` na thakle `/en/*` `404`, hreflang shudhu `bn` ar `x-default`; suspended shop ba API 5xx/network e page `503` (`Retry-After: 3600` suspended e), `no-store`; root `/` `lang` cookie dekhe redirect kore na; client JS `?v=<git sha>`; featured product protiti slug e alada detail call (max 12), na pele bad.
+
+### 10.11 M4 er decision (v1.19)
+
+1. **Login form**: `@client LoginForm`: phone → BFF `/_/auth/otp/send` (JSON) → code box (phone memory te) → `/_/auth/otp/verify` → `/account` ba `?next=`. `next` shudhu `/` diye shuru, `//` ba `\` na (M3 er `_sameOriginPath` er moto). JS chhara form na: Turnstile nijei JS chhara chole na, tai phone rakhar notun cookie ba URL query (log, referrer) na.
+2. **Turnstile**: platform er ekta widget, site key website env `TURNSTILE_SITE_KEY` (shop er hostname widget e jog; Rule 15); implicit render, `data-response-field-name="turnstile_token"`; Go siteverify e `hostname` = `X-Shop-Host` o mile. Local e Cloudflare er test key (13.5), tai asol code path chole. Per-shop key MT e.
+3. **CSP**: `script-src` ar `frame-src` e `https://challenges.cloudflare.com` shudhu Turnstile thaka page e (M4 e `/login`); baki page 10.10 item 7.
+4. **BFF auth**: verify e Go er response er `token` theke `__Host-sid` (10.3) set, body theke `token` muche (JS kokhono token dekhe na); `/_/auth/logout` revoke ar cookie `Max-Age=0`. `ApiClient` e optional Bearer (`/account` SSR e `/api/me`).
+5. **Account**: M4 e `/account` (naam, bhasha, logout; login chhara `/login` e `303`); `/account/orders`, `addresses` M6, `wishlist` M5, `privacy` M11 e. Bottom nav/header e Account link abar.

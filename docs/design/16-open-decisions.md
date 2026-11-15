@@ -12,7 +12,7 @@
 | Staff login | Shop onujayi alada login, naki ek account e onek shop (`accounts` + `memberships`) | MVP te shop onujayi; pore migration |
 | Customer account | Shop onujayi alada, naki platform jure ekta | Shop onujayi: multi-tenant e protiti dokan er nijer customer |
 | Server region | Bangladesh er bhetore, naki kache-r region | Data law confirm er por (12.1, 13.2) |
-| SMS provider | Bangladesh er kono SMS gateway (masking/sender naam approval shoho) | `notify` package e interface, provider bodlano shohoj |
+| SMS provider | Bangladesh er kono SMS gateway (masking/sender naam approval shoho) | `notify` package e interface, provider bodlano shohoj. v1.19: M4 e adapter na (local e log, onno env e `ErrNoProvider`); provider M12 er age (8.16) |
 | Delivery | Nijer rider, courier, naki duitai | Duitai (`shipments.carrier`) |
 | Launch area | Kon shohor/area | `delivery_zones` e config |
 | Organic certificate | Ache kina | Na thakle "organic" badge na |
@@ -30,8 +30,8 @@
 | Purono `jobs` row (v1.6 review) | `data.retention` e purono done/failed job muche fela, naki rakha | Thik hoyni; ekhon kono cleanup nai (protiti SMS ekta job) |
 | `pricing.Allocate` er input (v1.6 review) | Exported thakbe (minus weight ba total e `bits.Div64` panic), naki guard ba unexported | Thik hoyni; pricing er bhetore input valid, tai ekhon bug na |
 | `order_notes` e DELETE (v1.6 review) | Itihash hishebe `shop_app` theke REVOKE, naki rakha | Thik hoyni |
-| OTP SMS er code `jobs.payload` e (v1.7 review) | (a) payload e AES-GCM (notun key ba `OTP_SECRET` theke HKDF, AAD = `otp_codes.id`), (b) OTP SMS job chhara request er bhetore pathano (ekta retry) | Thik hoyni; M4 er age. Ekhon plain text: 6.1 er niyom bhange, WAL ar backup e (prai ek bochor) thake. Jai hok, done SMS job er payload khali koro (upore `jobs` row er sathe) |
-| `jobs` er purono row (M0 review) | (a) `jobs.cleanup` protidin: `done_at` 30 din er purono row muche, (b) done hole payload khali, row rakho, (c) duitai | Thik hoyni; M4 er age (OTP payload er sathe). `jobs.sweep` ekai dine 288 row banay, done row muche na |
+| OTP SMS er code `jobs.payload` e (v1.7 review) | (a) payload e AES-GCM (notun key ba `OTP_SECRET` theke HKDF, AAD = `otp_codes.id`), (b) OTP SMS job chhara request er bhetore pathano (ekta retry) | Thik holo (v1.19, user 15 November 2026): (a). Key `OTP_SECRET` theke `crypto/hkdf`, AAD = `otp_codes.id`, payload `{otp_id, nonce, ct}`, done hole `{}` (8.2, 6.1) |
+| `jobs` er purono row (M0 review) | (a) `jobs.cleanup` protidin: `done_at` 30 din er purono row muche, (b) done hole payload khali, row rakho, (c) duitai | Thik holo (v1.19, user 15 November 2026): (c). Done `sms.send` er payload shathe shathe `{}`; `jobs.cleanup` protidin done 30 din ar failed 90 din er purono row muche (8.17) |
 | Vendor staff (`vendor_owner`) category list porte parbe kina (M1 review; 11.2 "category na") | (a) shudhu manage na, `GET /admin/categories` porte pare (product e `category_id` dite lage), (b) kichui na | Thik hoyni; M7 (admin UI) er age. Ekhon `GET` o owner/admin |
 | COD e packing e beshi ojon (v1.7 review) | (a) shima nai (ekhon: notun total SMS e), (b) shima (jemon +10%) er beshi hole staff call ar customer er OK, (c) free delivery shima abar dekha (beshi ojon e shima chhuyle delivery 0) | Thik hoyni; M7 er age. Customer refuse korle `phone_refused_before` (8.7) tar gaye lage |
 | Dart package er jora (v1.8) | (a) ek pub workspace, (b) `packages/shared` path dependency ar website alada resolution | Thik holo (v1.8): (b); admin ar app chaile ek workspace (4.6) |

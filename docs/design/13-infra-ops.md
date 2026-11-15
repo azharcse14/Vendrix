@@ -109,11 +109,12 @@ Jaspr er jonno ekoi rokom `shop-web.service` (ekoi `RestartSec`, `StartLimitInte
 | `ADDR` | `127.0.0.1:8080` (v1.5: shudhu loopback, Caddy theke; Jaspr o `127.0.0.1:8081`). `:8080` dile firewall bhul hole API Cloudflare ar Caddy chhara-i khola thake |
 | `DATABASE_URL` | Postgres connection, `shop_app` role (DDL nai, 6.1) |
 | `MIGRATE_DATABASE_URL` | Table er malik role, shudhu `shop-api migrate` e |
-| `OTP_SECRET` | OTP HMAC er secret (32 byte random) |
+| `OTP_SECRET` | OTP HMAC er secret (32 byte random). v1.19: OTP SMS job payload er AES-GCM key o eta theke `crypto/hkdf` (8.2) |
 | `CREDENTIALS_KEY` | AES-GCM key (32 byte, base64). Rotation: notun key notun version e, purono row `key_version` dekhe pore re-encrypt |
 | `ADMIN_ORIGINS` | Admin panel er origin, comma diye (CrossOriginProtection ar CORS), jemon `https://admin.tomarshop.com` |
 | `PREVIEW_SECRET`, `PRINT_SECRET` | Signed preview/print link |
-| `TURNSTILE_SECRET` | Cloudflare Turnstile |
+| `TURNSTILE_SECRET` | Cloudflare Turnstile. v1.19: local e Cloudflare er test secret (`1x0000000000000000000000000000000AA` shob shomoy pass; fail test e `2x0000000000000000000000000000000AA`), `env.example` e |
+| `TURNSTILE_SITE_KEY` | v1.19, website (Jaspr): platform er Turnstile widget er site key (10.11); local e test key `1x00000000000000000000AA` |
 | `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | File storage (platform er, Rule 15) |
 | `CF_IP_RANGES` | Cloudflare er IP range (space diye), shudhu Caddy er `trusted_proxies` e (13.3). Go API ar Jaspr eta dekhe na, shudhu loopback theke asha `X-Real-IP` mane (3.2) |
 | `JASPR_INTERNAL_SECRET` | Jaspr → API er `X-Internal-Auth` (API ar website duitatei) |

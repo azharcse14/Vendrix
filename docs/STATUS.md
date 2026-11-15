@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login)** porer. Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) cholche** (plan approve 15 November 2026, design v1.19; step 0 shesh). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 83/83 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,7 +18,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M4 step 0** ([M4](milestones/M4.md)): user 15 November 2026 e M4 plan er shob recommendation (Open question 1–10 shoho) approve korechen. `design-change` skill: uttor gulo 16.1 ar design section e, `docs/design/README.md` e version, M4.md er obostha/step 0 tick; tarpor step 1 (`milestone` skill).
+1. **M4 step 1, Config** ([M4](milestones/M4.md), 13.5; Q5): `backend/internal/config/config.go` e `OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY` (base64 32 byte), `RECOVERY_SECRET` `serve` e badhyotamulok ar `local-only` check e jog; `backend/env.example` e local value (Turnstile test secret `1x0000000000000000000000000000000AA`). Test age: `config_test.go` er `TestLoad` e notun case (secret na thakle, `local-only` value local chhara) age, fail dekhe tarpor code. Commit `feat(M4): auth er env`; tarpor step 2 (`milestone` skill).
 2. Push er por CI green kina dekho (`ci(M3): website build` ar Go job; Linux e `TestSearchRankingIntegration` green howa uchit).
 
 ## User er kache proshno
@@ -39,7 +39,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | M1 | Shop, vendor, settings, catalog API | shesh (10 November 2026) | [M1](milestones/M1.md) |
 | M2 | Shared Dart package | shesh (10 November 2026) | [M2](milestones/M2.md) |
 | M3 | Website catalog | shesh (15 November 2026) | [M3](milestones/M3.md) |
-| M4 | Login | baki (plan approve 15 November 2026, step 0 baki) | [M4](milestones/M4.md) |
+| M4 | Login | cholche (15 November 2026 theke) | [M4](milestones/M4.md) |
 | M5 | Cart ar wishlist | baki | |
 | M6 | Checkout (COD) | baki | |
 | M7 | Admin panel v1 | baki | |
@@ -53,6 +53,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: M4 plan approve (shob recommendation), design v1.19; M4 step 0.
 - 15 November 2026: M3 shesh: Lighthouse row ☑, step 16, Report; `bd32992`/`11df782` choto review (finding nai); `make check`: quick-check, DB 83/83 green, race e shudhu `TestSearchRankingIntegration` (macOS `C.UTF-8`, Linux e green).
 - 15 November 2026: 16.1 M3 Lighthouse LCP er uttor (a) (user): devtools throttle er number acceptance, simulate Report e, font kom + Lighthouse CI M12 er age (10.5, 15); design v1.18.
 - 15 November 2026: M4 plan draft (`docs/milestones/M4.md`): scope, acceptance → test, 14.2 test 10/18/19, 15 step, 10 ta open question (recommendation shoho); code na.
@@ -67,4 +68,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 12 November 2026: `QUICK_ALL=1` quick-check e website `dart format` dhorlo (`layout.dart`), thik (`11ce92c`); shob green.
 - 12 November 2026: M3 step 8: home, category page, product card, chobi (`srcset`), filter (`<dialog>` + `@client DialogToggle`), header logo; website test 69/69, shared 74/74.
 - 12 November 2026: CI green (run 43151580056); M0 shesh (`make check` green, go1.27.4).
-- 11 November 2026: CI Go job e govulncheck (GO-2026-6859, `net/http`): toolchain go1.27.4, design v1.15.

@@ -69,7 +69,7 @@ GoRouter buildRouter(AuthBloc auth) => GoRouter(
 
 `GoRouterRefreshStream` ekta choto `ChangeNotifier` class, stream e notun value ashle `notifyListeners()` dake (nije likhte hobe, 10 line).
 
-4. **Token**: admin er session cookie `__Host-asid` (`HttpOnly; Secure; SameSite=Strict; Path=/`, api domain e). `di.dart` e `ApiClient` ke `BrowserClient()..withCredentials = true` dao (shared package pure Dart thake, client inject hoy). CORS e `Access-Control-Allow-Credentials` shudhu `ADMIN_ORIGINS` er jonno. Dart code token dekhe na, localStorage e kichu na.
+4. **Token**: admin er session cookie `__Host-asid` (`HttpOnly; Secure; SameSite=Strict; Path=/`, api domain e; v1.19: `Max-Age=43200`, `setup_pending` e 900, logout e `Max-Age=0`; `mfa_pending` er temp_token cookie te na, body te, 8.3). `di.dart` e `ApiClient` ke `BrowserClient()..withCredentials = true` dao (shared package pure Dart thake, client inject hoy). CORS e `Access-Control-Allow-Credentials` shudhu `ADMIN_ORIGINS` er jonno. Dart code token dekhe na, localStorage e kichu na.
 
 ### 11.4 Guruttopurno screen
 
