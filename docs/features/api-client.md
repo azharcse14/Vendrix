@@ -1,6 +1,6 @@
 # API client ar model (shared)
 
-Design: 7.1, 7.2, 7.3, 4.3 · Milestone: M2, M4 · Code: `packages/shared/lib/api`, `packages/shared/lib/models`
+Design: 7.1, 7.2, 7.3, 7.4, 4.3 · Milestone: M2, M4, M5 · Code: `packages/shared/lib/api`, `packages/shared/lib/models`
 
 ## Ki kore
 
@@ -8,12 +8,13 @@ Website, admin ar app Go API er JSON ekoi Dart class e pore: product list ar det
 
 ## Kivabe kaj kore
 
-1. `ApiClient(baseUrl, client, locale:, headers:, timeout:, token:)` (`api/api_client.dart`): `send` protiti request e `Accept-Language`, constructor er `headers` (jemon `X-Shop-Host`), `token` thakle `Authorization: Bearer <token>` (M4, 10.11 item 4), body thakle JSON; `204` e `null`. Bhul: network → `ApiError(0, 'network_error')`, `timeout` (default 15 second) → `ApiError(0, 'timeout')`, JSON na (proxy er HTML 502) → asol status ar `internal`, 7.1 er `{"error":{...}}` → `code`, `message`, `fields`, `details`, `429` e `retryAfter` (second). Body er shape bhul holeo `ApiError` (`code` na thakle `internal`, shudhu string `fields`); 2xx khali body `null`. Auto retry na (v1.12).
+1. `ApiClient(baseUrl, client, locale:, headers:, timeout:, token:, cartKey:)` (`api/api_client.dart`): `send` protiti request e `Accept-Language`, constructor er `headers` (jemon `X-Shop-Host`), `token` thakle `Authorization: Bearer <token>` (M4, 10.11 item 4), `cartKey` thakle `X-Cart-Key` (M5, 7.1; website e `__Host-cart` theke), body thakle JSON; `204` e `null`. Bhul: network → `ApiError(0, 'network_error')`, `timeout` (default 15 second) → `ApiError(0, 'timeout')`, JSON na (proxy er HTML 502) → asol status ar `internal`, 7.1 er `{"error":{...}}` → `code`, `message`, `fields`, `details`, `429` e `retryAfter` (second). Body er shape bhul holeo `ApiError` (`code` na thakle `internal`, shudhu string `fields`); 2xx khali body `null`. Auto retry na (v1.12).
 2. Protiti model er `fromJson` `field<T>` (`models/json.dart`) diye pore: type na mille `FormatException`; `number` JSON er `0` (int) ke `double` kore; `objects` list.
 3. `Page.fromJson(json, item)` (`models/page.dart`): 7.1 er `{"items","page","limit","total"}`; `hasNext`.
 4. `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` (`models/catalog.dart`): M1 er public response (lekha age-i locale e resolve, 7.1); dam poisha `int`.
 5. `PublicSettings` (`models/settings.dart`): `raw` JSON ar dorkari getter (`name`, `colors`, `defaultLocale`, `enabledLocales`, `banglaDigits`, `paymentMethods`, font, radius, branding, `announcement`, `banners` (`Banner`: `imageKey`, `alt`, `link`; `image_key` string na hole item bad), `featuredCategorySlugs`, `featuredProductSlugs` (string na hole bad), `seoTitle`, `seoDescription`, `ogImageKey`, `noindex` (na thakle false)); block na thakle default.
 6. `CatalogRepository` (`categories`, `products` filter shoho, `product`, `policy` (v1.13: `body`)) ar `SettingsRepository` (`settings`, `version`, `translations`) (`api/repositories.dart`): 7.2 er route → model. `AccountRepository.me()` (M4): `GET /api/me` → `User` (`models/user.dart`: `phone`, `name`, `email`, `locale`; id nai, 7.3); token na thakle Go `401`.
+7. M5 (7.4, 8.4): `CartRepository` (`cart`, `add(variantId, quantity)`, `setQuantity`, `remove`) shob route e puro `Cart` (`models/cart.dart`: `items` (`CartItem`: `variantId`, `productSlug`, `name`, `variantLabel`, `image`, `unitPrice`, `compareAtPrice`, `variableWeight`, `quantity`, `maxQuantity`, `inStock`, `lineTotal`), `count`, `subtotal`, `notices` (`CartNotice`: `code`, `name`), notun guest cart e `cartKey`, na hole null). Dam/total client e hishab na (Rule 1). Bhul `ApiError` e: `out_of_stock` (`details.max_quantity`), `cart_full`, `not_found`. `WishlistRepository` (`wishlist`, `add`, `remove`, `merge(productIds)`; token lage) shob route e `List<ProductCard>` (Go er catalog card); 200 e `wishlist_full`. Verify er `cart_notices` website BFF `CartNotice.fromJson` diye pore (step 7).
 
 Website e (M3, [website.md](website.md)): protiti page request e notun `ApiClient` (`apiFor`, ek `http.Client`): `X-Shop-Host` = `Host`, `Accept-Language` URL er bhasha, Caddy er `X-Real-IP` thakle `X-Client-IP` + `X-Internal-Auth`. Settings er `SettingsRepository` process er cache e (`settingsCache`, 3.5). M4: `/account` `__Host-sid` cookie er token diye `ApiClient(token:)`; `@client LoginForm` browser e `ApiClient(Uri.base, http.Client())` diye shudhu BFF `/_/...` e (Go API te na, 10.9).
 
@@ -24,12 +25,13 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `packages/shared/lib/api/api_client.dart` → `ApiClient`, `send`, `get`, `ApiError` | HTTP, header, bhul |
-| `packages/shared/lib/api/repositories.dart` → `CatalogRepository`, `SettingsRepository`, `AccountRepository` | Route → model |
+| `packages/shared/lib/api/repositories.dart` → `CatalogRepository`, `SettingsRepository`, `AccountRepository`, `CartRepository`, `WishlistRepository` | Route → model |
 | `packages/shared/lib/models/json.dart` → `field`, `number`, `objects` | Typed JSON pora |
 | `packages/shared/lib/models/page.dart` → `Page` | Paging |
 | `packages/shared/lib/models/catalog.dart` → `ProductCard`, `Product`, `Variant`, `ProductImage`, `Category` | Catalog |
 | `packages/shared/lib/models/settings.dart` → `PublicSettings` | Settings |
 | `packages/shared/lib/models/user.dart` → `User` | Customer profile |
+| `packages/shared/lib/models/cart.dart` → `Cart`, `CartItem`, `CartNotice` | Cart (M5) |
 
 ## Niyom ar tar test
 
@@ -39,6 +41,7 @@ Ei kram e poro:
 | Header, query, JSON body, `204`; 7.1 error, `fields`, `429 Retry-After`, HTML 502, network, timeout → `ApiError` (7.1, v1.12) | `ApiClient.send` | `test/api/api_client_test.dart` → `group('ApiClient (7.1, v1.12)')` |
 | Repository er query (na deya filter jay na) ar model (7.2) | `CatalogRepository`, `SettingsRepository` | `test/api/api_client_test.dart` → `group('Repository (7.2)')` |
 | `token` thakle `Authorization: Bearer`, na thakle header nai; `me()` → `User`, bhul shape `FormatException` (7.3, 10.11 item 4) | `ApiClient.send`, `AccountRepository`, `User` | `test/api/api_client_test.dart` → `group('Account (7.3, 10.11 item 4)')` |
+| `cartKey` thakle `X-Cart-Key`, na thakle nai; cart route er method/path/body; `Cart`/`CartItem`/`CartNotice` parse, `cart_key` shudhu notun cart e; wishlist card list ar merge body; `out_of_stock` `max_quantity`, `cart_full`, `wishlist_full`; bhul shape `FormatException` (7.4, 8.4) | `ApiClient.send`, `CartRepository`, `WishlistRepository`, `Cart` | `test/api/api_client_test.dart` → `group('Cart ar wishlist (7.4, 8.4, M5)')` |
 | Public settings er getter ar default (7.2, 9.2) | `PublicSettings` | `test/models/catalog_test.dart` → `group('PublicSettings (7.2, 9.2)')` |
 | Theme, branding, homepage (banner, featured) er getter; bhul type e default ba item bad (9.2) | `PublicSettings`, `Banner` | `test/models/settings_test.dart` → `group('PublicSettings (9.2)')` |
 
@@ -55,7 +58,7 @@ Nai (API er JSON; [catalog.md](catalog.md), [shop.md](shop.md)).
 
 - Go er response e field jog/bodlale ekhane model ar `catalog_test.dart` er JSON o (M1 er local API theke copy).
 - Timeout e request bondho hoy na, shudhu opekkha thame; POST e app nije abar pathabe na (idempotency, 8.6).
-- Model shudhu je API ache tar (v1.12); cart, order tader milestone e.
+- Model shudhu je API ache tar (v1.12); order M6 e. Cart er Go response (`cart/service.go` er `Cart`, `Item`) bodlale `cart.dart` ar test er JSON o.
 - `attributes`, `seo` vendor er lekha: HTML/JSON-LD e boshate escape (M3).
 
 ## Proshno-uttor

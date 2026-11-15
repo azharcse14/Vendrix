@@ -7,6 +7,7 @@ export 'api/repositories.dart';
 export 'format/date.dart';
 export 'format/money.dart';
 export 'l10n/translator.dart';
+export 'models/cart.dart';
 export 'models/catalog.dart';
 export 'models/localized_text.dart';
 export 'models/page.dart';

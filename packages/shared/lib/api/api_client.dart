@@ -59,6 +59,9 @@ class ApiClient {
   /// Customer session token (`Authorization: Bearer`; website e `__Host-sid` cookie theke, 10.11 item 4).
   final String? token;
 
+  /// Guest cart er key (`X-Cart-Key`; website e `__Host-cart` cookie theke, 7.1, 8.4).
+  final String? cartKey;
+
   /// ApiClient.
   const ApiClient(
     this.baseUrl,
@@ -67,6 +70,7 @@ class ApiClient {
     this.headers = const {},
     this.timeout = const Duration(seconds: 15),
     this.token,
+    this.cartKey,
   });
 
   /// GET; JSON ferot.
@@ -88,6 +92,7 @@ class ApiClient {
           ..headers.addAll({
             ...headers,
             if (token != null) 'Authorization': 'Bearer $token',
+            'X-Cart-Key': ?cartKey,
             'Accept-Language': locale,
             'Accept': 'application/json',
           });
