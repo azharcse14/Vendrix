@@ -57,6 +57,7 @@ class SeoHead extends StatelessComponent {
     String url(String locale) => '${site.origin}${localePath(locale, path)}';
     final key = imageKey ?? s.ogImageKey ?? s.logoKey;
     final image = key == null ? null : site.images.url(key, 1280);
+    final favicon = s.faviconKey == null ? null : site.images.url(s.faviconKey!, 320);
     Component og(String property, String content) => meta(attributes: {'property': property, 'content': content});
 
     return Document.head(
@@ -66,6 +67,8 @@ class SeoHead extends StatelessComponent {
         if (noindex || s.noindex) 'robots': 'noindex',
       },
       children: [
+        // Key na thakle `data:` (CSP img-src e ache): browser nije `/favicon.ico` (404) khoje na.
+        link(rel: 'icon', href: favicon ?? 'data:,'),
         link(rel: 'canonical', href: url(site.locale)),
         for (final (lang, href) in [
           ('bn', url('bn')),

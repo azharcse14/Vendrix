@@ -8,6 +8,7 @@ void main() {
         'branding': {
           'name': {'bn': 'সবুজ বাজার'},
           'logo_key': 'shops/1/logo.png',
+          'favicon_key': 'shops/1/favicon.png',
           'phone': '+8801712345678',
           'email': 'hello@example.com',
           'dbid_number': 'DBID-1',
@@ -25,6 +26,7 @@ void main() {
       expect(s.bodyFont, 'Hind Siliguri');
       expect(s.radius, 14);
       expect(s.logoKey, 'shops/1/logo.png');
+      expect(s.faviconKey, 'shops/1/favicon.png');
       expect(s.phone, '+8801712345678');
       expect(s.email, 'hello@example.com');
       expect(s.dbidNumber, 'DBID-1');
@@ -42,6 +44,7 @@ void main() {
       expect(s.radius, 8);
       expect(s.phone, isNull);
       expect(s.logoKey, isNull);
+      expect(s.faviconKey, isNull);
       expect(s.announcement.of('bn'), '');
       expect(s.noindex, isFalse);
       expect(s.ogImageKey, isNull);

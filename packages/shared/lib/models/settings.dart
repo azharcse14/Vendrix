@@ -67,6 +67,9 @@ class PublicSettings {
   /// `branding.logo_key`.
   String? get logoKey => _str('branding', 'logo_key');
 
+  /// `branding.favicon_key`.
+  String? get faviconKey => _str('branding', 'favicon_key');
+
   /// `branding.phone`.
   String? get phone => _str('branding', 'phone');
 

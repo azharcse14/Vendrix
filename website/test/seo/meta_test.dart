@@ -70,6 +70,30 @@ void main() {
       expect(cat.querySelector('meta[property="og:type"]')!.attributes['content'], 'website');
     });
 
+    testServer('favicon: branding.favicon_key er chobi; na thakle data: (browser /favicon.ico 404 khoje na)', (
+      t,
+    ) async {
+      t.pumpComponent(site(shop));
+      final none = (await t.request('/')).document!;
+      expect(none.querySelector('link[rel="icon"]')!.attributes['href'], 'data:,');
+    });
+
+    testServer('favicon key thakle oi chobi', (t) async {
+      t.pumpComponent(
+        site({
+          ...shop,
+          'branding': {
+            'name': {'bn': 'সবুজ বাজার'},
+            'favicon_key': 'shops/1/favicon.png',
+          },
+        }),
+      );
+      final doc = (await t.request('/policy/terms')).document!;
+      final href = doc.querySelector('link[rel="icon"]')!.attributes['href']!;
+      expect(href, startsWith('https://img.test/'));
+      expect(href, endsWith('shops/1/favicon.png'));
+    });
+
     testServer('en bondho: hreflang shudhu bn ar x-default; seo.noindex: puro site noindex', (t) async {
       t.pumpComponent(
         site({
