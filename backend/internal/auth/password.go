@@ -1,6 +1,3 @@
-// Package auth: staff er password hash (8.3). Login, session, TOTP M4 e.
-//
-// Feature doc: docs/features/shop.md
 package auth
 
 import (

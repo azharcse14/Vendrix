@@ -23,6 +23,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.17 | M0 | chalu (SMS provider M4, alert M12) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
 | Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec) |
+| Login: OTP, staff password (session, TOTP M4 e ashbe) | [auth.md](auth.md) | 8.2, 8.3 | M4 | cholche (password, OTP code ar hash) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
@@ -39,7 +40,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/shop` | Shop er data: resolve, credential encrypt ar save | [shop.md](shop.md), [credentials.md](credentials.md) |
 | `backend/internal/catalog` | Category, product, variant: public read, search, admin CRUD | [catalog.md](catalog.md) |
 | `backend/internal/audit` | Admin kaj er log, kaj er transaction e | [audit.md](audit.md) |
-| `backend/internal/auth` | Staff password hash (login M4) | [shop.md](shop.md) |
+| `backend/internal/auth` | Staff password hash, OTP code ar hash (session, TOTP M4 e) | [auth.md](auth.md) |
 | `backend/internal/jobs` | Job queue, worker, sweep | [jobs.md](jobs.md) |
 | `backend/internal/notify` | SMS sender, `sms.send` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |

@@ -1,6 +1,6 @@
 # Shop chena ar khola
 
-Design: 3.2, 3.8, 6.7, 7.1, 7.2, 8.3, 9.2, 9.4 · Milestone: M1 · Code: `backend/internal/httpx`, `backend/internal/shop`, `backend/internal/auth`
+Design: 3.2, 3.8, 6.7, 7.1, 7.2, 8.3, 9.2, 9.4 · Milestone: M1 · Code: `backend/internal/httpx`, `backend/internal/shop`
 
 ## Ki kore
 
@@ -36,7 +36,6 @@ Ei kram e poro:
 | `backend/internal/shop/settings.go` → `PublicSettings`, `publicKeys` | Whitelist (7.2) |
 | `backend/internal/shop/store.go` → `publishedSettings`, `translations` | SQL |
 | `backend/cmd/api/main.go` → `runShopCreate` | CLI |
-| `backend/internal/auth/password.go` → `HashPassword`, `CheckPassword` | Owner staff er password hash (`shop create`) |
 
 ## Niyom ar tar test
 
@@ -51,7 +50,6 @@ Ei kram e poro:
 | Protiti host e nijer shop er published settings ar version; draft na; policy shop er nijer, settings e na, ochena kind `404` (Rule 3, 7.2) | `Handlers.Settings`, `SettingsVersion`, `Policy` | `TestSettingsIsolationIntegration` |
 | Policy: locale er lekha, khali hole `bn`, ta-o khali hole Bangla placeholder (404 na); notun shop e placeholder (7.2, 9.2, v1.13) | `PolicyText`, `DefaultSettings` | `TestPolicyText` |
 | Translation override shudhu oi shop ar locale er; `locale` bn/en chhara `400` (7.2, 9.8) | `Handlers.Translations` | `TestTranslationsIntegration` |
-| Password: pbkdf2-sha256, 600000, 16 byte salt, format `pbkdf2-sha256$600000$<salt>$<hash>`, constant-time tulona, bhul format e false (8.3) | `HashPassword`, `CheckPassword` | `TestPasswordHash` |
 
 ## Data
 
@@ -72,7 +70,7 @@ Ei kram e poro:
 - Admin route e shop staff session theke (M4), `X-Shop-Host` theke na (3.2).
 - Notun setting jog korle public kina `publicKeys` e decide koro; na dile private thake.
 - `features` notun shop e faka; organic er `unit_pricing`, `variable_weight` ityadi admin settings (M8) e chalu. SSLCommerz credential set (M10) er por `payment_methods` e `sslcommerz`.
-- `auth` package M4 e login, session, TOTP pabe; tokhon password er map `auth` er nijer doc e jabe. Ochena email e dummy hash ar ek shathe 4 tar beshi PBKDF2 na (8.3) login er kaj, M4 e.
+- Owner er password hash `auth.HashPassword` ([auth.md](auth.md)); login er niyom shekhane.
 
 ## Proshno-uttor
 
