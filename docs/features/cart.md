@@ -1,10 +1,10 @@
 # Cart ar wishlist
 
-Design: 8.4 (v1.28, v1.29), 7.4 · Milestone: M5 · Code: `backend/internal/cart`
+Design: 8.4 (v1.28–v1.30), 7.4, 7.3, 8.2 step 6 · Milestone: M5 · Code: `backend/internal/cart`
 
 ## Ki kore
 
-Customer (login chhara-o) cart e variant rakhe; dam protibar bortoman (cart e dam save hoy na). Ekhon cart API: `GET /api/cart`, `POST /api/cart/items`, `PATCH`/`DELETE /api/cart/items/{variant_id}`. Login thakle account cart, na hole `X-Cart-Key` er guest cart. Merge, wishlist ar `cart.cleanup` M5 er porer step e.
+Customer (login chhara-o) cart e variant rakhe; dam protibar bortoman (cart e dam save hoy na). Ekhon cart API: `GET /api/cart`, `POST /api/cart/items`, `PATCH`/`DELETE /api/cart/items/{variant_id}`. Login thakle account cart, na hole `X-Cart-Key` er guest cart. OTP login e guest cart account cart e merge hoy. Wishlist ar `cart.cleanup` M5 er porer step e.
 
 ## Kivabe kaj kore
 
@@ -13,6 +13,7 @@ Customer (login chhara-o) cart e variant rakhe; dam protibar bortoman (cart e da
 3. `POST` (`Add`): transaction e cart row `UPDATE ... updated_at = now() RETURNING` (lock); na thakle notun cart: account e `ON CONFLICT`, guest e `NewKey` (response e `cart_key`; client er key diye cart kokhono na). Ekoi variant abar add e qty jog; jog `CheckQuantity` (1..`min(stock, 50)`), notun variant e `CheckRoom` (50 line).
 4. `PATCH` (`SetQuantity`): cart e thaka variant er qty set; cart/item na thakle `404`. `DELETE` (`Remove`): idempotent `200`.
 5. Protiti route puro cart ferot dey, `Cache-Control: no-store`.
+6. Merge (`Merge`, `auth.verifyOTP` er transaction theke, `X-Cart-Key` shoho): `KeyHash` na mille kichu na. Age guest cart `FOR UPDATE` (`lockGuestCart`; na pele kichu na), tarpor account cart upsert (`createCart`, row lock) — shob merge ek kram e lock kore, tai deadlock na, ar parallel merge e duita-r ekta guest cart pay na. Guest er line add er kram e: bondho bad (notice na); ekoi variant e qty jog, `NormalizeQuantity(min(jog, 50), stock)` (stock 0 e `min(jog, 50)`); notun variant e `CheckRoom` fail hole `item_dropped`. Shesh e guest cart row muche (item CASCADE). Notice verify er response er `cart_notices` e (7.3 v1.30).
 
 ## Code er map
 
@@ -23,9 +24,10 @@ Ei kram e poro:
 | `backend/cmd/api/router.go` → `newHandler` | Cart route: public + `OptionalCustomer` |
 | `backend/internal/cart/handler.go` → `Routes`, `owner`, `Get`, `Add`, `Patch`, `Delete`, `fail`, `reply` | HTTP, body (`DisallowUnknownFields`), error mapping, puro cart response |
 | `backend/internal/cart/service.go` → `View`, `Add`, `SetQuantity`, `Remove`, `checkVariant`, `line`, `label` | Niyom: normalize, notice, pricing, qty/limit, transaction |
+| `backend/internal/cart/service.go` → `Merge`; `backend/cmd/api/router.go` → `cartMerge`; `backend/internal/auth/service.go` → `verifyOTP` | Login e guest cart merge (verify er tx e; router `auth.CartMerge` hishebe dey, import cycle er karone) |
 | `backend/internal/cart/service.go` → `NewKey`, `KeyHash` | Guest key banano ar format check, `sha256` |
 | `backend/internal/cart/service.go` → `MaxQuantity`, `CheckQuantity`, `CheckRoom`, `NormalizeQuantity` | Quantity, line limit, normalize (pure) |
-| `backend/internal/cart/store.go` → `findCart`, `touchCart`, `createCart`, `activeVariant`, `itemState`, `setItem`, `deleteItem`, `removeInactive`, `reduceItem`, `items` | SQL, protiti query `shop_id` diye |
+| `backend/internal/cart/store.go` → `findCart`, `touchCart`, `createCart`, `activeVariant`, `itemState`, `setItem`, `deleteItem`, `removeInactive`, `reduceItem`, `items`, `lockGuestCart`, `guestItems`, `quantities`, `deleteCart` | SQL, protiti query `shop_id` diye |
 | `backend/internal/httpx/session.go` → `OptionalCustomer` | Bearer optional, thakle `RequireCustomer` |
 | `backend/internal/cart/cart_test.go`, `cart_integration_test.go` | Pure niyom ar asol Postgres e API test |
 
@@ -42,10 +44,12 @@ Ei kram e poro:
 | Dam bortoman, subtotal `pricing` diye; body te dam field `400` (8.4 item 5, Rule 1) | `View`, `line`, `DecodeJSON` | `TestCartFreshPriceIntegration`, `TestCartRejectsPriceField` |
 | Bondho product/variant, active na vendor: `GET` e muche + `item_removed` ekbar; add e `404` (8.4 item 4, Rule 13) | `removeInactive`, `activeVariant` | `TestCartInactiveRemovedIntegration` |
 | Onno shop er key/session/variant chhoy na (Rule 3, 14.2 test 5) | protiti query `shop_id` | `TestCartShopIsolationIntegration` |
+| Merge: qty jog `min(jog, 50, stock)`, stock 0 e `min(jog, 50)`, bondho bad, guest cart muche, 50 variant er beshi e account er item thake + guest er notun kram e, baki `item_dropped`; parallel e ekbar; onno shop/bhul format key e kichu na (8.4 item 6, v1.29) | `Merge`, `lockGuestCart` | `TestCartMergeIntegration` |
+| Merge verify er transaction e (bhul code e na), response e `cart_notices` (khali `[]`) (8.2 step 6, 7.3 v1.30) | `verifyOTP`, `VerifyOTP` | `TestVerifyMergesCartIntegration` |
 
 ## Data
 
-`carts` (`session_key` = key er `sha256`; `user_id` thakle account cart), `cart_items` (`quantity > 0`), `001_init.sql`. Write e `carts.updated_at = now()` (8.4 item 7, `cart.cleanup` er jonno). Dam/stock `product_variants` theke protibar.
+`carts` (`session_key` = key er `sha256`; `user_id` thakle account cart), `cart_items` (`quantity > 0`), `001_init.sql`. Merge e guest `carts` row muche (`cart_items` CASCADE), account cart upsert. Write e `carts.updated_at = now()` (8.4 item 7, `cart.cleanup` er jonno). Dam/stock `product_variants` theke protibar.
 
 ## Bhul hole ki hoy
 
@@ -61,4 +65,5 @@ Ei kram e poro:
 
 - **Bhul key e error na keno?** Client er key ochena hole notun cart; onner cart kokhono pay na (8.4 item 1). Cookie expire ba bhul hole customer notun cart e add korte pare.
 - **Ekoi variant abar add korle?** Qty jog (product page e duibar "Cart e add" = 2), jog o `min(stock, 50)` er beshi hole `409`. Set korte `PATCH`.
+- **Merge e bad hoya item er notice porer `GET` e ashe na keno?** Tar jonno state (column) lagto; notice verify er response er `cart_notices` e, website login form e ek line (10.12 item 2, v1.30).
 - **`variant_label` ki?** Variant er `options` er value gulo key er kram e, bortoman bhashay, koma diye.

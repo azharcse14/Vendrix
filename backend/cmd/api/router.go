@@ -46,7 +46,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/policies/{kind}", public(http.HandlerFunc(sh.Policy)))
 
 	// OTP send e public limit er upore client IP te ghontay 10 (7.8)
-	ah := auth.NewHandlers(d, log, cfg.OTPSecret, auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret})
+	ah := auth.NewHandlers(d, log, cfg.OTPSecret, auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret}, cartMerge)
 	otpIP := httpx.RateLimit(10, time.Hour)
 	mux.Handle("POST /api/auth/otp/send", public(otpIP(http.HandlerFunc(ah.SendOTP))))
 	mux.Handle("POST /api/auth/otp/verify", public(http.HandlerFunc(ah.VerifyOTP)))
@@ -103,4 +103,9 @@ func healthz(p pinger) http.HandlerFunc {
 		}
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
+}
+
+// cartMerge: auth.CartMerge (auth cart import kore na, import cycle).
+func cartMerge(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
+	return cart.Merge(ctx, tx, shopID, userID, key, locale)
 }

@@ -64,7 +64,10 @@ func newOTPFixture(t *testing.T) *otpFixture {
 		f.shops[s+".com"] = id
 	}
 	log := slog.New(slog.DiscardHandler)
-	h := auth.NewHandlers(d, log, otpSecret, auth.Turnstile{URL: fakeSiteverify(t).URL, Secret: "ts-secret"})
+	h := auth.NewHandlers(d, log, otpSecret, auth.Turnstile{URL: fakeSiteverify(t).URL, Secret: "ts-secret"},
+		func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
+			return cart.Merge(ctx, tx, shopID, userID, key, locale)
+		})
 	mux := http.NewServeMux()
 	shopMW := httpx.ShopFromHost(log, shop.NewResolver(d).Resolve)
 	mux.Handle("POST /api/auth/otp/send", shopMW(http.HandlerFunc(h.SendOTP)))
@@ -399,7 +402,7 @@ func TestTurnstile(t *testing.T) {
 	}
 
 	// handler: Turnstile DB er age, tai database chhara-i 400
-	h := auth.NewHandlers(nil, slog.New(slog.DiscardHandler), otpSecret, ts)
+	h := auth.NewHandlers(nil, slog.New(slog.DiscardHandler), otpSecret, ts, nil)
 	for _, tok := range []string{"bad", "", "ok:evil.com"} {
 		b, _ := json.Marshal(map[string]string{"phone": "01711000001", "purpose": "login", "turnstile_token": tok})
 		rec := httptest.NewRecorder()

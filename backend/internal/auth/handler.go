@@ -22,10 +22,11 @@ type Handlers struct {
 	log       *slog.Logger
 	otpSecret string
 	turnstile Turnstile
+	cartMerge CartMerge
 }
 
-func NewHandlers(d *sql.DB, log *slog.Logger, otpSecret string, ts Turnstile) *Handlers {
-	return &Handlers{db: d, log: log, otpSecret: otpSecret, turnstile: ts}
+func NewHandlers(d *sql.DB, log *slog.Logger, otpSecret string, ts Turnstile, merge CartMerge) *Handlers {
+	return &Handlers{db: d, log: log, otpSecret: otpSecret, turnstile: ts, cartMerge: merge}
 }
 
 // SendOTP: POST /api/auth/otp/send {phone, purpose: "login", turnstile_token} → {"sent": true} (8.2, 7.8).
@@ -69,7 +70,7 @@ func (h *Handlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// VerifyOTP: POST /api/auth/otp/verify {phone, code} → {token, user} (8.2, 7.3). Turnstile lage na (14.2
+// VerifyOTP: POST /api/auth/otp/verify {phone, code} (+ X-Cart-Key) → {token, user, cart_notices} (8.2, 7.3). Turnstile lage na (14.2
 // test 23): OTP nijei 5 attempt ar phone lock e bandha.
 func (h *Handlers) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	noStore(w)
@@ -87,12 +88,13 @@ func (h *Handlers) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s, _ := httpx.ShopFrom(r.Context())
-	token, u, err := verifyOTP(r.Context(), h.db, h.otpSecret, verifyInput{ShopID: s.ID, Timezone: s.Timezone, Phone: p,
-		Code: in.Code, Locale: httpx.Locale(r), IP: httpx.IP(r.Context()), UserAgent: userAgent(r)})
+	token, u, notices, err := verifyOTP(r.Context(), h.db, h.otpSecret, h.cartMerge, verifyInput{ShopID: s.ID, Timezone: s.Timezone, Phone: p,
+		Code: in.Code, Locale: httpx.Locale(r), IP: httpx.IP(r.Context()), UserAgent: userAgent(r),
+		CartKey: r.Header.Get("X-Cart-Key")})
 	var limit limitError
 	switch {
 	case err == nil:
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "user": u})
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"token": token, "user": u, "cart_notices": notices})
 	case errors.As(err, &limit):
 		writeLimit(w, r, limit.retry)
 	case errors.Is(err, errOTPInvalid):

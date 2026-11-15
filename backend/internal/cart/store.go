@@ -190,3 +190,73 @@ func items(ctx context.Context, q querier, shopID, cartID int64) ([]itemRow, err
 	}
 	return out, rows.Err()
 }
+
+// lockGuestCart (merge): guest cart row FOR UPDATE; na thakle (ba parallel merge age muche thakle) 0.
+// Merge e age guest, tarpor account lock: shob merge ek kram e, tai deadlock na.
+func lockGuestCart(ctx context.Context, tx *sql.Tx, shopID int64, keyHash []byte) (int64, error) {
+	var id int64
+	err := tx.QueryRowContext(ctx, `SELECT id FROM carts WHERE shop_id = $1 AND session_key = $2 AND user_id IS NULL
+		FOR UPDATE`, shopID, keyHash).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	return id, err
+}
+
+type guestRow struct {
+	VariantID int64
+	Quantity  int
+	Stock     int
+	Active    bool
+	Name      catalog.Text
+}
+
+// guestItems (merge): guest cart er line guest er add er kram e (item_dropped e kon ta thakbe), active ar stock shoho.
+func guestItems(ctx context.Context, tx *sql.Tx, shopID, cartID int64) ([]guestRow, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT ci.variant_id, ci.quantity, v.stock,
+		  v.is_active AND p.is_active AND vd.status = 'active', p.name
+		FROM cart_items ci
+		JOIN product_variants v ON v.shop_id = ci.shop_id AND v.id = ci.variant_id
+		JOIN products p ON p.shop_id = v.shop_id AND p.id = v.product_id
+		JOIN vendors vd ON vd.shop_id = v.shop_id AND vd.id = v.vendor_id
+		WHERE ci.shop_id = $1 AND ci.cart_id = $2
+		ORDER BY ci.added_at, ci.variant_id`, shopID, cartID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []guestRow
+	for rows.Next() {
+		var g guestRow
+		if err := rows.Scan(&g.VariantID, &g.Quantity, &g.Stock, &g.Active, &g.Name); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
+// quantities: cart er variant → qty.
+func quantities(ctx context.Context, tx *sql.Tx, shopID, cartID int64) (map[int64]int, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT variant_id, quantity FROM cart_items WHERE shop_id = $1 AND cart_id = $2`,
+		shopID, cartID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]int{}
+	for rows.Next() {
+		var v int64
+		var q int
+		if err := rows.Scan(&v, &q); err != nil {
+			return nil, err
+		}
+		out[v] = q
+	}
+	return out, rows.Err()
+}
+
+func deleteCart(ctx context.Context, tx *sql.Tx, shopID, cartID int64) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM carts WHERE shop_id = $1 AND id = $2`, shopID, cartID)
+	return err
+}

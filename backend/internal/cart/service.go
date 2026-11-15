@@ -289,3 +289,51 @@ func Remove(ctx context.Context, d *sql.DB, shopID int64, o Owner, variantID int
 		return deleteItem(ctx, tx, shopID, cartID, variantID)
 	})
 }
+
+// Merge (8.4 item 6, 8.2 step 6): login er (verify er) transaction e guest cart account cart e. Ekoi variant e
+// qty jog, min(jog, 50, stock); stock 0 e item thake min(jog, 50) (abar ashle kena jay); bondho bad (notice
+// na); 50 variant er beshi hole account er item thake, guest er notun ta kram e 50 porjonto, baki item_dropped
+// (v1.29; notice verify er response e, v1.30). Shesh e guest cart muche. Key nai, bhul format ba onno shop er
+// hole kichu na.
+func Merge(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) ([]Notice, error) {
+	notices := []Notice{}
+	hash, ok := KeyHash(key)
+	if !ok {
+		return notices, nil
+	}
+	guestID, err := lockGuestCart(ctx, tx, shopID, hash)
+	if err != nil || guestID == 0 {
+		return notices, err
+	}
+	accountID, err := createCart(ctx, tx, shopID, userID, nil) // upsert, row lock o
+	if err != nil {
+		return nil, err
+	}
+	guest, err := guestItems(ctx, tx, shopID, guestID)
+	if err != nil {
+		return nil, err
+	}
+	have, err := quantities(ctx, tx, shopID, accountID)
+	if err != nil {
+		return nil, err
+	}
+	lines := len(have)
+	for _, g := range guest {
+		if !g.Active {
+			continue
+		}
+		cur := have[g.VariantID]
+		if CheckRoom(lines, cur > 0) != nil {
+			notices = append(notices, Notice{Code: "item_dropped", Name: g.Name.In(locale)})
+			continue
+		}
+		q, _ := NormalizeQuantity(min(cur+g.Quantity, MaxLineQuantity), g.Stock)
+		if err := setItem(ctx, tx, shopID, accountID, g.VariantID, q); err != nil {
+			return nil, err
+		}
+		if cur == 0 {
+			lines++
+		}
+	}
+	return notices, deleteCart(ctx, tx, shopID, guestID)
+}
