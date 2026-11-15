@@ -13,6 +13,7 @@ import (
 
 	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/db"
+	"vendrix/backend/internal/jobs"
 	"vendrix/backend/internal/pricing"
 )
 
@@ -397,4 +398,10 @@ func MergeWish(ctx context.Context, d *sql.DB, shopID, userID int64, ids []int64
 		}
 		return nil
 	})
+}
+
+// CleanupJob (cart.cleanup, 8.17 v1.28): protidin purono guest cart muche; login cart kokhono na (Q11 vi).
+// Idempotent: abar chalale muchar kichu nai.
+func CleanupJob(d *sql.DB) jobs.Handler {
+	return func(ctx context.Context, _ jobs.Job) error { return deleteStaleGuestCarts(ctx, d) }
 }

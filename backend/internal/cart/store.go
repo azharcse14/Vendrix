@@ -261,6 +261,13 @@ func deleteCart(ctx context.Context, tx *sql.Tx, shopID, cartID int64) error {
 	return err
 }
 
+// deleteStaleGuestCarts (8.17 v1.28): 30 din bodol na hoya guest cart, item CASCADE e. Shop filter nai: platform
+// er job (shop_id NULL), shob shop ek DELETE e; carts_updated_idx o shop chhara.
+func deleteStaleGuestCarts(ctx context.Context, d *sql.DB) error {
+	_, err := d.ExecContext(ctx, `DELETE FROM carts WHERE user_id IS NULL AND updated_at < now() - interval '30 days'`)
+	return err
+}
+
 type wishCard struct {
 	ID, RatingSum, ReviewCount int64
 	Slug, Unit                 string

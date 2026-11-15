@@ -4,7 +4,7 @@ Design: 8.4 (v1.28–v1.30), 7.4, 7.3, 8.2 step 6 · Milestone: M5 · Code: `bac
 
 ## Ki kore
 
-Customer (login chhara-o) cart e variant rakhe; dam protibar bortoman (cart e dam save hoy na). Ekhon cart API: `GET /api/cart`, `POST /api/cart/items`, `PATCH`/`DELETE /api/cart/items/{variant_id}`. Login thakle account cart, na hole `X-Cart-Key` er guest cart. OTP login e guest cart account cart e merge hoy. Wishlist (login chay): `GET /api/wishlist`, `POST`/`DELETE /api/wishlist/{product_id}`, `POST /api/wishlist/merge` (guest `wl` cookie er ID). `cart.cleanup` M5 er porer step e.
+Customer (login chhara-o) cart e variant rakhe; dam protibar bortoman (cart e dam save hoy na). Ekhon cart API: `GET /api/cart`, `POST /api/cart/items`, `PATCH`/`DELETE /api/cart/items/{variant_id}`. Login thakle account cart, na hole `X-Cart-Key` er guest cart. OTP login e guest cart account cart e merge hoy. Wishlist (login chay): `GET /api/wishlist`, `POST`/`DELETE /api/wishlist/{product_id}`, `POST /api/wishlist/merge` (guest `wl` cookie er ID). `cart.cleanup` job protidin 30 din purono guest cart muche.
 
 ## Kivabe kaj kore
 
@@ -15,6 +15,7 @@ Customer (login chhara-o) cart e variant rakhe; dam protibar bortoman (cart e da
 5. Protiti route puro cart ferot dey, `Cache-Control: no-store`.
 6. Merge (`Merge`, `auth.verifyOTP` er transaction theke, `X-Cart-Key` shoho): `KeyHash` na mille kichu na. Age guest cart `FOR UPDATE` (`lockGuestCart`; na pele kichu na), tarpor account cart upsert (`createCart`, row lock) — shob merge ek kram e lock kore, tai deadlock na, ar parallel merge e duita-r ekta guest cart pay na. Guest er line add er kram e: bondho bad (notice na); ekoi variant e qty jog, `NormalizeQuantity(min(jog, 50), stock)` (stock 0 e `min(jog, 50)`); notun variant e `CheckRoom` fail hole `item_dropped`. Shesh e guest cart row muche (item CASCADE). Notice verify er response er `cart_notices` e (7.3 v1.30).
 7. Wishlist: router e public + `RequireCustomer` (Bearer na/bhul `401`). Protiti query `shop_id` ar `user_id` diye (Rule 16). `GET` (`wishCards`): `catalog.Card` list, shudhu active product (active variant ache, vendor active), notun age, max 200; bondho product er row thake, chalu hole abar dekhay. `POST` (`AddWish`): user row `FOR NO KEY UPDATE` (`lockWishlist`, parallel e 200 na bhange); ager product e kichu na; notun e `activeProducts` (onno shop er ID o `404`), 200 thakle `409 wishlist_full` (limit e lukano row o gona). `DELETE` (`RemoveWish`) idempotent. Merge (`MergeWish`): prothom 50 ID, shudhu oi shop er active product, request er kram e mot 200 porjonto; ochena/bhul ID chupchap bad. `POST`/`DELETE`/merge o `GET` er list ferot dey, `Cache-Control: no-store`.
+8. `cart.cleanup` (`CleanupJob`, worker protidin, [jobs](jobs.md)): `updated_at` 30 din er purono guest cart (`user_id IS NULL`) ek `DELETE` e, shob shop er (platform job, `carts_updated_idx`); item CASCADE. Login cart kokhono na. Guest key er 30 din `__Host-cart` er `Max-Age` er sathe mile.
 
 ## Code er map
 
@@ -30,6 +31,7 @@ Ei kram e poro:
 | `backend/internal/cart/service.go` → `MaxQuantity`, `CheckQuantity`, `CheckRoom`, `NormalizeQuantity` | Quantity, line limit, normalize (pure) |
 | `backend/internal/cart/store.go` → `findCart`, `touchCart`, `createCart`, `activeVariant`, `itemState`, `setItem`, `deleteItem`, `removeInactive`, `reduceItem`, `items`, `lockGuestCart`, `guestItems`, `quantities`, `deleteCart` | SQL, protiti query `shop_id` diye |
 | `backend/internal/cart/handler.go` → `WishlistRoutes`, `GetWishlist`, `AddWishlist`, `DeleteWishlist`, `MergeWishlist`; `service.go` → `AddWish`, `RemoveWish`, `MergeWish`; `store.go` → `wishCards`, `lockWishlist`, `activeProducts`, `insertWish`, `deleteWish` | Wishlist API (router e public + `RequireCustomer`) |
+| `backend/internal/cart/service.go` → `CleanupJob`; `store.go` → `deleteStaleGuestCarts`; `backend/cmd/api/main.go` → `runServe` | `cart.cleanup` job handler (main worker e jog kore) |
 | `backend/internal/httpx/session.go` → `OptionalCustomer` | Bearer optional, thakle `RequireCustomer` |
 | `backend/internal/cart/cart_test.go`, `cart_integration_test.go`, `wishlist_integration_test.go` | Pure niyom ar asol Postgres e API test |
 
@@ -49,6 +51,7 @@ Ei kram e poro:
 | Merge: qty jog `min(jog, 50, stock)`, stock 0 e `min(jog, 50)`, bondho bad, guest cart muche, 50 variant er beshi e account er item thake + guest er notun kram e, baki `item_dropped`; parallel e ekbar; onno shop/bhul format key e kichu na (8.4 item 6, v1.29) | `Merge`, `lockGuestCart` | `TestCartMergeIntegration` |
 | Wishlist: login chhara `401`; query `user_id` + `shop_id` (onno user/shop er product na, IDOR na); duibar add e ek row; bondho product `GET` e lukano (row thake); 200 e notun add `409 wishlist_full`, parallel e o (8.4 item 8, 7.4, Rule 16) | `WishlistRoutes`, `AddWish`, `lockWishlist`, `wishCards` | `TestWishlistIntegration` |
 | Wishlist merge: prothom 50 ID, shudhu oi shop er active product, mot 200; bhul body `400` (8.4 item 8, 10.12) | `MergeWish`, `MergeWishlist` | `TestWishlistMergeIntegration` |
+| `cart.cleanup`: 30 din er purono guest cart ar item muche (shob shop), login cart ar notun guest cart thake; idempotent (8.17 v1.28, 8.4 item 7) | `CleanupJob`, `deleteStaleGuestCarts` | `TestCartCleanupIntegration` |
 | Merge verify er transaction e (bhul code e na), response e `cart_notices` (khali `[]`) (8.2 step 6, 7.3 v1.30) | `verifyOTP`, `VerifyOTP` | `TestVerifyMergesCartIntegration` |
 
 ## Data
@@ -64,6 +67,7 @@ Ei kram e poro:
 - 50 er shima (`MaxLineQuantity`, `MaxLines`) 8.4 er niyom; bodlate `design-change`, website/l10n er lekha o.
 - Key format bodlale website er `__Host-cart` (10.12) ar purono cart er key ochena hoye jabe.
 - Dam/total er hishab shudhu `pricing` e; cart e kokhono dam save korbe na.
+- Cart e notun write path holeo `updated_at = now()` koro, na hole active guest cart `cart.cleanup` e muche jabe.
 
 ## Proshno-uttor
 

@@ -120,7 +120,8 @@ func (w *Worker) Run(ctx context.Context) {
 	}
 }
 
-// schedule: recurring job, slot er dedupe_key diye (duita process e-o ekbar). jobs.cleanup UTC din er key e;
+// schedule: recurring job, slot er dedupe_key diye (duita process e-o ekbar). jobs.cleanup ar cart.cleanup
+// (handler cart package e, main jog kore) UTC din er key e;
 // protiti slot e insert chesta kore, dedupe e dine ekbar-i row.
 func (w *Worker) schedule(ctx context.Context, now time.Time) error {
 	slot := now.UTC().Truncate(sweepInterval)
@@ -129,7 +130,8 @@ func (w *Worker) schedule(ctx context.Context, now time.Time) error {
 	}
 	err := errors.Join(
 		Enqueue(ctx, w.db, New{Kind: "jobs.sweep", DedupeKey: "jobs.sweep:" + slot.Format(time.RFC3339), RunAt: slot}),
-		Enqueue(ctx, w.db, New{Kind: "jobs.cleanup", DedupeKey: "jobs.cleanup:" + slot.Format(time.DateOnly), RunAt: slot}))
+		Enqueue(ctx, w.db, New{Kind: "jobs.cleanup", DedupeKey: "jobs.cleanup:" + slot.Format(time.DateOnly), RunAt: slot}),
+		Enqueue(ctx, w.db, New{Kind: "cart.cleanup", DedupeKey: "cart.cleanup:" + slot.Format(time.DateOnly), RunAt: slot}))
 	if err == nil {
 		w.lastSweep = slot
 	}

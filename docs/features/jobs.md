@@ -1,6 +1,6 @@
 # Background job ar SMS
 
-Design: 6.4, 8.2, 8.17, 12.2, 13.4 · Milestone: M0, M4 · Code: `backend/internal/jobs`, `backend/internal/notify`
+Design: 6.4, 8.2, 8.17, 12.2, 13.4 · Milestone: M0, M4, M5 · Code: `backend/internal/jobs`, `backend/internal/notify`
 
 ## Ki kore
 
@@ -9,11 +9,11 @@ Request er baire je kaj (SMS, alert, auto-cancel, reconcile) `jobs` table e queu
 ## Kivabe kaj kore
 
 1. Kaj jog: `jobs.Enqueue` (`*sql.DB` ba order er `*sql.Tx`). `DedupeKey` thakle ekoi key e duibar row hoy na. `RunAt` khali hole database er `now()` (app er ghori na).
-2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
-3. `Worker.Run`: protiti 2 second e `schedule` (recurring `jobs.sweep` 5 minute er slot `dedupe_key`, `jobs.cleanup` UTC din er `dedupe_key`), tarpor `RunOnce`. 10 ta pele shathe shathe abar.
+2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`, `cart.cleanup` → `cart.CleanupJob`), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
+3. `Worker.Run`: protiti 2 second e `schedule` (recurring `jobs.sweep` 5 minute er slot `dedupe_key`, `jobs.cleanup` ar `cart.cleanup` UTC din er `dedupe_key`), tarpor `RunOnce`. 10 ta pele shathe shathe abar.
 4. `RunOnce`: 6.4 er claim query (`FOR UPDATE SKIP LOCKED`, `attempts + 1`, `locked_at`). Protiti kaj er age lock notun kore (onno worker niye thakle bad), `call` (1 minute timeout; panic o error), tarpor `finish`.
 5. `finish`: shofol hole `done_at` (`sms.send` hole payload `{}`, PII); fail hole `last_error`, `run_at = now + backoff` (1, 5, 15, 60 minute); `attempts = max_attempts` hole `failed_at` ar `alert`. `locked_at` claim er sathe na mille (5 minute por onno worker niyeche) kichu lekhe na.
-6. `jobs.sweep`: shesh attempt e crash kora job (`attempts >= max_attempts`, lock 5 minute er purono) `failed_at` ar alert. `jobs.cleanup` (protidin): `done_at` 30 din ar `failed_at` 90 din er purono row muche (`dedupe_key` shoho).
+6. `jobs.sweep`: shesh attempt e crash kora job (`attempts >= max_attempts`, lock 5 minute er purono) `failed_at` ar alert. `jobs.cleanup` (protidin): `done_at` 30 din ar `failed_at` 90 din er purono row muche (`dedupe_key` shoho). `cart.cleanup` (protidin): 30 din er purono guest cart muche ([cart](cart.md)).
 7. `notify.NewSMS`: `APP_ENV=local` e log (`phone.Mask`, shesh 3 digit); onno env e `ErrNoProvider` (provider M12 er age, 16.1), tai production e kokhono log mode na. OTP er lekha `OTPText`: kram shop override[locale] → default[locale] → override[bn] → default[bn] (9.8), `{code}` chhara lekha bad; default bn/en Go te (`otpDefault`).
 
 ## Code er map
@@ -41,6 +41,7 @@ Ei kram e poro:
 | Shutdown ba DB error e batch er baki job chere dey, attempt ferot (8.17) | `RunOnce`, `release` | `TestShutdownReleasesIntegration` |
 | `jobs.sweep` protiti 5 minute e ekbar (8.17) | `schedule` | `TestScheduleSweep` |
 | `jobs.cleanup` dine ekbar; done 30 din, failed 90 din er purono row muche, `dedupe_key` abar khali (8.17 v1.19) | `schedule`, `cleanup` | `TestJobsCleanupIntegration` |
+| `cart.cleanup` dine ekbar (UTC din er `dedupe_key`); handler `cart` package e (8.17 v1.28) | `schedule`, `cart.CleanupJob` | `TestJobsCleanupIntegration`, `TestCartCleanupIntegration` |
 | `sms.otp` bn ≤ 70 unit (UCS-2), en ≤ 160 (GSM-7), `{code}`, override ar locale er kram (8.16, 9.8) | `OTPText` | `TestOTPTemplateLength` |
 | SMS shudhu local e log, production e log mode na (8.2 step 4); log e phone mask (12.2) | `NewSMS` | `TestNewSMS` |
 | `sms.send` payload e phone ar text lage; OTP payload (`{otp_id, nonce, ct}`) e `OTPSource` theke phone ar code (8.2 step 4) | `SendSMSJob` | `TestSendSMSJob` |
