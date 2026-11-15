@@ -89,6 +89,7 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 | Method | Path | Kaj |
 |---|---|---|
 | GET | `/api/cart` | Cart (login ba `X-Cart-Key`). Dam ar stock server theke fresh |
+| GET | `/api/cart/count` | v1.31: badge er jonno shudhu `{count}` (normalize na) |
 | POST | `/api/cart/items` | `{variant_id, quantity}` |
 | PATCH | `/api/cart/items/{variant_id}` | `{quantity}` |
 | DELETE | `/api/cart/items/{variant_id}` | Bad dewa |
@@ -97,6 +98,17 @@ v1.19: M4 e `otp/*`, `logout`, `GET`/`PATCH /api/me`; `/api/me/addresses` ar `or
 | POST | `/api/wishlist/merge` | `{product_ids}` guest cookie theke account e |
 
 v1.28 (M5): Cart route e Bearer thakle account cart (bhul/expire `401`), na hole `X-Cart-Key` er guest cart (8.4). `GET`, `POST`, `PATCH`, `DELETE` shob puro cart ferot dey: `{items: [{variant_id, product_slug, name, variant_label, image, unit_price, compare_at_price, variable_weight, quantity, max_quantity, in_stock, line_total}], count, subtotal, notices}` (notun guest cart e `cart_key` o); `count` = alada line er shonkhya (qty jog na); `Cache-Control: no-store`. Body te dam/total er field nai (`DisallowUnknownFields` e `400`). `DELETE` e item na thakleo `200`. Wishlist er shob route login chay (`401`), protiti query `user_id` diye (Rule 16); `GET /api/wishlist` = product card er list (catalog er card er moto), bondho product lukano, max 200; merge e max 50 ID, mot 200 (8.4 item 8). v1.29: 200 thakle notun product `409 wishlist_full`.
+
+v1.31 (M5 review, user 15 November 2026): `GET /api/cart/count` → `{count}` (alada line): owner `GET /api/cart` er moto (Bearer, bhul/expire `401`; na hole `X-Cart-Key`), `shop_id` diye, kintu normalize na: row banay na, `DELETE`/`UPDATE` na, notice na; tai bondho item o gona, porer `GET /api/cart` muche. `Cache-Control: no-store`. Notice (`item_removed`, `quantity_reduced`) shudhu `GET /api/cart` e; website e shudhu `/cart` page eta dake (10.12 item 5), jate onno page er badge notice gile na fele.
+
+v1.31 spashto niyom (M5 er code, review e lekha):
+
+- `POST /api/cart/items` ekoi variant e qty **jog** kore (jog o 1..`min(stock, 50)`); `PATCH` qty **set** kore; cart e na thaka variant e `PATCH` `404 not_found` (`DELETE` `200`). Jog er age `quantity` 51 e cap, tai boro shonkhya overflow hoye `400` na, `409 out_of_stock`.
+- `variant_label` = variant er `options` er value, key er alphabet kram e, request er bhashay, `", "` diye; option na thakle `""`.
+- Ojon-variable variant e `nominal_weight_g` NULL hole item `in_stock: false`, `line_total` 0 (dam hishab hoy na).
+- Stock 0 line er `line_total` hishab kora dam (`pricing.LineTotal`), kintu `in_stock: false`, tai subtotal e na.
+- `409 out_of_stock` er `details.max_quantity` (`min(stock, 50)`) public catalog er `in_stock` er cheye beshi bole (stock 50 er niche exact): mene neya (12.2 Data 7).
+- Wishlist: `POST`, `DELETE` ar merge o `GET` er puro card list ferot dey. "Active" product = `is_active`, kom-poksha ekta active variant, vendor `active`. Add e onno shop er, bondho ba ochena product `404 not_found`; age theke thaka product e `200` (bondho holeo). 200 er limit e `GET` e lukano (bondho) row o gona. Merge e prothom 50 ID nay, baki chupchap bad; `product_ids` na thakle ba `null` `400 validation_failed`, khali list `200`.
 
 ### 7.5 Checkout ar order
 

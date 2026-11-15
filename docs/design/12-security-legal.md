@@ -54,6 +54,7 @@ Ami lawyer na, ar niyom bodlay. Niche-r tottho 28 October 2026 e prokashito khob
 4. Credential (`shop_credentials`) AES-GCM (AAD = shop_id:provider:key_version), key env e (`CREDENTIALS_KEY`), API theke kokhono ferot na.
 5. Log e phone er majhkhan lukano (`+88017****5678`), thikana log e na.
 6. Database user er shudhu dorkari permission: migration owner role, app `shop_app` (DDL nai, order/payment e DELETE nai, audit e UPDATE nai; `001` er shesh block, 6.1).
+7. v1.31 (M5 review): cart er `409 out_of_stock` er `details.max_quantity` (`min(stock, 50)`) diye 50 er niche exact stock jana jay (catalog e shudhu `in_stock`): mene neya; customer ke shima dekhate lage, stock gopon tottho na (7.4, 8.4).
 
 **Payment**
 
@@ -69,7 +70,7 @@ Ami lawyer na, ar niyom bodlay. Niche-r tottho 28 October 2026 e prokashito khob
 2. Admin er HTML/lekha (banner, description) render er age escape. Markdown allow korle shudhu nirdishto tag. JSON-LD e `<` escape. Banner ar social link e shudhu `/` (kintu `//`, `\` ba control character na, URL parse kore; 9.2) ba `https://`.
 3. Security header: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` (token ar print page e `no-referrer`), `Content-Security-Policy` (nijer domain + Turnstile + payment + chobi er domain, Pixel/GA4 settings onujayi kintu token page e na (10.1); v1.5: inline script e nonce na, `sha256` hash ba external file, karon public HTML cache hoy (10.3) ar cache kora page e shobai ekoi nonce pay), `frame-ancestors 'none'` (preview chhara). v1.19: Turnstile er domain shudhu Turnstile thaka page er CSP te (10.11).
 4. CSRF: BFF er POST e Origin check (10.9).
-5. Session, cart ba `preview` cookie thaka page e `Cache-Control: private, no-store` (10.3). v1.28: `wl` server e kichu render kore na, tai cache er karon na (10.12).
+5. Session, cart ba `preview` cookie thaka page e `Cache-Control: private, no-store` (10.3). v1.28: `wl` server e kichu render kore na, tai cache er karon na (10.12). v1.31 (M5 review): `wl` e `__Host-` prefix nai (JS lekhe; ekhon shop er domain e shudhu amader JS, ar ID list secret na); tenant er custom script ba subdomain (Phase 3) ele `__Host-wl` (onno subdomain theke overwrite atkate).
 
 **Operation**
 

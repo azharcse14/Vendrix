@@ -67,6 +67,7 @@ v1.28 (M5, user 15 November 2026):
 6. **Merge** (8.2 step 6): verify er transaction e dui cart `SELECT ... FOR UPDATE` (account cart na thakle toiri); ekoi variant e qty jog, `min(jog, 50, stock)`; stock 0 hole item thake `min(jog, 50)` (out of stock dekhay, stock ferot ele kena jay); bondho product bad; tarpor guest cart (row) muche. Verify fail hole merge na. Website e `__Host-cart` muche (10.12). v1.29: guest + account milie 50 er beshi alada variant hole account cart er item thake, guest er notun item 50 porjonto, baki bad; cart response e notice `item_dropped`. v1.30 (user 15 November 2026): notice verify er response er `cart_notices` e (7.3), porer `GET /api/cart` e na (tar jonno state lagto, migration na); protiti bad item e `{code: "item_dropped", name}`. Bondho guest item chupchap bad (notice na).
 7. **Purono cart**: item bodlale `carts.updated_at = now()`; `cart.cleanup` (8.17) shudhu guest cart, login cart muche na. `DELETE` e item na thakleo `200` (idempotent).
 8. **Wishlist** (7.4): `GET` e bondho product lukano (row thake, chalu hole ferot); merge e shudhu oi shop er active product, ochena/bhul ID bad, max 50 ID, wishlist e mot 200. v1.29: wishlist e 200 thakle notun `POST /api/wishlist/{product_id}` → `409 wishlist_full` (ager product e `200`).
+9. v1.31 (M5 review, user 15 November 2026): badge er jonno `GET /api/cart/count` (normalize ar notice na); normalize ar notice shudhu `GET /api/cart` e, website e shudhu `/cart` page (7.4, 10.12 item 5). Qty jog/set, `variant_label`, stock 0 er `line_total` ar wishlist er `404`/limit er choto niyom 7.4 e. Vendor `active` cart ar wishlist dekhe, catalog list dekhe na: MV er age milano (16.1).
 
 ### 8.5 Dam er hishab (`pricing` package)
 
@@ -332,7 +333,7 @@ v1.19 (M4): `sms.otp` er default lekha Go te (`notify` e bn/en), shop er `transl
 | `payment.reconcile` | Protiti 10 minute | `reconcile_after` er shomoy hoya payment (local `cancelled` o) er status gateway theke (8.9, v1.4) |
 | `inventory.expire`, `inventory.reconcile` | Protidin (shop er timezone) | 8.12 |
 | `data.retention` | Protidin | `orders.ip`, `sessions.ip`, `audit_logs.ip` 180 din por `NULL` (`shop_app` er `audit_logs` e shudhu `ip` column e UPDATE, `001`) |
-| `cart.cleanup` | Protidin | 30 diner purono guest cart. v1.28: `session_key` thaka cart, `updated_at` 30 din er purono (`carts_updated_idx`); login cart na; din er `dedupe_key` (`jobs.cleanup` er moto) |
+| `cart.cleanup` | Protidin | 30 diner purono guest cart. v1.28: `session_key` thaka cart, `updated_at` 30 din er purono (`carts_updated_idx`); login cart na; din er `dedupe_key` (`jobs.cleanup` er moto). v1.31: shob shop ek `DELETE` e, `shop_id` filter chhara (Rule 3 er chhar: platform job, kichu dekhay na, shudhu muche; `carts_updated_idx` shop chhara); din UTC (Rule 5 er chhar: 30 din e shop timezone er ek din er parthokko nai) |
 | `session.cleanup` | Protidin | Expire hoya session ar OTP |
 | `jobs.cleanup` | Protidin | v1.19: `done_at` 30 din ar `failed_at` 90 din er purono `jobs` row muche (`dedupe_key` shoho); failed beshi din thake jate alert er por dekha jay. `shop_app` er `jobs` e DELETE ache (`001`), migration na |
 | `jobs.sweep` | Protiti 5 minute | Shesh attempt e crash kora job (`attempts = max_attempts`, lock 5 minute er purono) `failed_at` ar admin alert (6.4) |

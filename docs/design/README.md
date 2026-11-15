@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.30, 15 November 2026
+Version 1.31, 15 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -82,3 +82,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.28 | 15 November 2026 | M5 er 11 ta decision (user recommendation niyeche): guest cart key Go banay (`rand.Text()`, `cart_key`, BFF `__Host-cart` sliding), Bearer thakle shudhu account cart (`OptionalCustomer`, bhul token `401`), merge (jog, `min(jog, 50, stock)`, stock 0 thake), stock komle `GET` e normalize (`quantity_reduced`), bondho product `GET` e muche (`item_removed`), dam bodol er notice na (M6 `price_changed`), cart e max 50 variant (`409 cart_full`), guest wishlist `wl` cookie (`@client`, verify e merge), `@client AddToCart`/`WishlistButton` ar JS chhara `/cart`, SSR cart badge, choto niyom (response, subtotal, idempotent `DELETE`, wishlist 200) (3.2, 7.1, 7.4, 7.8, 8.2, 8.4, 8.17, 10.1, 10.2, 10.3, 10.5, 10.9, 10.10, 10.12, 12.2) |
 | 1.29 | 15 November 2026 | 7.1, 7.4, 8.4, 16.1 (user decision): merge e 50 er beshi variant hole account cart er item thake, guest er notun item 50 porjonto, baki bad + notice `item_dropped`; wishlist e 200 thakle notun add `409 wishlist_full` |
 | 1.30 | 15 November 2026 | 7.3, 8.4, 10.12 (user decision): merge er `item_dropped` verify er response er `cart_notices` e (shob shomoy array), porer `GET /api/cart` e na (state/migration lagto na); BFF body te rakhe, login form ek line dekhay |
+| 1.31 | 15 November 2026 | 7.4, 8.4, 8.17, 10.12, 12.2, 16.1 (M5 review, user decision): badge er jonno halka `GET /api/cart/count` (normalize/notice na; notice shudhu `/cart` er `GET /api/cart` e); website e session `401` hole shob jaygay `/login?next=` ar `__Host-sid` `Max-Age=0`; review e dhora agent er choice design e lekha (qty jog/set, `variant_label`, stock 0 er `line_total`, wishlist er `404`/limit, `cart.cleanup` er Rule 3/5 chhar, website er choto niyom, `max_quantity` ar `wl` er security note); 16.1 e MV er age vendor `active` proshno |
