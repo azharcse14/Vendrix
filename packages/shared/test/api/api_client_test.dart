@@ -382,6 +382,15 @@ void main() {
       await CartRepository(api((_) => cartJson)).cart();
       expect(seen.single.headers.containsKey('X-Cart-Key'), isFalse);
     });
+    test('count() → GET /api/cart/count er count (badge, 7.4 v1.31)', () async {
+      final n = await CartRepository(
+        api((_) => {'count': 4}, cartKey: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+      ).count();
+      expect(n, 4);
+      expect(seen.single.method, 'GET');
+      expect(seen.single.url.path, '/api/cart/count');
+      expect(seen.single.headers['X-Cart-Key'], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    });
     test(
       'cart() → Cart, CartItem, CartNotice; cart_key na thakle null',
       () async {

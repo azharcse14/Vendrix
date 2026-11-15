@@ -216,6 +216,70 @@ void main() {
       }
     });
 
+    group('session expire ar sid cookie (10.12 item 7, 8, v1.31)', () {
+      const sidCleared = '__Host-sid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+      final expired = http.Response(
+        '{"error":{"code":"session_expired","message":""}}',
+        401,
+        headers: {'content-type': 'application/json'},
+      );
+
+      test('JSON: Go 401 → 401 hubohu ar __Host-sid Max-Age=0 (cart ar wishlist)', () async {
+        for (final (m, p, apiPath) in [
+          ('POST', '/_/cart/items', '/api/cart/items'),
+          ('PATCH', '/_/cart/items/7', '/api/cart/items/7'),
+          ('POST', '/_/wishlist/5', '/api/wishlist/5'),
+        ]) {
+          api[apiPath] = expired;
+          final res = await send(m, p, cookie: '__Host-sid=TOK2ABC', body: '{"variant_id":5,"quantity":1}');
+          expect(res.statusCode, 401, reason: p);
+          expect(setCookies(res), [sidCleared], reason: p);
+          expect(res.headers['cache-control'], 'private, no-store');
+        }
+      });
+
+      test('JS chhara form: Go 401 → 303 /login?next=<form er page> (bhasha shoho), sid muche', () async {
+        api['/api/cart/items/7'] = expired;
+        final res = await send(
+          'POST',
+          '/_/cart/items/7',
+          cookie: '__Host-sid=TOK2ABC',
+          form: 'quantity=2',
+          referer: 'https://shop.example.com/en/cart',
+        );
+        expect(res.statusCode, 303);
+        expect(res.headers['location'], '/en/login?next=%2Fen%2Fcart');
+        expect(setCookies(res), [sidCleared]);
+      });
+
+      test('sid chhara 401 e cookie muche na', () async {
+        api['/api/wishlist/5'] = expired;
+        final res = await send('POST', '/_/wishlist/5');
+        expect(res.statusCode, 401);
+        expect(setCookies(res), isEmpty);
+      });
+
+      test('khali ba bhul okkhor er __Host-sid: Bearer na, guest (X-Cart-Key jay)', () async {
+        for (final bad in ['', 'a"b', 'tok,en', 'tok%20en']) {
+          await send('PATCH', '/_/cart/items/7', cookie: '__Host-sid=$bad; __Host-cart=$key', body: '{}');
+          final r = seen.single;
+          expect(r.headers.containsKey('Authorization'), isFalse, reason: bad);
+          expect(r.headers['X-Cart-Key'], key, reason: bad);
+        }
+      });
+
+      test('login e Go cart_key dileo __Host-cart set na, body theke muche', () async {
+        api['/api/cart/items'] = http.Response(
+          '{"items":[],"count":0,"subtotal":0,"notices":[],"cart_key":"$newKey"}',
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+        final res = await send('POST', '/_/cart/items', cookie: '__Host-sid=TOK2ABC', body: '{}');
+        expect(setCookies(res), isEmpty);
+        expect(await res.readAsString(), isNot(contains(newKey)));
+      });
+    });
+
     for (final (m, p) in [
       ('POST', '/_/cart/items'),
       ('PATCH', '/_/cart/items/7'),

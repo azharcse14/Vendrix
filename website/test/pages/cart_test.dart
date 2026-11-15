@@ -82,6 +82,8 @@ void main() {
     switch (r.url.path) {
       case '/api/cart':
         return http.Response(jsonEncode(cart), 200, headers: json);
+      case '/api/cart/count':
+        return http.Response(jsonEncode({'count': 3}), 200, headers: json);
       case '/api/wishlist':
         return http.Response(
           jsonEncode({
@@ -113,6 +115,8 @@ void main() {
   }
 
   Iterable<http.Request> cartCalls() => seen.where((r) => r.url.path == '/api/cart');
+  Iterable<http.Request> countCalls() => seen.where((r) => r.url.path == '/api/cart/count');
+  const sidCleared = '__Host-sid=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
 
   group('Cart page (10.1, 10.5, 10.12 item 4, 6)', () {
     test('guest __Host-cart: X-Cart-Key diye GET, item, qty ar delete form (JS chhara), notice, subtotal', () async {
@@ -145,6 +149,9 @@ void main() {
       expect(text, contains('৳১,৭০০')); // line total API er
       expect(text, contains('৳২,২০০')); // subtotal API er (Rule 1)
       expect(text, contains(t.t('cart.approx'))); // ojon-variable line
+      // Bracket l10n er bhetore (bhasha onujayi), code e na (v1.31).
+      expect(t.t('cart.approx'), matches(RegExp(r'^\(.+\)$')));
+      expect(text, isNot(contains('((')));
       expect(text, contains(t.t('product.out_of_stock')));
       // Checkout M6 e (10.12 item 4).
       expect(doc.querySelector('a[href*="checkout"], form[action*="checkout"]'), isNull);
@@ -156,6 +163,22 @@ void main() {
       expect(call.headers['Authorization'], 'Bearer GOOD');
       expect(call.headers.containsKey('X-Cart-Key'), isFalse);
       expect(doc.querySelector('form[action="/_/cart/items/9/delete"]'), isNotNull);
+    });
+
+    test('session expire (401): 303 /login?next=/cart (bhasha shoho), __Host-sid Max-Age=0 (10.12 item 7)', () async {
+      for (final (path, next) in [('/cart', '%2Fcart'), ('/en/cart', '%2Fen%2Fcart')]) {
+        final res = await get(path, cookie: '__Host-sid=OLD');
+        expect(res.statusCode, 303, reason: path);
+        expect(res.headers['location'], '${path.startsWith('/en') ? '/en' : ''}/login?next=$next');
+        expect(res.headersAll['set-cookie'], [sidCleared]);
+      }
+    });
+
+    test('bhul okkhor er __Host-sid: Bearer na, guest key diye (10.12 item 8)', () async {
+      await page('/cart', cookie: '__Host-sid=a"b; __Host-cart=$key');
+      final call = cartCalls().single;
+      expect(call.headers.containsKey('Authorization'), isFalse);
+      expect(call.headers['X-Cart-Key'], key);
     });
 
     test('cookie nai ba bhul key: API call na, khali cart', () async {
@@ -190,6 +213,10 @@ void main() {
       expect(seen, isEmpty);
       final expired = await get('/account/wishlist', cookie: '__Host-sid=OLD');
       expect(expired.statusCode, 303);
+      expect(expired.headersAll['set-cookie'], [sidCleared]); // 10.12 item 7
+      final account = await get('/account', cookie: '__Host-sid=OLD');
+      expect(account.statusCode, 303);
+      expect(account.headersAll['set-cookie'], [sidCleared]);
     });
 
     test('login e GET /api/wishlist Bearer diye: card ar bad dewar button', () async {
@@ -213,14 +240,33 @@ void main() {
         expect(b.text, isEmpty);
       }
       expect(cartCalls(), isEmpty);
+      expect(countCalls(), isEmpty);
     });
 
-    test('__Host-cart thakle count (alada line) ekbar e call', () async {
+    test('__Host-cart thakle GET /api/cart/count ekbar, GET /api/cart na (notice gile na, v1.31)', () async {
       final (_, _, doc) = await page('/policy/nai', cookie: '__Host-cart=$key');
-      expect(cartCalls(), hasLength(1));
+      expect(countCalls().single.headers['X-Cart-Key'], key);
+      expect(cartCalls(), isEmpty);
       final badges = doc.querySelectorAll('[data-cart-badge]');
       expect(badges, isNotEmpty);
       expect(badges.every((b) => b.text == '৩' && !b.attributes.containsKey('hidden')), isTrue);
+    });
+  });
+
+  group('Cart badge er session expire (10.12 item 5, 7)', () {
+    test('401 e badge lukano, page bhange na (redirect na)', () async {
+      final (res, _, doc) = await page('/policy/nai', cookie: '__Host-sid=OLD');
+      expect(res.statusCode, isNot(303));
+      expect(countCalls(), hasLength(1));
+      for (final b in doc.querySelectorAll('[data-cart-badge]')) {
+        expect(b.attributes.containsKey('hidden'), isTrue);
+      }
+    });
+
+    test('/cart page e badge count theke, list GET /api/cart theke (duita alada call)', () async {
+      await page('/cart', cookie: '__Host-cart=$key');
+      expect(countCalls(), hasLength(1));
+      expect(cartCalls(), hasLength(1));
     });
   });
 

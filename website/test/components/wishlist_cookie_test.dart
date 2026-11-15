@@ -19,4 +19,12 @@ void main() {
       expect(wlCookie([]), 'wl=; Path=/; Max-Age=0; Secure; SameSite=Lax');
     });
   });
+
+  group('Session expire e login (10.12 item 7)', () {
+    test('loginHref: ekhon er path next e, /en hole /en/login', () {
+      expect(loginHref('/p/lal-chal'), '/login?next=%2Fp%2Flal-chal');
+      expect(loginHref('/en/p/lal-chal'), '/en/login?next=%2Fen%2Fp%2Flal-chal');
+      expect(loginHref('/en'), '/en/login?next=%2Fen');
+    });
+  });
 }

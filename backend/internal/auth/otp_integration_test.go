@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"math"
@@ -53,6 +54,14 @@ type otpFixture struct {
 
 func newOTPFixture(t *testing.T) *otpFixture {
 	t.Helper()
+	return newOTPFixtureMerge(t, func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
+		return cart.Merge(ctx, tx, shopID, userID, key, locale)
+	})
+}
+
+// newOTPFixtureMerge: verify er cart merge bodle (fail er test).
+func newOTPFixtureMerge(t *testing.T, merge auth.CartMerge) *otpFixture {
+	t.Helper()
 	d := dbtest.New(t)
 	f := &otpFixture{d: d, shops: map[string]int64{}}
 	for _, s := range []string{"a", "b"} {
@@ -64,10 +73,7 @@ func newOTPFixture(t *testing.T) *otpFixture {
 		f.shops[s+".com"] = id
 	}
 	log := slog.New(slog.DiscardHandler)
-	h := auth.NewHandlers(d, log, otpSecret, auth.Turnstile{URL: fakeSiteverify(t).URL, Secret: "ts-secret"},
-		func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
-			return cart.Merge(ctx, tx, shopID, userID, key, locale)
-		})
+	h := auth.NewHandlers(d, log, otpSecret, auth.Turnstile{URL: fakeSiteverify(t).URL, Secret: "ts-secret"}, merge)
 	mux := http.NewServeMux()
 	shopMW := httpx.ShopFromHost(log, shop.NewResolver(d).Resolve)
 	mux.Handle("POST /api/auth/otp/send", shopMW(http.HandlerFunc(h.SendOTP)))
@@ -781,5 +787,36 @@ func TestVerifyMergesCartIntegration(t *testing.T) {
 	}
 	if accountItems("+8801711000004") != 50 || guestItems(key4) != 0 {
 		t.Errorf("limit: account %d, guest %d", accountItems("+8801711000004"), guestItems(key4))
+	}
+}
+
+// TestVerifyMergeFailRollsBackIntegration (8.2 step 6, 8.4 item 6): merge cart bodlanor por fail korle verify er
+// puro transaction rollback: guest cart, OTP (abar use kora jay), user ar session kichui bodlay na.
+func TestVerifyMergeFailRollsBackIntegration(t *testing.T) {
+	f := newOTPFixtureMerge(t, func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
+		if _, err := cart.Merge(ctx, tx, shopID, userID, key, locale); err != nil {
+			return nil, err
+		}
+		return nil, errors.New("merge er por bhul")
+	})
+	a := f.shops["a.com"]
+	key := f.guestCart(t, a, "g", 2, 0)
+	f.otpRow(t, a, "+8801711000001", "123456", "5 minutes")
+	if rec := f.verifyKey(t, "a.com", "01711000001", "123456", key); rec.Code != http.StatusInternalServerError {
+		t.Fatalf("verify: %d %s, chai 500", rec.Code, rec.Body.String())
+	}
+	sum := sha256.Sum256([]byte(key))
+	if n := f.count(t, `SELECT count(*) FROM cart_items ci JOIN carts c ON c.id = ci.cart_id WHERE c.session_key = $1`, sum[:]); n != 2 {
+		t.Errorf("guest cart e %d item, chai 2 (rollback)", n)
+	}
+	for q, want := range map[string]int{
+		`SELECT count(*) FROM carts WHERE user_id IS NOT NULL`:      0,
+		`SELECT count(*) FROM users WHERE phone = '+8801711000001'`: 0,
+		`SELECT count(*) FROM sessions`:                             0,
+		`SELECT count(*) FROM otp_codes WHERE consumed_at IS NULL`:  1,
+	} {
+		if n := f.count(t, q); n != want {
+			t.Errorf("%s: %d, chai %d", q, n, want)
+		}
 	}
 }

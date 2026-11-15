@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -252,6 +253,8 @@ func TestCartQuantityIntegration(t *testing.T) {
 		t.Fatalf("abar add e qty 5 chai: %+v", c)
 	}
 	wantOutOfStock(t, f.fail(t, add("a.com", tok, "", v10, 6), 409, "out_of_stock"), v10, 10)
+	// boro qty: jog overflow hoye 400 na, 409 out_of_stock (7.4 v1.31)
+	wantOutOfStock(t, f.fail(t, add("a.com", tok, "", v10, math.MaxInt), 409, "out_of_stock"), v10, 10)
 
 	c = f.ok(t, patch("a.com", tok, "", v10, 10))
 	if it := find(c, v10); it == nil || it.Quantity != 10 {
@@ -323,6 +326,63 @@ func TestCartQuantityIntegration(t *testing.T) {
 	last := f.id(t, `SELECT id FROM product_variants WHERE shop_id = $1 AND sku LIKE 'bulk-%' ORDER BY id DESC LIMIT 1`, f.ids["a"])
 	f.fail(t, add("a.com", tok, "", last, 1), 409, "cart_full")
 	f.ok(t, add("a.com", tok, "", v100, 1))
+}
+
+// TestCartCountIntegration (7.4 v1.31, 10.12 item 5): GET /api/cart/count shudhu alada line er count, owner
+// GET /api/cart er moto; normalize na (bondho item gona, DB bodlay na, row banay na, notice na), no-store; onno
+// shop er key 0; expire Bearer 401.
+func TestCartCountIntegration(t *testing.T) {
+	f := newFixture(t)
+	va := f.variant(t, "a", "a1", 100, 10)
+	vb := f.variant(t, "a", "a2", 100, 10)
+	count := func(r req) int {
+		t.Helper()
+		r.method, r.path = "GET", "/api/cart/count"
+		rec := f.do(t, r)
+		var c struct {
+			Count *int `json:"count"`
+		}
+		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &c) != nil || c.Count == nil {
+			t.Fatalf("count: %d %s", rec.Code, rec.Body.String())
+		}
+		if cc := rec.Header().Get("Cache-Control"); cc != "no-store" {
+			t.Errorf("Cache-Control %q", cc)
+		}
+		if strings.Contains(rec.Body.String(), "notices") {
+			t.Errorf("count e notice: %s", rec.Body.String())
+		}
+		return *c.Count
+	}
+	if n := count(req{host: "a.com"}); n != 0 {
+		t.Errorf("key chhara %d", n)
+	}
+	k, _ := cart.NewKey()
+	if n := count(req{host: "a.com", key: k}); n != 0 || f.id(t, `SELECT count(*) FROM carts`) != 0 {
+		t.Errorf("ochena key: %d, row banalo?", n)
+	}
+	key := f.ok(t, add("a.com", "", "", va, 3)).CartKey
+	f.ok(t, add("a.com", "", key, vb, 1))
+	if n := count(req{host: "a.com", key: key}); n != 2 {
+		t.Errorf("count %d, chai 2 (alada line, qty jog na)", n)
+	}
+	// bondho product: count e normalize na (gona, DB te thake); porer GET /api/cart muche + notice
+	f.exec(t, `UPDATE products SET is_active = false WHERE id = $1`, f.ids["a/a2.product"])
+	if n := count(req{host: "a.com", key: key}); n != 2 || f.id(t, `SELECT count(*) FROM cart_items`) != 2 {
+		t.Errorf("count normalize korlo: %d", n)
+	}
+	if c := f.ok(t, get("a.com", "", key)); c.Count != 1 || len(c.Notices) != 1 || c.Notices[0].Code != "item_removed" {
+		t.Errorf("count er por GET e notice chai: %+v", c)
+	}
+	if n := count(req{host: "b.com", key: key}); n != 0 {
+		t.Errorf("onno shop e %d", n)
+	}
+	tok := f.customer(t, "a", "+8801711000009")
+	f.ok(t, add("a.com", tok, key, va, 1))
+	if n := count(req{host: "a.com", token: tok, key: key}); n != 1 {
+		t.Errorf("login count %d (key ignore, account cart)", n)
+	}
+	f.exec(t, `UPDATE sessions SET expires_at = now() - interval '1 second'`)
+	f.fail(t, req{method: "GET", path: "/api/cart/count", host: "a.com", token: tok}, 401, "session_expired")
 }
 
 // TestCartFreshPriceIntegration (8.4 Dam, v1.28 item 5, Rule 1): cart e dam save hoy na; dam bodlale porer
