@@ -10,7 +10,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Ekhon
 
-- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) shesh** (15 November 2026, design v1.19–v1.27): customer OTP login + session, `/api/me`, staff login + TOTP/recovery + setup, admin session, `staff reset-2fa` CLI, website `/login` + `/account`, local https (`make https`); report [M4](milestones/M4.md). **M5 (Cart ar wishlist) cholche** (plan approve 15 November 2026: shob recommendation, design v1.28–v1.30; step 0–10 shesh). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
+- **M0 shesh** (12 November 2026): CI green (run 43151580056), toolchain go1.27.4 (v1.15). **M3 (Website catalog) shesh** (15 November 2026): Lighthouse 16.1 (a) (v1.18); report [M3](milestones/M3.md). Mac e `make check` er `TestSearchRankingIntegration` macOS `C.UTF-8` er karone fail (Linux e green; M3 Report). **M4 (Login) shesh** (15 November 2026, design v1.19–v1.27): customer OTP login + session, `/api/me`, staff login + TOTP/recovery + setup, admin session, `staff reset-2fa` CLI, website `/login` + `/account`, local https (`make https`); report [M4](milestones/M4.md). **M5 (Cart ar wishlist) shesh** (15 November 2026, design v1.28–v1.31): Cart API (guest key, `OptionalCustomer`, normalize, `GET /api/cart/count`), login e merge, wishlist API, `cart.cleanup`, shared `Cart`/repository, website BFF cart/wishlist, `/cart`, `/account/wishlist`, `@client AddToCart`/`WishlistButton`, Cart badge; report [M5](milestones/M5.md). Push baki: `339de22`..HEAD (user: `gh auth switch -u azharcse14`, `git push origin main`).
 - Repo setup shesh (design v1.8): design, feature doc, Claude Code (hook, skill, agent, rule), CI, infra, ar M0 er shuru code: config, `httpx`, migration runner (checksum shoho), server, `/healthz`.
 - Go test ar `go test -race` green; database constraint test 85/85 (Postgres 16, C.UTF-8).
 - M1 shesh (v1.11). **M2 shesh** (v1.12): `packages/shared` (format, phone, theme token/CSS variable, translator, model, `ApiClient`), CI Dart job; report [M2](milestones/M2.md). Local Postgres host port **5433**; local API `ADDR=127.0.0.1:8090` (8080 e onno project er `hb-api`).
@@ -18,8 +18,8 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Porer kaj
 
-1. **M5 step 11 baki** ([M5](milestones/M5.md) step 11): review finding thik (design v1.31, step 11 er Review line). Baki: `make check` (Mac e jana `TestSearchRankingIntegration` locale fail chhara green); acceptance ☐ row ☑ (Website row: `website/test/bff/bff_cart_test.dart`, `test/pages/cart_test.dart`, `test/client_components_test.dart`; `make check` row); M5 Report (`docs/milestones/M5.md` er "Report"); STATUS e M5 shesh, porer kaj M6 plan. Commit `docs(M5): report`.
-2. **User: push ar CI**: `git push origin main` (`339de22`..HEAD; `gh auth switch -u azharcse14`), tarpor CI green kina dekho (Go job, `ci(M3): website build`, Dart job); Linux e `TestSearchRankingIntegration` (`backend/internal/catalog`) green howa uchit (Mac e macOS `C.UTF-8` e fail, M3/M4 Report). Local browser login er jonno `backend/.env` e `OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET` ar `website/.env` e `TURNSTILE_SITE_KEY` (`env.example` dekho).
+1. **User: push ar CI**: `git push origin main` (`339de22`..HEAD; `gh auth switch -u azharcse14`), tarpor CI green kina dekho (Go job, website build, Dart job); Linux e `TestSearchRankingIntegration` (`backend/internal/catalog`) green howa uchit (Mac e macOS `C.UTF-8` e fail, M3/M4/M5 Report). Local browser login er jonno `backend/.env` e `OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET` ar `website/.env` e `TURNSTILE_SITE_KEY` (`env.example` dekho).
+2. **M6 (Checkout (COD))**: `milestone` skill (`/milestone M6`). `docs/design/15-milestones.md` er M6 row (Section 8.5–8.8, 8.10, 8.13: delivery zone, quote, `POST /api/orders` puro 8.6, risk + OTP, coupon, idempotency, fulfillment, duita state machine + `Summary`, COD confirm, tracking, order view, cancel, SMS job, auto-cancel job; 14.2 test 1–5, 7, 8, 11, 15, 16, 22, 23, 26, 27, 31, 33, 39, 40). Age `docs/milestones/M6.md` e plan (scope, acceptance → test, Open question recommendation shoho), user approve korle tarpor code. Note: `docs/design/08-core-flows.md` 57 KB (60 KB shima), 8.6 e boro lekha lagle file bhag (design-change).
 
 ## User er kache proshno
 
@@ -42,7 +42,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 | M2 | Shared Dart package | shesh (10 November 2026) | [M2](milestones/M2.md) |
 | M3 | Website catalog | shesh (15 November 2026) | [M3](milestones/M3.md) |
 | M4 | Login | shesh (15 November 2026) | [M4](milestones/M4.md) |
-| M5 | Cart ar wishlist | cholche (15 November 2026 theke) | [M5](milestones/M5.md) |
+| M5 | Cart ar wishlist | shesh (15 November 2026) | [M5](milestones/M5.md) |
 | M6 | Checkout (COD) | baki | |
 | M7 | Admin panel v1 | baki | |
 | M8 | Store settings | baki | |
@@ -55,6 +55,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## Session log
 
+- 15 November 2026: **M5 shesh**: step 11 `make check` (gofmt, vet, docsync, rule green; DB 85/85; shared 86, website 173; `-race` e shudhu jana `TestSearchRankingIntegration` macOS locale, `catalog` `-skip` diye green), JS `main.client.dart.js` 174,827 byte (gzip 54 KB), acceptance ☑, [M5](milestones/M5.md) Report. Porer kaj: push + CI, tarpor M6 plan.
 - 15 November 2026: M5 step 11 review fix (user decision D1/D2): design v1.31 `750f161` (7.4 `GET /api/cart/count`, 8.4 item 9, 8.17 Rule 3/5 er chhar, 10.12 item 5, 7–9, 12.2, 16.1 duita thik holo + MV er age vendor `active` + CGNAT row e note), test `6df9511`, fix `65c3604` (count route, qty overflow `409`), `4ef530a` (Layout count, session `401` e `/login?next=` + `__Host-sid` `Max-Age=0`, `validSid`, login e `cart_key` cookie na, approx bracket); M5.md review line. Rakha: security L3/L5 (12.2), L1 (16.1), design L4 (16.1 MV).
 - 15 November 2026: M5 step 10 (feature doc): `cart.md`, `website.md`, `api-client.md`, `l10n.md`, `auth.md`, `jobs.md`, `http-foundation.md` code er sathe milano (function ar test naam grep e); jog: `PATCH` `404`, `parseCookies` shikkha, `/cart` public cache, `wl` 50/merge fail, verify e merge er bhul; README (M5). Code-doc mismatch nai. Porer kaj step 11.
 - 15 November 2026: M5 step 9 (manual proman): scratch stack (HEAD `d6ca8db` er `shop-api` 8091, `jaspr build` 8082, Caddy copy 8444; chalu 8090/8081/8443 e hat na), headless Chromium: guest add → `/cart` (qty `303`, bad), JS chhara form `303`, SQL dam bodol → notun dam, product bondho → `item_removed` notice (ekbar), OTP login → merge (2+3=5), `__Host-cart` `Max-Age=0`, guest `wl` → `/account/wishlist`, `wl` muche; cookie flag, `Cache-Control`, 360/1280 screenshot (scratch), console error 0. Bug nai. Porer kaj step 10.
@@ -69,4 +70,3 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 - 15 November 2026: M5 plan approve (user: shob recommendation, Q1–Q11), design v1.28 (3.2, 7.1, 7.4, 7.8, 8.2, 8.4, 8.17, 10.1–10.3, 10.5, 10.9, 10.10, notun 10.12, 12.2); M5 step 0.
 - 15 November 2026: M5 plan draft `docs/milestones/M5.md` (scope, Already ache, acceptance → test, 11 ta Open question recommendation shoho, step 0–11); user approve baki, code na.
 - 15 November 2026: **M4 shesh**: step 15 `make check` (gofmt, vet, docsync, rule green; DB 85/85; shared 78, website 123; `-race` e shudhu jana `TestSearchRankingIntegration` macOS locale), `dart format` fix `7b90d9b` (`account.dart`), acceptance ☑, [M4](milestones/M4.md) Report. Porer kaj: push + CI, tarpor M5 plan.
-- 15 November 2026: 16.1 local `__Host-` cookie: user (a), design v1.27 `bf33e68` (13.1, 13.3); `make https` (Caddy `tls internal`, `infra/caddy/Caddyfile.local`, `scripts/https.sh`); Chromium e `https://sobujbazar.localhost:8443` OTP login → `/account` e `__Host-sid` thake. User: `brew install caddy`, ekbar `caddy trust`.
