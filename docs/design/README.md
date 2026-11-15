@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.23, 15 November 2026
+Version 1.24, 15 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -75,3 +75,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.21 | 15 November 2026 | 16.1: Turnstile test secret siteverify e `hostname` `example.com` dey, tai 10.11 er hostname check local e fail; proshno M4 step 12 er age (M4 step 4) |
 | 1.22 | 15 November 2026 | 10.11, 13.5, 16.1: Turnstile secret Cloudflare er test secret hole siteverify er `hostname` check bad, asol secret e local eo check (user decision (a); test secret `example.com` dey, ar local chhara config e atke) |
 | 1.23 | 15 November 2026 | 16.1: local http e `__Host-` cookie Chromium e thake na (https scheme lage), tai `make web` e browser login hoy na; proshno M7 er age (M4 step 13) |
+| 1.24 | 15 November 2026 | 8.3, 7.8, 8.17, 12.2, 16.1 (M4 step 15 review): password ar `failed_mfa` lock check er age atomic reservation (parallel e lock edano jeto); account lock e `401` (user decision, enumeration); `GREATEST` diye lock choto hoy na; `/auth/password` e bhul purono password gona; audit e ochena email er shudhu domain; auth response e `no-store`; `/auth/totp`, `/recovery` e IP limit; staff alert er `dedupe_key` (din); password bodlale "ekhon er session chhara" |

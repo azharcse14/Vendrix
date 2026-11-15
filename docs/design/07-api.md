@@ -175,7 +175,8 @@ Vendor staff (`vendor_owner`, `vendor_staff`) ekoi endpoint use kore, kintu back
 | `POST /api/orders` | Ek phone e ghontay 5 ta, ek IP te ghontay 10 ta |
 | `POST /api/orders/track` | Ek client IP te minute e 10 bar |
 | `POST /api/complaints` | Ek client IP te ghontay 5 ta |
-| `POST /api/admin/auth/login` | Ek client IP te 15 minute e 10 bar bhul (memory). Account e 5 bar bhul er por protiti bhul e 1 minute `locked_until` (soft lock: keu owner er email diye barbar bhul dileo owner shudhu 1 minute opekkha kore), 10 ar 50 e owner alert. TOTP: ek temp_token e 5 bar, temp_token jure `staff.failed_mfa` 10 e 30 minute lock ar alert |
+| `POST /api/admin/auth/login` | Ek client IP te 15 minute e 10 bar bhul (memory). Account e 5 bar bhul er por protiti bhul e 1 minute `locked_until` (soft lock: keu owner er email diye barbar bhul dileo owner shudhu 1 minute opekkha kore), 10 ar 50 e owner alert. TOTP: ek temp_token e 5 bar, temp_token jure `staff.failed_mfa` 10 e 30 minute lock ar alert. v1.24: duita lock-i check er age atomic reservation (8.3); account lock e login `401 invalid_credentials` (`429` na, `Retry-After` na; email chena na jay), IP limit e `429`; `failed_mfa` lock e `/auth/totp`, `/auth/recovery` `429` |
+| `POST /api/admin/auth/totp`, `/recovery` | v1.24: ek client IP te minute e 120 (baki public er moto) |
 | Baki public | Ek IP te minute e 120 |
 
 IP mane client IP (3.2 Niyom 5): website theke ashle Jaspr er `X-Client-IP` (shudhu loopback + secret), admin ar app er request e Caddy er `X-Real-IP` (Cloudflare range Caddy-i dekhe), na hole connection er IP. Na hole keu nijer header boshiye rate limit edate parbe, ba puro website, admin ar app ek IP hoye atke jabe.

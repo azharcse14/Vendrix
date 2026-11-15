@@ -40,10 +40,11 @@ Ami lawyer na, ar niyom bodlay. Niche-r tottho 28 October 2026 e prokashito khob
 
 1. Token random (`rand.Text()`), database e shudhu `sha256`.
 2. OTP er hash `HMAC-SHA256(secret, phone:purpose:code)`, 5 minute, 5 attempt (atomic `UPDATE`, error path eo commit), phone e dine 10 OTP, 24 ghontay 10 bhul e lock (7.8).
-3. Staff password `pbkdf2` 600k (dummy hash, semaphore, soft lock), owner/admin/staff e TOTP badhyotamulok, temp_token e 5 attempt ar `failed_mfa` (temp_token jure 10), `totp_last_step` (replay), recovery code, prothom login e `setup_pending` (8.3).
+3. Staff password `pbkdf2` 600k (dummy hash, semaphore, soft lock; v1.24: lock atomic reservation, lock e-o `401`), owner/admin/staff e TOTP badhyotamulok, temp_token e 5 attempt ar `failed_mfa` (temp_token jure 10), `totp_last_step` (replay), recovery code, prothom login e `setup_pending` (8.3).
 4. Cookie `__Host-` prefix, `HttpOnly; Secure`; customer `SameSite=Lax`, admin `SameSite=Strict`. Token localStorage e kokhono na.
-5. Logout e session revoke. Staff er password, role bodlale ba deactivate korle tar shob session revoke.
+5. Logout e session revoke. Staff er password, role bodlale ba deactivate korle tar shob session revoke (v1.24: password bodlale ekhon er session chhara, 8.3 step 4).
 6. Session er `subject_type` route er sathe (Rule 16): customer token admin route e `401`.
+7. v1.24: token, secret ba personal data thaka API response (`/api/auth/otp/verify`, `/api/me`, admin `/auth/login`, `/auth/totp`, `/auth/recovery`, `/auth/totp/setup`, `/auth/totp/enable`) e `Cache-Control: no-store`. Audit e secret plain text e na: ochena email er login e shudhu domain (8.3 step 4).
 
 **Data**
 
