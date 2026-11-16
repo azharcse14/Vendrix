@@ -2,6 +2,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
 
+import '../components/icon.dart';
 import '../components/site.dart';
 import '../seo/meta.dart';
 import '../services/bff.dart';
@@ -48,10 +49,26 @@ class OrderItems extends StatelessComponent {
 }
 
 /// Ek sari: lekha ar man.
-Component row(String label, String value) => div(classes: 'flex justify-between gap-4 py-1', [
-  dt(classes: 'text-muted', [.text(label)]),
-  dd(classes: 'text-right', [.text(value)]),
-]);
+Component row(String label, String value) => rowOf(label, .text(value));
+
+/// Ek sari, man component (badge).
+Component rowOf(String label, Component value, {String classes = 'py-1'}) =>
+    div(classes: 'flex items-center justify-between gap-4 $classes', [
+      dt(classes: 'text-muted', [.text(label)]),
+      dd(classes: 'text-right', [value]),
+    ]);
+
+/// Order status badge (10.5 v1.38): lekha shob shomoy, rong [orderStatusTone] theke. Puro class literal (Tailwind purge).
+Component statusBadge(Site site, String status) => span(
+  classes: switch (orderStatusTone(status)) {
+    BadgeTone.success => 'badge badge-success',
+    BadgeTone.danger => 'badge badge-danger',
+    BadgeTone.warning => 'badge badge-warning',
+    BadgeTone.accent => 'badge badge-accent',
+    BadgeTone.muted => 'badge badge-muted',
+  },
+  [.text(site.t('order.status.$status'))],
+);
 
 /// `/order/{token}` ar `/order/{token}/done` (10.1, 10.6, 10.13 item 4): `GET /api/orders/{token}` er mask kora data
 /// (8.19 item 6). Order page e `can_cancel` hole JS chhara cancel form (`/_/orders/{token}/cancel`); done page e
@@ -80,19 +97,30 @@ class OrderPage extends AsyncStatelessComponent {
       return pageError(context, e);
     }
     if (done) {
-      return div(classes: 'mx-auto max-w-screen-sm space-y-4 px-4 py-8', [
+      return div(classes: 'mx-auto max-w-screen-sm space-y-6 px-4 py-8 text-center', [
         SeoHead(title: site.t('order.done.title'), noindex: true),
-        h1(classes: 'font-heading text-2xl', [.text(site.t('order.done.title'))]),
-        p(classes: 'text-lg', [
-          .text(site.t('order.done.number', {'number': o.orderNumber})),
+        span(classes: 'mx-auto flex size-16 items-center justify-center rounded-full bg-success-soft text-success', [
+          const Icon(Icons.check, classes: 'size-8'),
+        ]),
+        h1([.text(site.t('order.done.title'))]),
+        div(classes: 'card', [
+          p(classes: 'mx-auto text-sm text-muted', [.text(site.t('track.number'))]),
+          p(classes: 'mx-auto font-heading text-3xl tracking-wide', [.text(o.orderNumber)]),
         ]),
         // `pending` COD = confirm lagbe (8.7); link shudhu SMS e (8.10).
-        p([.text(site.t(o.displayStatus == 'pending' ? 'order.done.confirm_sms' : 'order.done.sms'))]),
-        a(href: site.href('/order/$token'), classes: 'inline-flex min-h-11 items-center underline', [
-          .text(site.t('order.done.view')),
+        p(
+          classes: 'notice max-w-none text-left',
+          attributes: {'role': 'status'},
+          [
+            .text(site.t(o.displayStatus == 'pending' ? 'order.done.confirm_sms' : 'order.done.sms')),
+          ],
+        ),
+        div(classes: 'flex flex-col gap-3 sm:flex-row sm:justify-center', [
+          a(href: site.href('/order/$token'), classes: 'btn btn-primary', [.text(site.t('order.done.view'))]),
+          a(href: site.href('/'), classes: 'btn btn-secondary', [.text(site.t('page.home_link'))]),
         ]),
         if (validSid(requestCookies(context)) == null)
-          p(classes: 'text-sm text-muted', [.text(site.t('order.done.signup'))]),
+          p(classes: 'mx-auto text-sm text-muted', [.text(site.t('order.done.signup'))]),
       ]);
     }
     final error = query['error'];
@@ -100,21 +128,16 @@ class OrderPage extends AsyncStatelessComponent {
     final cancelled = o.displayStatus == 'cancelled';
     return div(classes: 'mx-auto max-w-screen-sm space-y-6 px-4 py-8', [
       SeoHead(title: site.t('order.title', {'number': o.orderNumber}), noindex: true),
-      h1(classes: 'font-heading text-2xl', [
-        .text(site.t('order.title', {'number': o.orderNumber})),
+      div(classes: 'space-y-2', [
+        h1([
+          .text(site.t('order.title', {'number': o.orderNumber})),
+        ]),
+        statusBadge(site, o.displayStatus),
       ]),
       if (error != null)
-        p(
-          classes: 'rounded border border-line bg-tint p-3 text-sm',
-          attributes: {'role': 'alert'},
-          [.text(site.error(error))],
-        ),
+        p(classes: 'notice notice-danger max-w-none', attributes: {'role': 'alert'}, [.text(site.error(error))]),
       if (cancelled)
-        p(
-          classes: 'rounded border border-line bg-tint p-3',
-          attributes: {'role': 'status'},
-          [.text(site.t('order.cancelled'))],
-        ),
+        p(classes: 'notice max-w-none', attributes: {'role': 'status'}, [.text(site.t('order.cancelled'))]),
       div(classes: 'text-sm text-muted', [
         p([
           .text(site.t('order.placed_at', {'date': site.date(o.placedAt)})),
@@ -124,41 +147,45 @@ class OrderPage extends AsyncStatelessComponent {
             .text(site.t('order.deadline', {'date': site.date(deadline)})),
           ]),
       ]),
-      dl([
-        row(site.t('order.status'), site.t('order.status.${o.displayStatus}')),
+      dl(classes: 'card', [
         row(site.t('order.payment'), site.t('order.payment.${o.paymentMethod}')),
         row(site.t('order.customer'), '${o.customerName}, ${o.phoneMasked}'),
         row(site.t('order.recipient'), '${o.recipientName}, ${o.recipientPhoneMasked}'),
         row(site.t('order.address'), '${o.area}, ${o.district}'),
       ]),
-      section([
-        h2(classes: 'mb-2 font-heading text-lg', [.text(site.t('order.items'))]),
+      section(classes: 'card', [
+        h2(classes: 'mb-2 text-xl', [.text(site.t('order.items'))]),
         OrderItems(o.items),
         dl(classes: 'mt-2 border-t border-line pt-2', [
           row(site.t('checkout.subtotal'), site.taka(o.subtotal)),
           if (o.discount > 0) row(site.t('checkout.discount'), site.taka(-o.discount)),
           row(site.t('checkout.delivery_charge'), site.taka(o.deliveryCharge)),
-          row(site.t('checkout.total'), site.taka(o.total)),
+          rowOf(
+            site.t('checkout.total'),
+            span(classes: 'font-heading text-xl', [.text(site.taka(o.total))]),
+            classes: 'mt-1 border-t border-line pt-2',
+          ),
         ]),
       ]),
       if (o.canCancel)
         form(
           action: tokenFormAction(site, '/_/orders/$token/cancel'),
           method: FormMethod.post,
-          classes: 'space-y-4',
+          classes: 'space-y-3',
           [
-            label(classes: 'block space-y-1', [
-              span(classes: 'text-sm', [.text(site.t('order.cancel_reason'))]),
+            // Reason oichchhik, tai bondho; submit baire (na khulei cancel).
+            details([
+              summary(classes: 'flex min-h-11 cursor-pointer items-center text-sm text-muted', [
+                .text(site.t('order.cancel_reason')),
+              ]),
               input(
                 type: InputType.text,
                 name: 'reason',
-                classes: 'min-h-11 w-full rounded border border-line bg-page px-3 text-base',
-                attributes: {'maxlength': '200'},
+                classes: 'input',
+                attributes: {'maxlength': '200', 'aria-label': site.t('order.cancel_reason')},
               ),
             ]),
-            button(type: ButtonType.submit, classes: 'min-h-11 w-full rounded border border-line px-4', [
-              .text(site.t('order.cancel')),
-            ]),
+            button(type: ButtonType.submit, classes: 'btn btn-danger w-full', [.text(site.t('order.cancel'))]),
           ],
         ),
     ]);

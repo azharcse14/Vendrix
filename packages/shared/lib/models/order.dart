@@ -263,3 +263,38 @@ class OrderSummary {
     _time(j, 'placed_at'),
   );
 }
+
+/// Status badge er rong (10.5 v1.38). Lekha shob shomoy thake; rong shudhu shathe (rong only na).
+enum BadgeTone {
+  /// Shesh, bhalo (delivered).
+  success,
+
+  /// Shesh, bad (cancelled).
+  danger,
+
+  /// Customer/shop er kaj baki (pending, partial).
+  warning,
+
+  /// Cholche.
+  accent,
+
+  /// Baki/ochena.
+  muted,
+}
+
+/// `display_status`/itihash er status (8.8) → [BadgeTone]; `order.status.*` er protiti key (test dhore).
+const orderStatusTones = <String, BadgeTone>{
+  'pending': BadgeTone.warning,
+  'confirmed': BadgeTone.accent,
+  'open': BadgeTone.accent,
+  'packed': BadgeTone.accent,
+  'shipped': BadgeTone.accent,
+  'partial': BadgeTone.warning,
+  'delivered': BadgeTone.success,
+  'returned': BadgeTone.muted,
+  'cancelled': BadgeTone.danger,
+};
+
+/// [orderStatusTones]; ochena status (notun Go status) [BadgeTone.muted].
+BadgeTone orderStatusTone(String status) =>
+    orderStatusTones[status] ?? BadgeTone.muted;

@@ -2,6 +2,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
 
+import '../components/icon.dart';
 import '../components/site.dart';
 import '../seo/meta.dart';
 import '../services/bff.dart';
@@ -35,52 +36,52 @@ class AccountPage extends AsyncStatelessComponent {
       if (e.status == 401) return login();
       return pageError(context, e);
     }
-    const field = 'min-h-11 w-full rounded border border-line bg-page px-3 text-base';
     final error = query['error'];
     return div(classes: 'mx-auto max-w-sm space-y-6 px-4 py-8', [
       SeoHead(title: site.t('account.title'), noindex: true),
-      h1(classes: 'font-heading text-2xl', [.text(site.t('account.title'))]),
-      if (error != null)
-        p(
-          classes: 'rounded border border-line bg-tint p-3 text-sm',
-          attributes: {'role': 'alert'},
-          [
-            .text(site.error(error)),
-          ],
-        ),
-      p([
+      h1([.text(site.t('account.title'))]),
+      if (error != null) p(classes: 'notice notice-danger', attributes: {'role': 'alert'}, [.text(site.error(error))]),
+      p(classes: 'text-muted', [
         .text(site.t('account.phone', {'phone': me.phone})),
       ]),
-      a(href: site.href('/account/wishlist'), classes: 'flex min-h-11 items-center underline', [
-        .text(site.t('wishlist.title')),
+      // Menu card list: icon + lekha + chevron, puro sari link (44px+).
+      ul(classes: 'card divide-y divide-line p-0', [
+        for (final (path, icon, key) in const [
+          ('/account/orders', Icons.truck, 'account.orders'),
+          ('/account/wishlist', Icons.heart, 'wishlist.title'),
+        ])
+          li([
+            a(href: site.href(path), classes: 'flex min-h-12 items-center gap-3 px-4 hover:bg-tint', [
+              Icon(icon, classes: 'size-5 shrink-0 text-primary'),
+              span(classes: 'flex-1', [.text(site.t(key))]),
+              const Icon(Icons.chevronRight, classes: 'size-5 shrink-0 text-muted'),
+            ]),
+          ]),
       ]),
-      a(href: site.href('/account/orders'), classes: 'flex min-h-11 items-center underline', [
-        .text(site.t('account.orders')),
-      ]),
-      form(action: '/_/account', method: FormMethod.post, classes: 'space-y-4', [
+      form(action: '/_/account', method: FormMethod.post, classes: 'card space-y-4', [
         label(classes: 'block space-y-1', [
           span(classes: 'text-sm', [.text(site.t('account.name'))]),
           input(
             type: InputType.text,
             name: 'name',
             value: me.name ?? '',
-            classes: field,
+            classes: 'input',
             attributes: {'autocomplete': 'name', 'maxlength': '100'},
           ),
         ]),
         label(classes: 'block space-y-1', [
           span(classes: 'text-sm', [.text(site.t('account.locale'))]),
-          select(name: 'locale', classes: field, [
+          select(name: 'locale', classes: 'input', [
             for (final l in const ['bn', 'en'])
               option(value: l, selected: l == me.locale, [.text(site.t('account.locale.$l'))]),
           ]),
         ]),
-        button(type: ButtonType.submit, classes: 'min-h-11 w-full rounded bg-primary px-4 text-on-primary', [
+        button(type: ButtonType.submit, classes: 'btn btn-primary w-full', [
           .text(site.t('account.save')),
         ]),
       ]),
       form(action: '/_/auth/logout', method: FormMethod.post, [
-        button(type: ButtonType.submit, classes: 'min-h-11 w-full rounded border border-line px-4', [
+        button(type: ButtonType.submit, classes: 'btn btn-secondary w-full', [
           .text(site.t('account.logout')),
         ]),
       ]),

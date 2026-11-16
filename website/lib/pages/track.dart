@@ -4,9 +4,8 @@ import 'package:shared/shared.dart';
 
 import '../components/site.dart';
 import '../seo/meta.dart';
+import 'order.dart';
 import 'status.dart';
-
-const _field = 'min-h-11 w-full rounded border border-line bg-page px-3 text-base';
 
 /// `/track` (10.1, 10.13 item 6): JS chhara form nijer page e POST; `renderPage` form pore [Site.trackForm] e dey,
 /// ei page Go `POST /api/orders/track` dake (phone body te, `X-Client-IP` shoho) ar uttor (status, itihash; order er
@@ -47,23 +46,35 @@ class TrackPage extends AsyncStatelessComponent {
     }
     return div(classes: 'mx-auto max-w-sm space-y-6 px-4 py-8', [
       SeoHead(title: site.t('track.title'), noindex: true),
-      h1(classes: 'font-heading text-2xl', [.text(site.t('track.title'))]),
-      if (error != null)
-        p(classes: 'rounded border border-line bg-tint p-3 text-sm', attributes: {'role': 'alert'}, [.text(error)]),
+      h1([.text(site.t('track.title'))]),
+      if (error != null) p(classes: 'notice notice-danger', attributes: {'role': 'alert'}, [.text(error)]),
       if (order != null)
         section(
           id: 'track-result',
-          classes: 'space-y-2 rounded border border-line p-4',
+          classes: 'card space-y-3',
           attributes: {'role': 'status'},
           [
-            p(classes: 'text-lg font-medium', [.text(order.orderNumber)]),
-            p([.text(site.t('order.status.${order.displayStatus}'))]),
+            h2(classes: 'text-xl', [.text(order.orderNumber)]),
+            statusBadge(site, order.displayStatus),
             p(classes: 'text-sm text-muted', [
               .text(site.t('order.placed_at', {'date': site.date(order.placedAt)})),
             ]),
-            h2(classes: 'pt-2 font-heading', [.text(site.t('track.history'))]),
-            ol(classes: 'space-y-1 text-sm', [
-              for (final h in order.history) li([.text('${site.date(h.at)}: ${site.t('order.status.${h.status}')}')]),
+            h3(classes: 'pt-2 text-base', [.text(site.t('track.history'))]),
+            // Timeline CSS only: bam e line (border), protiti step er dot `before:`; shesh step `aria-current` e
+            // primary (rong chhara-o lekha ache).
+            ol(classes: 'ml-1.5 space-y-3 border-l-2 border-line', [
+              for (final (i, h) in order.history.indexed)
+                li(
+                  classes:
+                      'relative pl-5 text-sm text-muted before:absolute before:-left-[7px] before:top-1.5 '
+                      'before:size-3 before:rounded-full before:bg-line aria-[current=step]:text-ink '
+                      'aria-[current=step]:before:bg-primary',
+                  attributes: {if (i == order.history.length - 1) 'aria-current': 'step'},
+                  [
+                    span(classes: 'block', [.text(site.t('order.status.${h.status}'))]),
+                    span(classes: 'block text-muted', [.text(site.date(h.at))]),
+                  ],
+                ),
             ]),
           ],
         ),
@@ -74,7 +85,7 @@ class TrackPage extends AsyncStatelessComponent {
             type: InputType.text,
             name: 'number',
             value: f?.number,
-            classes: _field,
+            classes: 'input',
             attributes: {'required': '', 'maxlength': '32', 'autocomplete': 'off'},
           ),
         ]),
@@ -84,7 +95,7 @@ class TrackPage extends AsyncStatelessComponent {
           input(
             type: InputType.tel,
             name: 'phone',
-            classes: _field,
+            classes: 'input',
             attributes: {
               'inputmode': 'numeric',
               'autocomplete': 'tel',
@@ -94,7 +105,7 @@ class TrackPage extends AsyncStatelessComponent {
           ),
           if (badPhone) span(id: 'track-phone-error', classes: 'text-sm', [.text(site.error('invalid_phone'))]),
         ]),
-        button(type: ButtonType.submit, classes: 'min-h-11 w-full rounded bg-primary px-4 text-on-primary', [
+        button(type: ButtonType.submit, classes: 'btn btn-primary w-full', [
           .text(site.t('track.submit')),
         ]),
       ]),

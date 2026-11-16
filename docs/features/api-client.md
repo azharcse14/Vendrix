@@ -33,7 +33,7 @@ Ei kram e poro:
 | `packages/shared/lib/models/settings.dart` → `PublicSettings` | Settings |
 | `packages/shared/lib/models/user.dart` → `User` | Customer profile |
 | `packages/shared/lib/models/cart.dart` → `Cart`, `CartItem`, `CartNotice` | Cart (M5) |
-| `packages/shared/lib/models/order.dart` → `DeliveryZone`, `DeliveryArea`, `Quote`, `PlacedOrder`, `ConfirmSummary`, `OrderItem`, `Order`, `TrackedOrder`, `OrderEvent`, `OrderSummary` | Checkout ar order (M6) |
+| `packages/shared/lib/models/order.dart` → `DeliveryZone`, `DeliveryArea`, `Quote`, `PlacedOrder`, `ConfirmSummary`, `OrderItem`, `Order`, `TrackedOrder`, `OrderEvent`, `OrderSummary`, `BadgeTone`, `orderStatusTones`, `orderStatusTone` | Checkout ar order (M6); status badge er rong (MU U9) |
 
 ## Niyom ar tar test
 
@@ -44,6 +44,7 @@ Ei kram e poro:
 | Repository er query (na deya filter jay na) ar model (7.2) | `CatalogRepository`, `SettingsRepository` | `test/api/api_client_test.dart` → `group('Repository (7.2)')` |
 | `token` thakle `Authorization: Bearer`, na thakle header nai; `me()` → `User`, bhul shape `FormatException` (7.3, 10.11 item 4) | `ApiClient.send`, `AccountRepository`, `User` | `test/api/api_client_test.dart` → `group('Account (7.3, 10.11 item 4)')` |
 | `cartKey` thakle `X-Cart-Key`, na thakle nai; cart route er method/path/body; `Cart`/`CartItem`/`CartNotice` parse, `cart_key` shudhu notun cart e; `count()` path ar `int`; wishlist card list ar merge body; `out_of_stock` `max_quantity`, `cart_full`, `wishlist_full`; bhul shape `FormatException` (7.4, 8.4) | `ApiClient.send`, `CartRepository`, `WishlistRepository`, `Cart` | `test/api/api_client_test.dart` → `group('Cart ar wishlist (7.4, 8.4, M5)')` |
+| Status badge: `order.status.*` er protiti key er `BadgeTone` (beshi na), `delivered` success, `cancelled` danger, `pending` warning, `confirmed` = `open`, ochena `muted` (10.5 v1.38, 8.8) | `orderStatusTones`, `orderStatusTone` | `test/models/order_test.dart` → `group('Status badge (10.5 v1.38, 8.8)')` |
 | Checkout ar order er Go JSON pora (quote, placed, confirm summary, order view, track, me/orders card, delivery zone); `problems` null, `delivery_deadline` null, khali `variant_label`; bhul type/tarikh `FormatException` (7.2, 7.3, 7.5, 8.19) | `models/order.dart` | `test/models/order_test.dart` → `group('Checkout ar order model (7.2, 7.3, 7.5, 8.19, M6)')` |
 | Checkout/order route er method, path, body, query; `Idempotency-Key` header, Bearer, `X-Cart-Key`; `409 otp_required`/`price_changed` er `details`, `404` (7.5, 8.6, 8.10) | `ApiClient.send(headers:)`, `CheckoutRepository`, `OrderRepository` | `test/api/api_client_test.dart` → `group('Checkout ar order (7.2, 7.3, 7.5, 8.6, 8.10, M6)')` |
 | Public settings er getter ar default (7.2, 9.2) | `PublicSettings` | `test/models/catalog_test.dart` → `group('PublicSettings (7.2, 9.2)')` |
