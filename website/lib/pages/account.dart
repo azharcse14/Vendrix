@@ -54,6 +54,9 @@ class AccountPage extends AsyncStatelessComponent {
       a(href: site.href('/account/wishlist'), classes: 'flex min-h-11 items-center underline', [
         .text(site.t('wishlist.title')),
       ]),
+      a(href: site.href('/account/orders'), classes: 'flex min-h-11 items-center underline', [
+        .text(site.t('account.orders')),
+      ]),
       form(action: '/_/account', method: FormMethod.post, classes: 'space-y-4', [
         label(classes: 'block space-y-1', [
           span(classes: 'text-sm', [.text(site.t('account.name'))]),

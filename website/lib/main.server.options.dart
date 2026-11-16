@@ -6,6 +6,7 @@
 
 import 'package:jaspr/server.dart';
 import 'package:website/components/add_to_cart.dart' as _add_to_cart;
+import 'package:website/components/checkout_form.dart' as _checkout_form;
 import 'package:website/components/filter_sheet.dart' as _filter_sheet;
 import 'package:website/components/login_form.dart' as _login_form;
 import 'package:website/components/variant_picker.dart' as _variant_picker;
@@ -34,6 +35,10 @@ ServerOptions get defaultServerOptions => ServerOptions(
       'add_to_cart',
       params: __add_to_cartAddToCart,
     ),
+    _checkout_form.CheckoutForm: ClientTarget<_checkout_form.CheckoutForm>(
+      'checkout_form',
+      params: __checkout_formCheckoutForm,
+    ),
     _filter_sheet.DialogToggle: ClientTarget<_filter_sheet.DialogToggle>(
       'filter_sheet',
       params: __filter_sheetDialogToggle,
@@ -56,6 +61,9 @@ ServerOptions get defaultServerOptions => ServerOptions(
 Map<String, Object?> __add_to_cartAddToCart(_add_to_cart.AddToCart c) => {
   'digits': c.digits,
 };
+Map<String, Object?> __checkout_formCheckoutForm(
+  _checkout_form.CheckoutForm c,
+) => {'digits': c.digits, 'orderBase': c.orderBase};
 Map<String, Object?> __filter_sheetDialogToggle(_filter_sheet.DialogToggle c) =>
     {'dialogId': c.dialogId};
 Map<String, Object?> __login_formLoginForm(_login_form.LoginForm c) => {

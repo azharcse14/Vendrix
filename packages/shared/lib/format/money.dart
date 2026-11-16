@@ -25,3 +25,25 @@ String formatCount(int n, String locale) =>
 /// Rating (gor, 0–5) ek doshomik e, locale er digit e: `৪.৫`, `4.5` (9.8). `locale` = [numberLocale].
 String formatRating(double r, String locale) =>
     NumberFormat('0.0', locale).format(r);
+
+/// [formatTaka] er hubohu lekha, `intl` chhara: [digits] = `0`–`9` er locale er digit (jemon `০১২৩৪৫৬৭৮৯`), doshomik
+/// `.`. Website er `@client` e (`intl` er number data JS e na ashe, 10.5).
+String formatTakaDigits(int poisha, String digits) {
+  final abs = poisha.abs();
+  final whole = '${abs ~/ 100}';
+  // Lakh comma: shesh 3, tarpor 2 kore.
+  var head = whole.length > 3 ? whole.substring(0, whole.length - 3) : '';
+  final groups = [whole.substring(head.length)];
+  while (head.isNotEmpty) {
+    final cut = head.length > 2 ? head.length - 2 : 0;
+    groups.insert(0, head.substring(cut));
+    head = head.substring(0, cut);
+  }
+  var s = groups.join(',');
+  if (abs % 100 != 0) s += '.${'${abs % 100}'.padLeft(2, '0')}';
+  final local = String.fromCharCodes([
+    for (final c in s.codeUnits)
+      c >= 0x30 && c <= 0x39 ? digits.codeUnitAt(c - 0x30) : c,
+  ]);
+  return '${poisha < 0 ? '-' : ''}৳$local';
+}

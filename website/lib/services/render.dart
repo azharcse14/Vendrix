@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
@@ -7,6 +9,8 @@ import '../app.dart';
 import '../components/site.dart';
 import '../pages/status.dart';
 import 'api.dart';
+import 'bff.dart';
+import 'cache_control.dart';
 import 'config.dart';
 import 'image.dart';
 import 'locale.dart';
@@ -27,6 +31,7 @@ Future<ResolvedPage> resolvePage(
   required ImageUrls images,
   required void Function(Object error) log,
   String turnstileSiteKey = '',
+  ({String number, String phone})? trackForm,
 }) async {
   final locale = localeOf(path).locale;
   ResolvedPage status(int code, StatusKind kind, [Map<String, String> headers = const {}]) => (
@@ -83,6 +88,7 @@ Future<ResolvedPage> resolvePage(
       catalog: catalogFor(lang),
       images: images,
       turnstileSiteKey: turnstileSiteKey,
+      trackForm: trackForm,
       child: missing ? const StatusPage(StatusKind.notFound) : const App(),
     ),
     css: css,
@@ -98,6 +104,24 @@ Future<Response> renderPage(
   required http.Client client,
   required void Function(Object error) log,
 }) async {
+  ({String number, String phone})? trackForm;
+  // `/track` er JS chhara form nijer page e POST (10.13 item 6): BFF er moto CSRF ar body shima; Go call page e.
+  if (request.method == 'POST' && isTrackPage(request.url.path)) {
+    if (!sameOrigin(request.headers, request.headers['host'] ?? '')) return Response.forbidden('');
+    final bytes = <int>[];
+    await for (final chunk in request.read()) {
+      bytes.addAll(chunk);
+      if (bytes.length > maxBody) return Response(413);
+    }
+    try {
+      final f = Uri.splitQueryString(utf8.decode(bytes));
+      trackForm = (number: f['number'] ?? '', phone: f['phone'] ?? '');
+    } on FormatException {
+      return Response(400);
+    } on ArgumentError {
+      return Response(400);
+    }
+  }
   final page = await resolvePage(
     request.headers['host'] ?? '',
     '/${request.url.path}',
@@ -107,6 +131,7 @@ Future<Response> renderPage(
     images: ImageUrls(cfg.imageBaseUrl, resize: cfg.imageResize),
     log: log,
     turnstileSiteKey: cfg.turnstileSiteKey,
+    trackForm: trackForm,
   );
   final res = await render(
     Document(

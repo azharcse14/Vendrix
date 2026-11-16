@@ -55,7 +55,7 @@ const _empty = Cart([], 0, 0, [], null);
 
 /// `/cart` (10.1, 10.5, 10.12 item 4, 6): SSR, `@client` na. Protiti line e JS chhara qty form
 /// (`POST /_/cart/items/{id}` → PATCH) ar bad form (`.../delete`), `303` e page abar; dam, line total ar subtotal
-/// API er (Rule 1). Checkout button M6 e.
+/// API er (Rule 1). Item thakle checkout link (10.13).
 class CartPage extends AsyncStatelessComponent {
   /// URL query (BFF er `error`).
   final Map<String, String> query;
@@ -122,6 +122,11 @@ class CartPage extends AsyncStatelessComponent {
                   if (approx) span(classes: 'text-sm text-muted', [.text(' ${site.t('cart.approx')}')]),
                 ]),
               ]),
+              a(
+                href: site.href('/checkout'),
+                classes: 'mt-3 flex min-h-11 items-center justify-center rounded bg-primary px-4 text-on-primary',
+                [.text(site.t('cart.checkout'))],
+              ),
             ],
           ),
         ]),

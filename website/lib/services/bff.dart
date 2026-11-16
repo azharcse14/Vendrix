@@ -39,6 +39,10 @@ class BffRoute {
   /// JS chhara form 2xx e ekhane `303` (bhasha prefix shoho); null = form er page e.
   final String? formDone;
 
+  /// Form er page (bhasha prefix chhara) mil theke; token page `no-referrer`, Referer ashe na, tai bhasha form er
+  /// `?lang=` theke (10.13 item 7). null = Referer theke.
+  final String Function(Match)? page;
+
   /// BffRoute.
   const BffRoute(
     this.methods,
@@ -48,11 +52,12 @@ class BffRoute {
     this.apiMethod,
     this.ints = const {},
     this.formDone,
+    this.page,
   });
 }
 
-// Go API er `httpx.MaxBody` (12.2): er beshi body memory te pora hoy na.
-const _maxBody = 1 << 20;
+/// Go API er `httpx.MaxBody` (12.2): er beshi body memory te pora hoy na.
+const maxBody = 1 << 20;
 
 String _cartApi(Match m) => '/api/cart/items/${m[1]}';
 
@@ -96,9 +101,19 @@ final bffRoutes = <BffRoute>[
   // `Idempotency-Key` header forward hoy (niche, shob route e).
   BffRoute({'POST'}, RegExp(r'^/_/checkout$'), (_) => '/api/orders'),
   // Token e shudhu token er okkhor: `.`/`%` diye Go er onno path e jawa jay na.
-  BffRoute({'POST'}, RegExp(r'^/_/orders/([A-Za-z0-9_-]+)/cancel$'), (m) => '/api/orders/${m[1]}/cancel'),
-  BffRoute({'POST'}, RegExp(r'^/_/confirm/([A-Za-z0-9_-]+)$'), (m) => '/api/confirm/${m[1]}'),
-  BffRoute({'POST'}, RegExp(r'^/_/track$'), (_) => '/api/orders/track'),
+  BffRoute(
+    {'POST'},
+    RegExp(r'^/_/orders/([A-Za-z0-9_-]+)/cancel$'),
+    (m) => '/api/orders/${m[1]}/cancel',
+    page: (m) => '/order/${m[1]}',
+  ),
+  BffRoute(
+    {'POST'},
+    RegExp(r'^/_/confirm/([A-Za-z0-9_-]+)$'),
+    (m) => '/api/confirm/${m[1]}',
+    page: (m) => '/confirm/${m[1]}',
+  ),
+  // `/track` BFF e na: nijer page e SSR POST (10.13 item 6).
 ];
 
 // Go er `rand.Text()` base32; onno okkhor (`;`, space) cookie header bhangte pare.
@@ -206,19 +221,21 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       final path = '/${request.url.path}';
       if (!path.startsWith('/_/')) return inner(request);
       final host = request.headers['host'] ?? '';
-      if (request.method != 'GET' && request.method != 'HEAD' && !_sameOrigin(request.headers, host)) {
+      if (request.method != 'GET' && request.method != 'HEAD' && !sameOrigin(request.headers, host)) {
         return _error(403, 'forbidden');
       }
       final (route, match) = _find(routes, request.method, path);
       if (route == null) return _error(404, 'not_found');
 
       final cookies = parseCookies(request.headers['cookie']);
-      final referer = _sameOriginPath(request.headers['referer'], host);
+      final referer = route.page != null
+          ? localePath(request.url.queryParameters['lang'] == 'en' ? 'en' : 'bn', route.page!(match!))
+          : _sameOriginPath(request.headers['referer'], host);
       final form = (request.headers['content-type'] ?? '').startsWith('application/x-www-form-urlencoded');
       final bytes = <int>[];
       await for (final chunk in request.read()) {
         bytes.addAll(chunk);
-        if (bytes.length > _maxBody) return _error(413, 'validation_failed');
+        if (bytes.length > maxBody) return _error(413, 'validation_failed');
       }
       final String raw;
       final Map<String, Object>? fields;
@@ -300,9 +317,9 @@ Middleware bff(Config cfg, http.Client client, List<BffRoute> routes) =>
       );
     };
 
-// CSRF (10.9 niyom 1): Origin thakle seta hubohu ei site er origin (scheme shoho, [originOf]); na thakle ba
-// `null` (no-referrer page er form, 10.1) hole Sec-Fetch-Site same-origin.
-bool _sameOrigin(Map<String, String> headers, String host) {
+/// CSRF (10.9 niyom 1): Origin thakle seta hubohu ei site er origin (scheme shoho, [originOf]); na thakle ba
+/// `null` (no-referrer page er form, 10.1) hole Sec-Fetch-Site same-origin. `/track` er SSR POST o (10.13 item 6).
+bool sameOrigin(Map<String, String> headers, String host) {
   final origin = headers['origin'];
   if (origin != null && origin != 'null') return host.isNotEmpty && origin == originOf(headers);
   return headers['sec-fetch-site'] == 'same-origin';

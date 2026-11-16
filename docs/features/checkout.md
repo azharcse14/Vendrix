@@ -4,7 +4,7 @@ Design: 7.5, 8.5, 8.6, 8.7, 8.10, 8.16, 8.17, 8.19 item 2–5, 7, 12 · Mileston
 
 ## Ki kore
 
-Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–18; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. COD confirm link (`GET`/`POST /api/confirm/{confirm_token}`, 8.10). Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e. Order er job (SMS, alert, auto-cancel; step 18). Order page (`GET /api/orders/{token}`), login chhara tracking (`POST /api/orders/track`) ar nijer order list (`GET /api/me/orders`).
+Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–18; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. COD confirm link (`GET`/`POST /api/confirm/{confirm_token}`, 8.10). Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e. Order er job (SMS, alert, auto-cancel; step 18). Order page (`GET /api/orders/{token}`), login chhara tracking (`POST /api/orders/track`) ar nijer order list (`GET /api/me/orders`). Website er page (`/checkout` + `@client CheckoutForm`, `/order/{token}`, done, `/confirm/{token}`, `/track` SSR POST, `/account/orders`) ar BFF [website.md](website.md) e (item 22–27).
 
 ## Kivabe kaj kore
 

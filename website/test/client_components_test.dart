@@ -28,10 +28,10 @@ void main() {
   });
 
   group('CheckoutForm (10.13 item 1)', () {
-    test('takaText (client, intl chhara) server er formatTaka er hubohu', () {
+    test('formatTakaDigits (client, intl chhara) server er formatTaka er hubohu', () {
       for (final p in [0, 5, 100, 6000, 18050, 170000, 12500000, 123456789, -18000]) {
-        expect(takaText(p, '০১২৩৪৫৬৭৮৯'), formatTaka(p, 'bn'), reason: '$p');
-        expect(takaText(p, '0123456789'), formatTaka(p, 'en_IN'), reason: '$p');
+        expect(formatTakaDigits(p, '০১২৩৪৫৬৭৮৯'), formatTaka(p, 'bn'), reason: '$p');
+        expect(formatTakaDigits(p, '0123456789'), formatTaka(p, 'en_IN'), reason: '$p');
       }
     });
 

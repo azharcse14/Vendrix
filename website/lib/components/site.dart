@@ -27,6 +27,9 @@ class Site extends InheritedComponent {
   /// Turnstile site key (website env, 10.11 item 2).
   final String turnstileSiteKey;
 
+  /// `POST /track` er form (10.13 item 6); GET e null.
+  final ({String number, String phone})? trackForm;
+
   /// Site.
   const Site({
     required this.origin,
@@ -37,6 +40,7 @@ class Site extends InheritedComponent {
     required this.images,
     required super.child,
     this.turnstileSiteKey = '',
+    this.trackForm,
     super.key,
   });
 
@@ -53,6 +57,9 @@ class Site extends InheritedComponent {
 
   /// Shonkhya shop er digit setting e (9.8).
   String number(int n) => formatCount(n, _numbers);
+
+  /// Tarikh shop er timezone e (Rule 5, 9.8).
+  String date(DateTime t) => formatDate(t, uiLocale: locale, banglaDigits: settings.banglaDigits);
 
   /// Rating (ek doshomik) shop er digit setting e.
   String rating(double r) => formatRating(r, _numbers);

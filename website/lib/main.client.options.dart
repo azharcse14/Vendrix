@@ -7,6 +7,8 @@
 import 'package:jaspr/client.dart';
 
 import 'package:website/components/add_to_cart.dart' deferred as _add_to_cart;
+import 'package:website/components/checkout_form.dart'
+    deferred as _checkout_form;
 import 'package:website/components/filter_sheet.dart' deferred as _filter_sheet;
 import 'package:website/components/login_form.dart' deferred as _login_form;
 import 'package:website/components/variant_picker.dart'
@@ -35,6 +37,13 @@ ClientOptions get defaultClientOptions => ClientOptions(
     'add_to_cart': ClientLoader(
       (p) => _add_to_cart.AddToCart(digits: p['digits'] as String),
       loader: _add_to_cart.loadLibrary,
+    ),
+    'checkout_form': ClientLoader(
+      (p) => _checkout_form.CheckoutForm(
+        digits: p['digits'] as String,
+        orderBase: p['orderBase'] as String,
+      ),
+      loader: _checkout_form.loadLibrary,
     ),
     'filter_sheet': ClientLoader(
       (p) => _filter_sheet.DialogToggle(p['dialogId'] as String),
