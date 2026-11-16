@@ -13,6 +13,7 @@ import (
 	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/httpx"
+	"vendrix/backend/internal/inventory"
 	"vendrix/backend/internal/order"
 	"vendrix/backend/internal/shipping"
 	"vendrix/backend/internal/shop"
@@ -89,6 +90,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 	oh.AdminRoutes(mux, staff)
+	inventory.NewHandlers(d, log).Routes(mux, staff)
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
