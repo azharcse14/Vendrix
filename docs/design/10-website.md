@@ -20,7 +20,7 @@ English version e shob route er samne `/en`.
 | `/confirm/{confirm_token}` | COD confirm (v1.4: alada token, shudhu SMS e, 8.10) | Na | `noindex`, `no-referrer` |
 | `/order/{token}/review` | Review | Na | Delivered hole |
 | `/invoice/{token}` | Printable invoice | Na | Print CSS |
-| `/track` | Order tracking | Na | Order number + phone (POST form) |
+| `/track` | Order tracking | Na | Order number + phone (POST form). v1.33: form nijer page e SSR POST (`POST /track`), BFF na; uttor oi response e (10.13 item 6) |
 | `/login` | OTP login | | v1.19: `@client LoginForm`, Turnstile (10.11) |
 | `/account`, `/account/orders`, `/account/addresses`, `/account/wishlist`, `/account/profile`, `/account/privacy` | Account | Hya | v1.19: M4 e shudhu `/account` (naam, bhasha, logout); baki tar milestone e (10.11). v1.28: `/account/wishlist` M5 e (10.12). v1.32: `/account/orders` M6 e, `/account/addresses` M11 e (10.13) |
 | `/policy/{terms,return,refund,delivery,privacy}` | Policy | Na | Bangla badhyotamulok |
@@ -150,7 +150,7 @@ Browser kokhono Go API te jay na (CORS shudhu admin), tai `@client` component ar
 | POST, DELETE | `/_/wishlist/{product_id}` | `/api/wishlist/{product_id}` (v1.28: shudhu login e; guest e `wl` cookie) |
 | POST | `/_/orders/{token}/cancel`, `pay` | `/api/orders/{token}/...` |
 | POST | `/_/confirm/{confirm_token}` | `POST /api/confirm/{confirm_token}` (v1.4, 8.10) |
-| POST | `/_/track`, `/_/complaint`, `/_/review` | `POST /api/orders/track`, `/api/complaints`, `/api/reviews` |
+| POST | `/_/complaint`, `/_/review` | `/api/complaints`, `/api/reviews` (v1.33: `/_/track` nai, `/track` nijer page e SSR POST, 10.13 item 6) |
 | PATCH, POST | `/_/account` | v1.26: `PATCH /api/me` (JS chhara form er POST o PATCH hoye jay, `apiMethod`) |
 | PATCH, POST, DELETE | `/_/account/...` | `/api/me/...` (v1.32: address M11 e, 10.13) |
 
@@ -159,7 +159,7 @@ Niyom:
 1. Protiti POST, PATCH, DELETE e `Origin` (ba `Sec-Fetch-Site`) check: nijer domain na hole `403` (CSRF; `SameSite=Lax` er upor extra).
 2. Cookie theke token ar key niye `Authorization: Bearer`, `X-Cart-Key`; shathe `X-Shop-Host`, `X-Client-IP`, `X-Internal-Auth`, `Accept-Language` (3.2).
 3. Go API er status ar error JSON hubohu ferot; client `code` diye logic kore.
-4. JS chhara form POST e `303` redirect (POST-redirect-GET), error hole form abar dekhay. v1.19: login form chhara (Turnstile JS chhara chole na, 10.11).
+4. JS chhara form POST e `303` redirect (POST-redirect-GET), error hole form abar dekhay. v1.19: login form chhara (Turnstile JS chhara chole na, 10.11). v1.33: `/track` er bytikrom: uttor URL e rakha jay na (phone), tai `303` na, nijer page e SSR POST (10.13 item 6); token page er form (`no-referrer`, Referer ashe na) er `303` token er page e (10.13 item 7).
 5. Jaspr kono dam, stock, discount hishab kore na (Rule 1), shudhu forward kore.
 6. Response e `Cache-Control: no-store`.
 
@@ -205,3 +205,5 @@ User 15 November 2026 e M6 plan er shob recommendation niyeche ([M6](../mileston
 3. **Field** (Q11, 10.6): limit 8.19 item 10; bhul hole `fields` er code field er pashe. Login customer: phone readonly (account er phone, 8.19 item 4), naam/email `/api/me` theke prefill (bodlano jay), order profile e likhe na. Area: district er zone er dropdown, district-wide zone thakle "Onno area" + free text (8.19 item 2).
 4. **Order page** (Q7, 10.1): `/order/{token}` ar done page `GET /api/orders/{token}` er mask kora data dekhay (8.19 item 6); `/track` er uttor e shudhu status ar itihash, order er link na.
 5. **Account** (Q12): M6 e `/account/orders` (`GET /api/me/orders`, paged); `/account/addresses` ar checkout e saved address M11 e. Login customer er naam prefill (item 3) jothesto.
+6. **`/track`** (v1.33, Claude (advisor agent) 16 November 2026, 16.1; user ulte dite pare): JS chhara `<form method="post">` nijer page e (`POST /track`, `/en/track`), BFF na. Jaspr server Origin check (BFF er moto, `403`), body shima (`413`), `number` + `phone` Go `POST /api/orders/track` e (`X-Client-IP` shoho, Go er 10/minute limit), uttor (status, tarikh, itihash; order er link na) oi response e render. `404` e `track.not_found`, `429` hubohu + `Retry-After`, `400` e field er bhul, Go down e `503` page. GET ar POST duitay `private, no-store`, `noindex`; form e number abar bhora, phone khali. Karon: `303` er por uttor rakhte hole URL e number + phone (log, history) ba notun cookie lagto; `@client` hole JS lagto.
+7. **Token page er form** (v1.33): `/order/{token}` er cancel ar `/confirm/{token}` er confirm JS chhara form (BFF `/_/orders/{token}/cancel`, `/_/confirm/{token}`). Token page `Referrer-Policy: no-referrer`, tai browser Referer pathay na (Origin `null`, BFF `Sec-Fetch-Site` dekhe); BFF ei route e `303` token theke page e (`/order/{token}`, `/confirm/{token}`), bhasha form er `?lang=en` theke. Token page e `X-Robots-Tag: noindex` header o (10.4 item 7).
