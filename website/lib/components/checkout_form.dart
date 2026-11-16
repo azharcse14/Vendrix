@@ -143,8 +143,12 @@ class _CheckoutFormState extends State<CheckoutForm> {
       s.toggleAttribute('hidden', off);
       s.disabled = off;
     }
-    final other = _areaSelect?.value == '';
+    final sel = _areaSelect;
+    final other = sel?.value == '';
     _el('#checkout-area-other')?.toggleAttribute('hidden', !other);
+    // Delivery er shomoy: lekha server bosiyeche (10.6).
+    final pick = sel == null || sel.selectedIndex < 0 ? null : sel.options.item(sel.selectedIndex);
+    _el('#checkout-delivery-time')?.textContent = pick?.getAttribute('data-delivery') ?? '';
     (_el('[name="area_other"]') as web.HTMLInputElement?)?.required = other;
   }
 

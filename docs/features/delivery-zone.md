@@ -4,12 +4,12 @@ Design: 7.2, 8.6 step 5, 8.19 item 2 · Milestone: M6 · Code: `backend/internal
 
 ## Ki kore
 
-Checkout form `GET /api/delivery-zones` theke district ar area er list pay. Checkout (quote ar order, [checkout.md](checkout.md)) customer er district/area diye zone khuje charge, `min_order`, free delivery ar deadline er `same_city` nay; zone na pele `409 area_not_served`.
+Checkout form `GET /api/delivery-zones` theke district ar area er list pay. Checkout (quote ar order, [checkout.md](checkout.md)) customer er district/area diye zone khuje charge, `min_order`, free delivery ar deadline er `same_city` nay (din `DeadlineDays`: same city 5, na hole 10, 8.15; order ar zone list ekoi function); zone na pele `409 area_not_served`.
 
 ## Kivabe kaj kore
 
 1. Router: `ShopFromHost` → `RateLimit` (public), `GET /api/delivery-zones` → `Handlers.Zones`.
-2. `List`: shop er `is_active` zone `district`, `area` er kram e; district e group, `area NULL` zone thakle `district_wide: true` (form e "Onno area" + free text). Area er `name` request er bhashay (`httpx.Locale`), `en` na thakle `bn`. Area na thakle `areas: []`.
+2. `List`: shop er `is_active` zone `district`, `area` er kram e; district e group, `area NULL` zone thakle `district_wide: true` (form e "Onno area" + free text). Area er `name` request er bhashay (`httpx.Locale`), `en` na thakle `bn`. Area na thakle `areas: []`. Protiti area e `days`, district e `district_wide_days` (district-wide na hole `null`) = `DeadlineDays(same_city)` (7.2 v1.35); checkout e order er age delivery er shomoy (10.6).
 3. `Lookup` (`order.QuoteCart` ar `order.PlaceOrder` step 5, transaction er age; querier `*sql.DB` ba `*sql.Tx`): ek query te `(district, area)` hubohu ba oi district er `area NULL` zone, `ORDER BY area NULLS LAST` (area age). Bondho zone bad. Na pele `ErrAreaNotServed`.
 
 ## Code er map
@@ -20,7 +20,7 @@ Ei kram e poro:
 |---|---|
 | `backend/cmd/api/router.go` → `newHandler` | Route: public middleware |
 | `backend/internal/shipping/handler.go` → `Routes`, `Zones` | HTTP, JSON |
-| `backend/internal/shipping/store.go` → `Lookup`, `List` | SQL, fallback, group |
+| `backend/internal/shipping/store.go` → `DeadlineDays`, `Lookup`, `List` | Din er niyom, SQL, fallback, group |
 | `scripts/dev-seed.sql` | Local zone (Dhaka er area + district-wide, Gazipur) |
 | `backend/internal/shipping/zone_integration_test.go` | Asol Postgres e test |
 
@@ -30,7 +30,8 @@ Ei kram e poro:
 |---|---|---|
 | Area age, na hole district-wide; bondho bad; string hubohu (8.19 item 2) | `store.go` → `Lookup` | `TestZoneLookupIntegration` |
 | Onno shop er zone kokhono na (Rule 3) | `Lookup`, `List` er `shop_id` | `TestZoneLookupIntegration`, `TestDeliveryZonesIntegration` |
-| List shape, shudhu active, naam bhashay (7.2) | `store.go` → `List` | `TestDeliveryZonesIntegration` |
+| List shape, shudhu active, naam bhashay, area/district-wide er din (7.2 v1.35) | `store.go` → `List` | `TestDeliveryZonesIntegration` |
+| Delivery er din: same city 5, na hole 10 (8.15, 12.2) | `store.go` → `DeadlineDays` (order er `delivery_deadline` o) | `TestDeadlineDays` |
 
 ## Data
 

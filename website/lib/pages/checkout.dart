@@ -83,6 +83,8 @@ class CheckoutPage extends AsyncStatelessComponent {
       ]);
     }
 
+    // Din server er (8.15); niyom ekhane na.
+    String delivery(int? days) => days == null ? '' : site.t('checkout.delivery_time', {'days': site.number(days)});
     Component field(String text, Component input, {String? id, bool hidden = false}) => label(
       id: id,
       classes: 'block space-y-1',
@@ -197,8 +199,14 @@ class CheckoutPage extends AsyncStatelessComponent {
                     if (z != first) ...{'hidden': '', 'disabled': ''},
                   },
                   [
-                    for (final x in z.areas) option(value: x.area, [.text(x.name)]),
-                    if (z.districtWide) option(value: '', [.text(site.t('checkout.area_other'))]),
+                    for (final x in z.areas)
+                      option(value: x.area, attributes: {'data-delivery': delivery(x.days)}, [.text(x.name)]),
+                    if (z.districtWide)
+                      option(
+                        value: '',
+                        attributes: {'data-delivery': delivery(z.districtWideDays)},
+                        [.text(site.t('checkout.area_other'))],
+                      ),
                   ],
                 ),
             ]),
@@ -212,6 +220,13 @@ class CheckoutPage extends AsyncStatelessComponent {
               ),
               id: 'checkout-area-other',
               hidden: first == null || first.areas.isNotEmpty,
+            ),
+            // Order er age delivery er shomoy (10.6, 12.2); client area bachai onujayi option er lekha bosay.
+            p(
+              id: 'checkout-delivery-time',
+              classes: 'text-sm',
+              attributes: {'aria-live': 'polite'},
+              [.text(delivery(first?.areas.firstOrNull?.days ?? first?.districtWideDays))],
             ),
             field(
               site.t('checkout.address'),

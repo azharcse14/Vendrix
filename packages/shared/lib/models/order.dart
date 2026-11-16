@@ -15,14 +15,23 @@ class DeliveryZone {
   /// District-wide zone ache (form e "Onno area").
   final bool districtWide;
 
+  /// "Onno area" te delivery er din (server er 8.15 niyom); district-wide na hole null.
+  final int? districtWideDays;
+
   /// DeliveryZone.
-  const DeliveryZone(this.district, this.areas, this.districtWide);
+  const DeliveryZone(
+    this.district,
+    this.areas,
+    this.districtWide,
+    this.districtWideDays,
+  );
 
   /// JSON theke.
   factory DeliveryZone.fromJson(Map<String, dynamic> j) => DeliveryZone(
     field(j, 'district'),
     objects(j, 'areas', DeliveryArea.fromJson),
     field(j, 'district_wide'),
+    field(j, 'district_wide_days'),
   );
 }
 
@@ -31,12 +40,15 @@ class DeliveryArea {
   /// Area, naam.
   final String area, name;
 
+  /// Delivery er din (server er 8.15 niyom, client hishab kore na).
+  final int days;
+
   /// DeliveryArea.
-  const DeliveryArea(this.area, this.name);
+  const DeliveryArea(this.area, this.name, this.days);
 
   /// JSON theke.
   factory DeliveryArea.fromJson(Map<String, dynamic> j) =>
-      DeliveryArea(field(j, 'area'), field(j, 'name'));
+      DeliveryArea(field(j, 'area'), field(j, 'name'), field(j, 'days'));
 }
 
 /// `POST /api/checkout/quote` (7.5, 8.5); taka poisha, shudhu server er (Rule 1).

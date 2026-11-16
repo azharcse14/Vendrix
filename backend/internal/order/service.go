@@ -300,10 +300,7 @@ func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Ow
 	case ConfirmRequired(s.CODConfirmation, flags, cod, otpVerified):
 		status = "pending"
 	}
-	days := 10
-	if zone.SameCity {
-		days = 5
-	}
+	days := shipping.DeadlineDays(zone.SameCity)
 
 	var out Placed
 	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
