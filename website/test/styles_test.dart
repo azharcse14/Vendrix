@@ -18,6 +18,8 @@ void main() {
       ':focus-visible{outline:2px solid var(--color-focus)',
       'accent-color:var(--color-primary)',
       'prefers-reduced-motion:reduce',
+      // `hidden` attribute `.notice`/`.input` er display ke harabe (MU U8).
+      '[hidden]{display:none!important}',
     ]) {
       expect(s.contains(rule), isTrue, reason: 'styles.css e nai: $rule');
     }

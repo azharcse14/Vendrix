@@ -213,6 +213,82 @@ void main() {
       expect(html, contains('<!--@checkout_form data={"digits":"০১২৩৪৫৬৭৮৯","orderBase":"/order/"}-->'));
     });
 
+    test('section card, radio card, OTP box, mobile summary, client er id/data (10.5, 10.6 v1.38, MU U8)', () async {
+      final (_, _, doc) = await page('/checkout', cookie: '__Host-cart=$key');
+      final form = doc.querySelector('form#checkout')!;
+
+      // Numbered section (step indicator na): 1 Contact, 2 Thikana, 3 Payment, 4 OTP; h1 er por h2.
+      final heads = form.querySelectorAll('section > h2');
+      final keys = ['checkout.contact', 'checkout.shipping', 'checkout.payment', 'checkout.otp_title'];
+      expect(heads, hasLength(4));
+      for (var i = 0; i < 4; i++) {
+        expect(heads[i].text, startsWith('১২৩৪'[i]), reason: keys[i]);
+        expect(heads[i].text, endsWith(t.t(keys[i])), reason: keys[i]);
+      }
+      dom.Element sec(int i) => heads[i].parent!;
+      for (final n in ['customer.name', 'customer.phone', 'customer.email', 'recipient.phone']) {
+        expect(sec(0).querySelector('[name="$n"]'), isNotNull, reason: n);
+      }
+      for (final n in ['address.district', 'address.area', 'area_other', 'address.line', 'note']) {
+        expect(sec(1).querySelector('[name="$n"]'), isNotNull, reason: n);
+      }
+      expect(sec(1).querySelector('#checkout-delivery-time'), isNotNull);
+
+      // Payment radio card: radio label er bhetore, fieldset heading diye chena.
+      final radios = sec(2).querySelectorAll('input[type="radio"][name="payment_method"]');
+      expect(radios, isNotEmpty);
+      for (final r in radios) {
+        expect(r.parent!.localName, 'label');
+      }
+      final fs = sec(2).querySelector('fieldset')!;
+      expect(fs.attributes['aria-labelledby'], heads[2].id);
+
+      // OTP box: section nijei #checkout-otp, lukano, numeric one-time-code input.
+      expect(sec(3).id, 'checkout-otp');
+      expect(sec(3).attributes.containsKey('hidden'), isTrue);
+      final code = sec(3).querySelector('input[name="otp_code"]')!;
+      expect(code.attributes['inputmode'], 'numeric');
+      expect(code.attributes['autocomplete'], 'one-time-code');
+
+      // Mobile summary: JS chhara `<details>` + `<summary>`, form er shurute, line er naam.
+      final details = form.querySelector('details')!;
+      expect(form.children.first, details);
+      expect(details.querySelector('summary')!.text, contains(t.t('checkout.summary')));
+      expect(details.text, contains('লাল চাল'));
+
+      // Ekta-i submit button.
+      expect(form.querySelectorAll('button[type="submit"]'), hasLength(1));
+
+      // CheckoutForm je id/data khoje, protiti ekbar (querySelector prothom ta ney).
+      for (final s in [
+        '#checkout-recipient',
+        '#checkout-area-other',
+        '#checkout-delivery-time',
+        '#checkout-problems',
+        '#checkout-otp',
+        '#checkout-otp-text',
+        '#checkout-error',
+        '#checkout-area-label',
+        '[data-otp-resend]',
+        '[data-otp-text]',
+        '[data-quote="subtotal"]',
+        '[data-quote="discount"]',
+        '[data-quote="delivery_charge"]',
+        '[data-quote="total"]',
+        '[name="other_recipient"]',
+        '[name="consent"]',
+        '[name="website"]',
+        '.cf-turnstile',
+      ]) {
+        expect(doc.querySelectorAll(s), hasLength(1), reason: s);
+      }
+      expect(form.querySelectorAll('select[data-district]'), hasLength(2));
+      expect(form.querySelector('[data-error="internal"]'), isNotNull);
+      for (final s in ['#checkout-problems', '#checkout-error', '#checkout-otp', '#checkout-recipient']) {
+        expect(doc.querySelector(s)!.attributes.containsKey('hidden'), isTrue, reason: s);
+      }
+    });
+
     test('login: /api/me Bearer diye; phone readonly (8.19 item 4), naam/email prefill', () async {
       final (res, _, doc) = await page('/checkout', cookie: '__Host-sid=GOOD');
       expect(res.statusCode, 200);
