@@ -38,6 +38,8 @@ const en = {
   'error.idempotency_key_reused': 'Order details changed, please submit again',
   'error.price_changed': 'Prices changed, check the new total and submit again',
   'error.otp_required': 'Enter the code sent to your phone',
+  'error.invalid_transition': 'This cannot be done for this order now',
+  'error.payment_required': 'Payment must be completed first',
   'error.vendor_unavailable': 'This seller is not taking orders now',
   'theme.low_contrast': 'Text in this colour will be hard to read',
   'nav.main': 'Main menu',

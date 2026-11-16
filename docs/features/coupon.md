@@ -13,7 +13,7 @@ Checkout e coupon code diye discount: code thik, chalu, shomoy er bhitore, mot `
 3. `check`: code dhore row; nai, `is_active = false` ba shomoy er baire → `ErrInvalid`; tarpor `usage_limit` shesh → `ErrLimitReached`. Bondho ar shesh duitai hole `ErrInvalid` (invalid age).
 4. `Peek` (quote, `order.QuoteCart`; error hole `problems` e code, coupon chhara total): `check` + `checkPhone`, kichu bodlay na.
 5. Error hole caller transaction `ROLLBACK` kore, tai `used_count` ferot ashe. `ErrorCode` error theke API code (`coupon_invalid`, `coupon_limit_reached`).
-6. `Release` (cancel, 8.8): ek statement e order er redemption `DELETE`, tar coupon e `used_count = GREATEST(used_count - 1, 0)`. Redemption na thakle kichu na.
+6. `Release` (cancel, 8.8): ek statement e order er redemption `DELETE`, tar coupon e `used_count = GREATEST(used_count - 1, 0)`. Redemption na thakle kichu na. Caller `order.TransitionOrder(→ cancelled)` (fulfillment er restock er pore, lock er kram 8.8; [order-status.md](order-status.md)).
 
 ## Code er map
 
@@ -32,7 +32,7 @@ Ei kram e poro:
 |---|---|---|
 | Code `trim` + `upper`, max 32, khali = nai (8.19 item 5, 10) | `service.go` → `Normalize` | `TestCouponNormalize` |
 | Error → `409 coupon_invalid` / `coupon_limit_reached` (8.19 item 5) | `service.go` → `ErrorCode` | `TestCouponNormalize` |
-| Atomic `used_count + 1` (limit, shomoy, bondho), tarpor phone count (6.4, 8.6 step 11) | `store.go` → `Use` | `TestCouponUseIntegration` |
+| Atomic `used_count + 1` (limit, shomoy, bondho), tarpor phone count (6.4, 8.6 step 11) | `store.go` → `Use` | `TestCouponUseIntegration`, `TestCancelRestoresIntegration` |
 | Karon: nai/bondho/shomoy → invalid, limit → limit_reached; error e ROLLBACK e `used_count` ferot (8.19 item 5) | `store.go` → `check`, `checkPhone` | `TestCouponUseIntegration` |
 | Onno shop er code chole na (Rule 3) | protiti query er `shop_id` | `TestCouponUseIntegration`, `TestCouponPeekIntegration` |
 | Quote e read-only, ekoi karon (8.19 item 5) | `store.go` → `Peek` | `TestCouponPeekIntegration` |

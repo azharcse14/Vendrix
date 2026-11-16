@@ -38,6 +38,8 @@ const bn = {
   'error.idempotency_key_reused': 'অর্ডারের তথ্য বদলেছে, আবার জমা দিন',
   'error.price_changed': 'দাম বদলেছে, নতুন মোট দেখে আবার জমা দিন',
   'error.otp_required': 'মোবাইলে পাঠানো কোড দিন',
+  'error.invalid_transition': 'এই অর্ডারে এখন এটা করা যাবে না',
+  'error.payment_required': 'আগে পেমেন্ট সম্পন্ন করুন',
   'error.vendor_unavailable': 'বিক্রেতা এখন অর্ডার নিচ্ছেন না',
   'theme.low_contrast': 'এই রঙে লেখা পড়তে কঠিন হবে',
   'nav.main': 'প্রধান মেনু',

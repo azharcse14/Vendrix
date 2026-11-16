@@ -43,6 +43,7 @@ func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {
 func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
 	mux.Handle("POST /api/checkout/quote", wrap(http.HandlerFunc(h.Quote)))
 	mux.Handle("POST /api/orders", wrap(http.HandlerFunc(h.Place)))
+	mux.Handle("POST /api/orders/{token}/cancel", wrap(http.HandlerFunc(h.Cancel)))
 }
 
 func invalid(w http.ResponseWriter, r *http.Request, field, code string) {
@@ -304,4 +305,46 @@ func maskPhone(p string) string {
 		return "****"
 	}
 	return p[:6] + "****" + p[len(p)-4:]
+}
+
+// Cancel: POST /api/orders/{token}/cancel (7.5, 8.19 item 12 vii): body {reason?} max 200.
+func (h *Handlers) Cancel(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Reason string `json:"reason"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		invalid(w, r, "body", "invalid")
+		return
+	}
+	reason, ok := text(in.Reason, 0, 200)
+	if !ok {
+		invalid(w, r, "reason", "invalid")
+		return
+	}
+	by := By{Actor: Customer}
+	if c, ok := httpx.CustomerFrom(r.Context()); ok {
+		by.ID = c.UserID
+	}
+	s, _ := httpx.ShopFrom(r.Context())
+	if err := CancelByToken(r.Context(), h.db, s.ID, r.PathValue("token"), by, reason); err != nil {
+		h.transitionError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": string(Cancelled)})
+}
+
+// transitionError: TransitionOrder/TransitionFulfillment er error → 7.1.
+func (h *Handlers) transitionError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ErrNotFound):
+		httpx.WriteError(w, r, http.StatusNotFound, httpx.ErrorBody{Code: "not_found"})
+	case errors.Is(err, ErrInvalidTransition):
+		httpx.WriteError(w, r, http.StatusConflict, httpx.ErrorBody{Code: "invalid_transition"})
+	case errors.Is(err, ErrPaymentRequired):
+		httpx.WriteError(w, r, http.StatusConflict, httpx.ErrorBody{Code: "payment_required"})
+	default:
+		h.log.ErrorContext(r.Context(), "order transition", "request_id", httpx.RequestIDFrom(r.Context()), "err", err)
+		httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
+	}
 }

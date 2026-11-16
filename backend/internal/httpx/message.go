@@ -40,6 +40,8 @@ var messages = map[string][2]string{
 	"idempotency_key_reused":   {"অর্ডারের তথ্য বদলেছে, আবার জমা দিন", "Order details changed, please submit again"},
 	"price_changed":            {"দাম বদলেছে, নতুন মোট দেখে আবার জমা দিন", "Prices changed, check the new total and submit again"},
 	"otp_required":             {"মোবাইলে পাঠানো কোড দিন", "Enter the code sent to your phone"},
+	"invalid_transition":       {"এই অর্ডারে এখন এটা করা যাবে না", "This cannot be done for this order now"},
+	"payment_required":         {"আগে পেমেন্ট সম্পন্ন করুন", "Payment must be completed first"},
 	"vendor_unavailable":       {"বিক্রেতা এখন অর্ডার নিচ্ছেন না", "This seller is not taking orders now"},
 	"rate_limited":             {"অনেক বেশি অনুরোধ, একটু পরে চেষ্টা করুন", "Too many requests, try again later"},
 	"db_unavailable":           {"সার্ভারে সমস্যা, একটু পরে চেষ্টা করুন", "Service unavailable, try again later"},

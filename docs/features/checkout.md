@@ -4,7 +4,7 @@ Design: 7.5, 8.5, 8.6, 8.7, 8.19 item 2–5 · Milestone: M6 · Code: `backend/i
 
 ## Ki kore
 
-Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–17; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. Confirm token (step 8 er M6), job/SMS (step 18; M6 step 9), order view, tracking, cancel M6 er porer step e (`docs/milestones/M6.md`).
+Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–17; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e. Confirm token (step 8 er M6), job/SMS (step 18; M6 step 9), order view, tracking M6 er porer step e (`docs/milestones/M6.md`).
 
 ## Kivabe kaj kore
 

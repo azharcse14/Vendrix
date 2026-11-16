@@ -14,7 +14,12 @@ Order (customer ar payment: pending theke confirmed ba cancelled) ar fulfillment
 4. `AllCancelled(fs)`: shob fulfillment cancel hole system order cancel kore.
 5. `Summary(order, fs)`: `display_status`; vendor ra alada stage e hole `partial`.
 
-`TransitionOrder` ar `TransitionFulfillment` (M6) ei function gulo diye database e bodlabe; onno kothao `UPDATE ... SET status` na.
+Database e status bodlay shudhu `transition.go` er duita function (8.8); onno kothao `UPDATE ... SET status` na:
+
+6. `TransitionOrder(ctx, tx, shopID, orderID, to, By{Actor, ID, VendorID}, note)`: `lockOrder` (order → payment → fulfillment `id` er kram e `FOR UPDATE`), online unpaid `pending → confirmed` hole `ErrPaymentRequired` (actor jei hok), `CanTransitionOrder` na hole `ErrInvalidTransition`. Cancel e `CancelCascade` er open/packed fulfillment `cancelFulfillments` (history te order er actor), tarpor `coupon.Release`; `orders` e `status`, `display_status = Summary`, `confirmed_at`/`cancelled_at`, cancel e `cancel_reason = note`; history row (`from_status` shoho).
+7. `TransitionFulfillment(ctx, tx, shopID, fulfillmentID, to, by, note)`: fulfillment na pele, ba vendor actor er nijer na hole `ErrNotFound`; tarpor `lockOrder`, `CanTransitionFulfillment` na hole `ErrInvalidTransition`; M6 e shudhu `→ cancelled`, baki allowed bodol `ErrNotImplemented` (8.19 item 8, M7 e packing/shipment). Shob fulfillment cancelled (`AllCancelled`) hole ek-i tx e order `→ cancelled` (`System`, upore cascade), na hole shudhu `display_status`.
+8. `cancelFulfillments`: `restock` (active item er qty variant e, `variant_id` er kram e lock; removed item bad, karon edit e already ferot; pack hoye thakle `order_item_batches` theke batch e; movement `cancel`, batch er ongsho `batch_id` shoho), prepaid (online ar `paid`/`partially_refunded`) e protiti fulfillment er bortoman `total > 0` hole `refundCancel` (`refunds` `kind = 'cancel'`, `pending`, method = payment method, shesh succeeded payment; mot refund paid er beshi hole ROLLBACK), status `cancelled` + `cancelled_at`, history.
+9. Customer cancel `POST /api/orders/{token}/cancel` (7.5, Rule 11): `Cancel` handler body `{reason?}` (trim, max 200 rune, na hole `400 validation_failed`), `CancelByToken` (`public_token` + `shop_id` diye order, na pele `404 not_found`) → `TransitionOrder(→ cancelled, Customer)` (login thakle `actor_id` = user); `200 {"status": "cancelled"}`. Abar cancel ba packed thakle `409 invalid_transition`. Error map `transitionError` (M7 er admin route o eta nebe).
 
 Prothom status (M6, 8.6 step 14) checkout e insert er shomoy boshe, bodol na: `PlaceOrder` ([checkout.md](checkout.md)) COD e `ConfirmRequired` hole `pending`, na hole `confirmed`; online e `pending`. `display_status = Summary(status, nil)` (fulfillment tokhono insert hoyni), fulfillment `open`, `order_status_history` e `from_status` NULL, actor `customer`.
 
@@ -27,7 +32,11 @@ Ei kram e poro:
 | `backend/internal/order/doc.go` | Package comment (risk er niyom [checkout.md](checkout.md) e) |
 | `backend/internal/order/order.go` → `CanTransitionOrder`, `CanTransitionFulfillment` | Onumoti |
 | `order.go` → `CancelCascade`, `AllCancelled`, `Summary` | Cascade ar display |
+| `backend/internal/order/transition.go` → `TransitionOrder`, `TransitionFulfillment` | DB e bodol, lock, history, display |
+| `transition.go` → `lockOrder`, `cancelFulfillments`, `restock`, `refundCancel`, `history` | Side effect |
+| `transition.go` → `CancelByToken`; `handler.go` → `Cancel`, `transitionError` | Customer cancel route |
 | `backend/internal/order/order_test.go` | Golden table |
+| `backend/internal/order/transition_integration_test.go` | DB er bodol, cancel, display |
 
 ## Niyom ar tar test
 
@@ -39,15 +48,21 @@ Ei kram e poro:
 | Order cancel → open ar packed fulfillment cancel (8.8) | `CancelCascade` | `TestCancelCascade` |
 | Shob bodol golden table e (14.2 test 7) | table | `TestOrderTransitionGolden`, `TestFulfillmentTransitionGolden` |
 | `display_status` (14.2 test 16) | `Summary` | `TestSummary` |
+| DB e na-allowed bodol `invalid_transition`, online unpaid confirm `payment_required`, `confirmed_at`/history, M6 e packed `ErrNotImplemented`, onno shop/vendor `ErrNotFound`, route er `404`/`409`/`400` (8.8; 14.2 test 7) | `TransitionOrder`, `TransitionFulfillment`, `Cancel` | `TestTransitionIntegration` |
+| Cancel e stock (`cancel` movement), packed e batch, coupon (`used_count`, redemption) ferot, `cancel_reason`; prepaid e protiti fulfillment e ekta refund (0 total e na), order level e na; removed item er stock abar na (8.8, 8.12, 8.13; 14.2 test 8) | `cancelFulfillments`, `restock`, `refundCancel`, `coupon.Release` | `TestCancelRestoresIntegration` |
+| Customer cancel pending/confirmed (shob open), packed e na; staff packed shoho; system live order na; shob fulfillment cancel → order (system); vendor shudhu nijer (8.8; 14.2 test 26) | `CanTransitionOrder`, `CancelCascade`, `AllCancelled` | `TestCancelCascadeIntegration` |
+| DB `display_status` = `Summary`: checkout, cancel, marketplace `partial` (14.2 test 16) | `TransitionOrder`, `TransitionFulfillment` | `TestDisplayStatusIntegration` |
 | Checkout e prothom status, `display_status`, history row (8.6 step 14, 16) | `PlaceOrder` | `TestCheckoutSnapshotIntegration` |
 
 ## Data
 
-`orders.status`, `orders.display_status`, `order_fulfillments.status`, `order_status_history` (6.7). Database er CHECK: online unpaid order confirmed na, pending ar cancelled er display mile (`001_init_test.sql`).
+`orders.status`, `orders.display_status`, `confirmed_at`, `cancelled_at`, `cancel_reason`, `order_fulfillments.status`/`cancelled_at`, `order_status_history` (6.7). Cancel e: `product_variants.stock`, `inventory_batches.quantity_remaining`, `inventory_movements` (`cancel`), `coupon_redemptions`/`coupons.used_count`, `refunds` (`refunds_cancel_once`). Database er CHECK: online unpaid order confirmed na, pending ar cancelled er display mile (`001_init_test.sql`).
 
 ## Bhul hole ki hoy
 
-- Na-allowed bodol: `409 invalid_transition`; online unpaid order confirm: `409 payment_required` (M6 er handler).
+- Na-allowed bodol: `409 invalid_transition`; online unpaid order confirm: `409 payment_required` (`transitionError`). Kono side effect fail hole puro tx ROLLBACK (status o bodlay na).
+- Refund paid er beshi hole (`errRefundOverPaid`, bug ba vul data) ROLLBACK + `500` log.
+- Refund row `pending`; gateway e asol refund ar `payment_status` (`refunded`) M10 e. Cancel er SMS (`sms.cancelled`) M6 step 9 e.
 - Caller cascade bhule gele `Summary` "cancelled" dey ar database er CHECK transaction atkay.
 
 ## Bodlanor age mone rakho
@@ -57,4 +72,6 @@ Ei kram e poro:
 
 ## Proshno-uttor
 
+- **Online unpaid confirm e customer o `payment_required` keno, `invalid_transition` na?** Taka na asha-i asol karon; 14.2 test 7 duita actor er jonno ekoi code chay.
+- **Vendor onno vendor er fulfillment e `404` keno?** Ache kina bola na (IDOR).
 - **Duita state machine keno?** Order holo kena ar payment er unit, fulfillment holo ek vendor er pack-ship; marketplace e ek order er duita parcel alada stage e thakte pare.
