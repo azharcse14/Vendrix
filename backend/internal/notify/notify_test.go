@@ -81,6 +81,66 @@ func (f smsFunc) Send(ctx context.Context, shopID int64, phone, text string) err
 	return f(ctx, shopID, phone, text)
 }
 
+// TestOrderSMSTemplateLength (8.16, 8.19 item 7): order SMS er default bn ≤ 134 unit (UCS-2, 2 part), en ≤ 160
+// (GSM-7, ASCII), lomba shop/number/domain diye; placeholder bosano; override er kram OTPText er moto, {number}
+// ba (link thakle) {link} chhara override bad.
+func TestOrderSMSTemplateLength(t *testing.T) {
+	const (
+		shopBn = "সবুজবাজার অর্গানিক"
+		shopEn = "Sobujbazar Organic"
+		number = "SBORG-1000001"
+		domain = "https://sobujbazar-organic.com"
+		token  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" // 26 okkhor
+	)
+	for key, link := range map[string]string{
+		"sms.order_placed":  domain + "/order/" + token,
+		"sms.order_confirm": domain + "/confirm/" + token,
+		"sms.cancelled":     "",
+	} {
+		bn, en := OrderText(key, "bn", nil, shopBn, number, link), OrderText(key, "en", nil, shopEn, number, link)
+		if n := len(utf16.Encode([]rune(bn))); n > 134 || !strings.Contains(bn, number) || !strings.Contains(bn, link) {
+			t.Errorf("%s bn %d unit (≤ 134 chai): %q", key, n, bn)
+		}
+		for _, r := range en {
+			if r > 0x7e || (r < 0x20 && r != '\n') {
+				t.Errorf("%s en e GSM-7 er baire %q: %q", key, r, en)
+			}
+		}
+		if len(en) > 160 || !strings.Contains(en, number) || !strings.Contains(en, link) || en == bn {
+			t.Errorf("%s en %d (≤ 160 chai): %q", key, len(en), en)
+		}
+		if strings.Contains(bn+en, "{") {
+			t.Errorf("%s placeholder roye geche: %q %q", key, bn, en)
+		}
+		if bn != OrderText(key, "", nil, shopBn, number, link) || bn != OrderText(key, "fr", nil, shopBn, number, link) {
+			t.Errorf("%s: ochena locale e bn chai", key)
+		}
+	}
+	if OrderText("sms.order_placed", "bn", nil, "S", "N", "L") == OrderText("sms.order_confirm", "bn", nil, "S", "N", "L") {
+		t.Error("confirm SMS er lekha order_placed er moto (8.19 item 7: alada)")
+	}
+	def := OrderText("sms.order_placed", "en", nil, "S", "N-1", "L")
+	for _, c := range []struct {
+		locale   string
+		override map[string]string
+		want     string
+	}{
+		{"en", map[string]string{"en": "{shop} #{number} {link}"}, "S #N-1 L"},
+		{"en", map[string]string{"en": "#{number} {link}"}, "#N-1 L"},
+		{"en", map[string]string{"en": "{shop} {link}"}, def},    // number nai
+		{"en", map[string]string{"en": "{shop} #{number}"}, def}, // link nai
+		{"fr", map[string]string{"bn": "দোকান {number} {link}"}, "দোকান N-1 L"},
+	} {
+		if got := OrderText("sms.order_placed", c.locale, c.override, "S", "N-1", "L"); got != c.want {
+			t.Errorf("%q %v: %q, chai %q", c.locale, c.override, got, c.want)
+		}
+	}
+	// cancel e link nai, tai {link} chhara override chole
+	if got := OrderText("sms.cancelled", "en", map[string]string{"en": "#{number} cancelled"}, "S", "N-1", ""); got != "#N-1 cancelled" {
+		t.Errorf("sms.cancelled override: %q", got)
+	}
+}
+
 // TestOTPTemplateLength (8.16, Q10 iv): sms.otp er default bn ek SMS e (UCS-2, ≤ 70 code unit), en ≤ 160
 // (GSM-7, ASCII); {code} bosano; kram override[locale] → default[locale] → override[bn] → default[bn] (9.8);
 // {code} chhara override bad (code chhara OTP SMS kaje lage na).

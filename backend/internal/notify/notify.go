@@ -103,6 +103,11 @@ func OTPText(locale string, override map[string]string, code string) string {
 	return strings.ReplaceAll(otpDefault["bn"], "{code}", code)
 }
 
+// OrderText: order SMS er lekha; M6 step 9 e asol code.
+func OrderText(key, locale string, override map[string]string, shop, number, link string) string {
+	return ""
+}
+
 // SecurityAlertJob (8.17 alert.security, Q9): ekhon shudhu slog.Warn (payload e phone mask); email/webhook M12 e.
 func SecurityAlertJob(log *slog.Logger) jobs.Handler {
 	return func(ctx context.Context, j jobs.Job) error {
