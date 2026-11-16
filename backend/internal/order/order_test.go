@@ -3,6 +3,8 @@ package order
 import (
 	"slices"
 	"testing"
+
+	"vendrix/backend/internal/httpx"
 )
 
 var (
@@ -216,5 +218,30 @@ func TestFulfillmentTransitionGolden(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// TestByStaff (11.7 item 13 i): shop er role → Staff; vendor role → Vendor + session er vendor_id; ochena role
+// ba vendor_id chhara vendor role kono transition pay na (fail-closed).
+func TestByStaff(t *testing.T) {
+	v := int64(7)
+	for _, c := range []struct {
+		st   httpx.Staff
+		want By
+	}{
+		{httpx.Staff{ID: 1, Role: "owner"}, By{Actor: Staff, ID: 1}},
+		{httpx.Staff{ID: 2, Role: "admin"}, By{Actor: Staff, ID: 2}},
+		{httpx.Staff{ID: 3, Role: "staff"}, By{Actor: Staff, ID: 3}},
+		{httpx.Staff{ID: 4, Role: "vendor_owner", VendorID: &v}, By{Actor: Vendor, ID: 4, VendorID: 7}},
+		{httpx.Staff{ID: 5, Role: "vendor_staff", VendorID: &v}, By{Actor: Vendor, ID: 5, VendorID: 7}},
+		{httpx.Staff{ID: 6, Role: "vendor_staff"}, By{Actor: Vendor, ID: 6}},
+		{httpx.Staff{ID: 7, Role: "ochena"}, By{ID: 7}},
+	} {
+		if got := ByStaff(c.st); got != c.want {
+			t.Errorf("%s: %+v, chai %+v", c.st.Role, got, c.want)
+		}
+	}
+	if CanTransitionFulfillment(Open, FCancelled, ByStaff(httpx.Staff{Role: "ochena"}).Actor) {
+		t.Error("ochena role e transition")
 	}
 }

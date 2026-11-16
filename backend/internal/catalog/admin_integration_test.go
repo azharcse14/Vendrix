@@ -46,7 +46,7 @@ func errCode(m map[string]any) string {
 
 func idOf(m map[string]any) string { return strconv.FormatInt(int64(m["id"].(float64)), 10) }
 
-// TestAdminCategoryIntegration (7.7, 11.2, v1.10): fail-closed, role, validation, slug_taken, onno shop er
+// TestAdminCategoryIntegration (7.7, 11.2, v1.10, v1.37): fail-closed, role (vendor_owner shudhu GET), validation, slug_taken, onno shop er
 // parent, cycle, khali hole delete, audit.
 func TestAdminCategoryIntegration(t *testing.T) {
 	f := newFixture(t)
@@ -57,6 +57,9 @@ func TestAdminCategoryIntegration(t *testing.T) {
 	vendor := a
 	vendor.Role = "vendor_owner"
 	f.admin(t, vendor, "POST", "/api/admin/categories", `{}`, 403)
+	f.admin(t, vendor, "PATCH", "/api/admin/categories/"+s64(f.ids["b-cat"]), `{}`, 403)
+	f.admin(t, vendor, "DELETE", "/api/admin/categories/"+s64(f.ids["b-cat"]), "", 403)
+	f.admin(t, vendor, "GET", "/api/admin/categories", "", 200) // v1.37: vendor_owner list dekhe (product form)
 
 	root := f.admin(t, a, "POST", "/api/admin/categories", `{"slug":"chal","name":{"bn":"চাল","en":"Rice"},"image_key":"k.jpg"}`, 201)
 	if root["slug"] != "chal" || root["is_active"] != true || root["shop_id"] != nil {

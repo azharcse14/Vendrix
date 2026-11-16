@@ -4,19 +4,27 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"vendrix/backend/internal/config"
+	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/dbtest"
+	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/shop"
 )
 
@@ -384,6 +392,143 @@ func TestSessionRouteKind(t *testing.T) {
 		status, body := do(c.method, c.path, c.bearer, c.cookie)
 		if status != c.status || (c.code != "" && !strings.Contains(body, `"code":"`+c.code+`"`)) {
 			t.Errorf("%s: %d %s, chai %d %s", c.name, status, body, c.status, c.code)
+		}
+	}
+}
+
+// adminRoles (11.2, 7.7): protiti /api/admin/* route er role set. Notun admin route e ekhane row jog koro
+// (TestAdminRouteRoles source er route er sathe mile kina dekhe). preLogin = session er age (login, MFA);
+// setupOK = setup_pending session eo chole (8.3 step 4).
+var (
+	allRoles   = []string{"owner", "admin", "staff", "vendor_owner", "vendor_staff"}
+	shopAdmin  = []string{"owner", "admin"}
+	vendorProd = []string{"owner", "admin", "vendor_owner"}
+)
+
+type routeRoles struct {
+	roles    []string
+	preLogin bool
+	setupOK  bool
+}
+
+var adminRoutes = map[string]routeRoles{
+	"POST /api/admin/auth/login":       {preLogin: true},
+	"POST /api/admin/auth/totp":        {preLogin: true},
+	"POST /api/admin/auth/recovery":    {preLogin: true},
+	"POST /api/admin/auth/password":    {roles: allRoles, setupOK: true},
+	"POST /api/admin/auth/totp/setup":  {setupOK: true}, // shudhu setup_pending (active e 403, 8.3)
+	"POST /api/admin/auth/totp/enable": {setupOK: true},
+	"POST /api/admin/auth/logout":      {roles: allRoles, setupOK: true},
+	"GET /api/admin/me":                {roles: allRoles},
+
+	"GET /api/admin/categories":         {roles: vendorProd}, // v1.37: vendor_owner shudhu list
+	"POST /api/admin/categories":        {roles: shopAdmin},
+	"PATCH /api/admin/categories/{id}":  {roles: shopAdmin},
+	"DELETE /api/admin/categories/{id}": {roles: shopAdmin},
+
+	"GET /api/admin/products":                {roles: vendorProd},
+	"POST /api/admin/products":               {roles: vendorProd},
+	"GET /api/admin/products/{id}":           {roles: vendorProd},
+	"PATCH /api/admin/products/{id}":         {roles: vendorProd},
+	"POST /api/admin/products/{id}/variants": {roles: vendorProd},
+	"PATCH /api/admin/variants/{id}":         {roles: vendorProd},
+}
+
+// registeredAdminRoutes: backend er (test chhara) Go source e "METHOD /api/admin/..." pattern gulo. ServeMux
+// pattern er list dey na, tai source theke; route literal chhara register hole ei test dhore na.
+func registeredAdminRoutes(t *testing.T) map[string]bool {
+	t.Helper()
+	re := regexp.MustCompile(`"((?:GET|POST|PUT|PATCH|DELETE) /api/admin/[^"]*)"`)
+	out := map[string]bool{}
+	err := filepath.WalkDir("../..", func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
+			return err
+		}
+		b, err := os.ReadFile(p)
+		for _, m := range re.FindAllSubmatch(b, -1) {
+			out[string(m[1])] = true
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// TestAdminRouteRoles (11.2, 11.7 item 13 i, M7a acceptance): router diye protiti /api/admin/* route × 5 role:
+// table er role e 401/403 na (handler porjonto jay; DB nai tai 500 ba 400), baki role e 403 forbidden; cookie
+// chhara 401; setup_pending e 403 setup_required (setup route chhara). Session DB chhara (fake lookup).
+func TestAdminRouteRoles(t *testing.T) {
+	src := registeredAdminRoutes(t)
+	for r := range src {
+		if _, ok := adminRoutes[r]; !ok {
+			t.Errorf("%s: adminRoutes e row nai", r)
+		}
+	}
+	for r := range adminRoutes {
+		if !src[r] {
+			t.Errorf("%s: router e nai", r)
+		}
+	}
+
+	old := lookupStaffSession
+	defer func() { lookupStaffSession = old }()
+	vendorID := int64(9)
+	lookupStaffSession = func(*sql.DB) httpx.LookupStaff {
+		return func(_ context.Context, tok string) (httpx.Staff, error) {
+			st := httpx.Staff{ID: 1, ShopID: 1, SessionID: 1, Role: tok}
+			switch {
+			case tok == "setup":
+				st.Role, st.Setup = "owner", true
+			case strings.HasPrefix(tok, "vendor_"):
+				st.VendorID = &vendorID
+			case !slices.Contains(allRoles, tok):
+				return httpx.Staff{}, httpx.ErrNoSession
+			}
+			return st, nil
+		}
+	}
+	d, err := sql.Open(db.DriverName, "postgres://x@127.0.0.1:1/db?connect_timeout=1") // DB nai: handler 500
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	h, err := newHandler(testConfig(), quiet(), d, fakeDB{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	do := func(route, cookie string) (int, string) {
+		method, path, _ := strings.Cut(route, " ")
+		path = strings.ReplaceAll(path, "{id}", "1")
+		r := httptest.NewRequest(method, path, strings.NewReader(`{}`))
+		r.RemoteAddr = "192.0.2.1:1"
+		if cookie != "" {
+			r.AddCookie(&http.Cookie{Name: httpx.AdminCookieName, Value: cookie})
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec.Code, rec.Body.String()
+	}
+	for route, want := range adminRoutes {
+		if want.preLogin {
+			continue
+		}
+		if c, b := do(route, ""); c != http.StatusUnauthorized || !strings.Contains(b, `"unauthenticated"`) {
+			t.Errorf("%s cookie chhara: %d %s", route, c, b)
+		}
+		c, b := do(route, "setup")
+		if setupBlocked := c == http.StatusForbidden && strings.Contains(b, `"setup_required"`); setupBlocked == want.setupOK {
+			t.Errorf("%s setup_pending: %d %s", route, c, b)
+		}
+		for _, role := range allRoles {
+			c, b := do(route, role)
+			switch ok := slices.Contains(want.roles, role); {
+			case ok && (c == http.StatusUnauthorized || c == http.StatusForbidden):
+				t.Errorf("%s %s: %d %s, chai onumoti", route, role, c, b)
+			case !ok && (c != http.StatusForbidden || !strings.Contains(b, `"forbidden"`)):
+				t.Errorf("%s %s: %d %s, chai 403 forbidden", route, role, c, b)
+			}
 		}
 	}
 }

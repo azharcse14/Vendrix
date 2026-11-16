@@ -21,6 +21,9 @@ import (
 // siteverifyURL: Turnstile (test e fake server).
 var siteverifyURL = auth.SiteverifyURL
 
+// lookupStaffSession: __Host-asid → staff (test e fake, TestAdminRouteRoles DB chhara role dey).
+var lookupStaffSession = auth.LookupStaffSession
+
 // pinger: *sql.DB (test e fake).
 type pinger interface {
 	PingContext(ctx context.Context) error
@@ -67,7 +70,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("POST /api/admin/auth/totp", mfaIP(http.HandlerFunc(adm.TOTP)))
 	mux.Handle("POST /api/admin/auth/recovery", mfaIP(http.HandlerFunc(adm.Recovery)))
 	// admin session (3.2 Niyom 3, 11.3): __Host-asid → staff; setup route setup_pending eo, baki RequireStaff (active)
-	staff := httpx.AdminSession(log, auth.LookupStaffSession(d))
+	staff := httpx.AdminSession(log, lookupStaffSession(d))
 	mux.Handle("POST /api/admin/auth/password", staff(http.HandlerFunc(adm.Password)))
 	mux.Handle("POST /api/admin/auth/totp/setup", staff(http.HandlerFunc(adm.TOTPSetup)))
 	mux.Handle("POST /api/admin/auth/totp/enable", staff(http.HandlerFunc(adm.TOTPEnable)))
