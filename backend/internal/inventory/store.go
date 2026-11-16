@@ -73,10 +73,10 @@ func addStock(ctx context.Context, tx *sql.Tx, shopID, variantID int64, change i
 	return err
 }
 
-// movement: inventory_movements e row (batchID 0 = batch chhara).
+// movement: inventory_movements e row (batchID 0 = batch chhara, staffID 0 = job).
 func movement(ctx context.Context, tx *sql.Tx, shopID, variantID, batchID int64, change int, reason string, staffID int64, note string) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO inventory_movements (shop_id, variant_id, batch_id, change, reason, staff_id, note)
-		VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, NULLIF($7, ''))`, shopID, variantID, batchID, change, reason, staffID, note)
+		VALUES ($1, $2, NULLIF($3, 0), $4, $5, NULLIF($6, 0), NULLIF($7, ''))`, shopID, variantID, batchID, change, reason, staffID, note)
 	return err
 }
 

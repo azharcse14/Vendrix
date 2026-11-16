@@ -1,10 +1,10 @@
-# Inventory: batch, adjust, variant khoja
+# Inventory: batch, adjust, variant khoja, expire
 
-Design: 8.12, 11.7 item 1, 2, 6.4, 7.7 (Inventory) · Milestone: M7a · Code: `backend/internal/inventory`
+Design: 8.12, 8.17, 11.7 item 1, 2, 3, 6.4, 7.7 (Inventory) · Milestone: M7a · Code: `backend/internal/inventory`
 
 ## Ki kore
 
-Admin (owner, admin, staff, vendor_owner, vendor_staff) `/inventory` e variant khoje (naam/SKU, low stock), notun maal ele batch dey (stock barano shudhu eta), nosto ba bhul gona hole stock komay (wastage/adjust, note shoho), ar movement er itihash dekhe. Vendor role shudhu nijer vendor er variant. `staff` ar `vendor_staff` kena dam (`cost_price`) dekhe na.
+Admin (owner, admin, staff, vendor_owner, vendor_staff) `/inventory` e variant khoje (naam/SKU, low stock), notun maal ele batch dey (stock barano shudhu eta), nosto ba bhul gona hole stock komay (wastage/adjust, note shoho), ar movement er itihash dekhe. Protidin `inventory.expire` job expire hoya batch er baki stock theke bad dey. Vendor role shudhu nijer vendor er variant. `staff` ar `vendor_staff` kena dam (`cost_price`) dekhe na.
 
 ## Kivabe kaj kore
 
@@ -12,7 +12,8 @@ Admin (owner, admin, staff, vendor_owner, vendor_staff) `/inventory` e variant k
 2. `service.go` → `CreateBatch`: `db.InTx` e `lockVariant` (vendor scope, na hole `ErrNotFound`), `expiry_date` shop er ajker age hole `FieldError`, `insertBatch` (received = remaining), `addStock` (+qty), `movement` `purchase` `batch_id` shoho, `audit.Log` `inventory.batch`. `batch_expiry` off eo batch row hoy.
 3. `service.go` → `Adjust`: `lockVariant` → `stock < qty` hole `OutOfStockError{stock}` → `batchExpiry` (shop er `published.features`). Off: `batch_id` dile `FieldError`, shudhu `variant.stock`. On: `batch_id` dile `lockBatch` (onno variant er hole `ErrNotFound`, kom hole `OutOfStockError{remaining}`) + `takeBatch`; na dile `Allocate` (FIFO), batch e na pawa ongsho purono stock (batch chhara movement). Tarpor `addStock` (−qty), protiti ongsher movement (`wastage`/`adjust`, note, staff), `audit.Log` `inventory.adjust` (before/after `stock`).
 4. `store.go` → `Allocate`: variant lock er por batch gulo `id` kram e `FOR UPDATE` (deadlock na), tarpor 6.4 er FIFO (`expiry_date NULLS LAST, received_at`, expire batch bad) e qty porjonto komay; `rest` ferot. Pack (M7a step 5a) eo eta use korbe.
-5. List: `Variants` (`listVariants`: `batch_remaining`, `next_expiry`), `Batches` (`listBatches`, FIFO kram), `Movements` (`listMovements`, batch er `cost_price` join); `hideCost` staff/vendor_staff e `cost_price` muche.
+5. `jobs.go` → `ScheduleExpire` (worker er `Recurring`, protiti slot e): `batch_expiry` on protiti shop e shop er timezone er ajker 00:10 e `inventory.expire` (`dedupe_key` `inventory.expire:<shop>:<shop er tarikh>`, dine ekta). `ExpireJob`: `batchExpiry` off hole kichu na; `shopToday`, `expiry_date < aj AND quantity_remaining > 0` er variant gulo, protiti variant alada tx e (`expireVariant`): `lockVariant`, batch `id` kram e `FOR UPDATE`, `takeBatch` (0), `addStock(−LEAST(qty, stock))`, movement `expired` (staff chhara; 0 hole movement na). Miss kora din o dhore (self-heal), abar chalale kichu pay na.
+6. List: `Variants` (`listVariants`: `batch_remaining`, `next_expiry`), `Batches` (`listBatches`, FIFO kram), `Movements` (`listMovements`, batch er `cost_price` join); `hideCost` staff/vendor_staff e `cost_price` muche.
 
 ## Code er map
 
@@ -23,7 +24,9 @@ Ei kram e poro:
 | `backend/internal/inventory/handler.go` → `Routes`, `CreateBatch`, `Adjust`, `Variants`, `Batches`, `Movements`, `fail` | HTTP, input check, error map |
 | `backend/internal/inventory/service.go` → `CreateBatch`, `Adjust`, `Variants`, `Batches`, `Movements`, `hideCost`, `vendorScope` | Niyom, transaction, audit |
 | `backend/internal/inventory/store.go` → `lockVariant`, `lockBatch`, `Allocate`, `insertBatch`, `movement`, `listVariants`, `listBatches`, `listMovements` | SQL (static, Rule 12) |
+| `backend/internal/inventory/jobs.go` → `ScheduleExpire`, `ExpireJob`, `expireVariant` | `inventory.expire` job |
 | `backend/cmd/api/router.go` | `inventory.NewHandlers(d, log).Routes(mux, staff)` |
+| `backend/cmd/api/main.go` → `runServe` | `inventory.expire` handler ar `Recurring` e `ScheduleExpire` |
 
 ## Niyom ar tar test
 
@@ -35,17 +38,19 @@ Ei kram e poro:
 | Adjust shudhu komano (`change < 0`), reason `wastage`/`adjust`, note 1–500; stock er beshi `409 out_of_stock {available}`, kichu likha na (11.7 item 2) | `Adjust` (handler + service) | `TestInventoryAdjustIntegration` |
 | `batch_expiry` on: `batch_id` ba FIFO (expire batch bad), baki purono stock; off: shudhu `variant.stock` (6.4, 11.7 item 2) | `Adjust`, `Allocate` | `TestInventoryAdjustIntegration` |
 | Lock: variant tarpor batch `id` kram; checkout ar wastage ekshathe stock ≥ 0, deadlock na (11.7 item 2) | `lockVariant`, `Allocate` | `TestCheckoutWastageRaceIntegration` |
+| `inventory.expire`: shudhu `batch_expiry` on shop, shop er timezone e 00:10 dine ekbar; `expiry_date < aj` er shob batch (miss kora din o) 0, `variant.stock - LEAST(qty, stock)`, movement `expired`; idempotent (8.12, 8.17, 11.7 item 3) | `ScheduleExpire`, `ExpireJob`, `expireVariant` | `TestExpireBatchesIntegration` |
 | Route role (11.2) | `Routes` | `TestAdminRouteRoles` |
 
 ## Data
 
-`inventory_batches` (`quantity_received`, `quantity_remaining`, `cost_price`, `harvest_date`, `expiry_date`, `batch_code`), `inventory_movements` (`reason` `purchase`/`wastage`/`adjust`, `batch_id`, `staff_id`, `note`), `product_variants.stock`/`low_stock_at`, `shop_settings.published.features` (`batch_expiry`), `audit_logs`; `001_init.sql`, migration lage na.
+`inventory_batches` (`quantity_received`, `quantity_remaining`, `cost_price`, `harvest_date`, `expiry_date`, `batch_code`), `inventory_movements` (`reason` `purchase`/`wastage`/`adjust`/`expired`, `batch_id`, `staff_id`, `note`), `product_variants.stock`/`low_stock_at`, `shop_settings.published.features` (`batch_expiry`), `audit_logs`, `jobs` (`inventory.expire`); `001_init.sql`, migration lage na.
 
 ## Bhul hole ki hoy
 
 - Bhul body/query: `400 validation_failed` + `fields` (`variant_id`, `quantity` 1–1,000,000, `cost_price`, `batch_code` max 64, `harvest_date`, `expiry_date` (`invalid` ba `expired`), `change`, `reason`, `note`, `batch_id` (off e `batch_expiry_off`), `q` max 100, `low`).
 - Variant/batch nai, onno shop ba onno vendor er: `404 not_found`.
 - Stock ba batch e kom: `409 out_of_stock` `details {available}`; transaction rollback, kichu likha na.
+- `inventory.expire` e DB error: oi variant er tx rollback, job retry (8.17); ager variant gulo hoye geche, abar chalale bad pore.
 
 ## Bodlanor age mone rakho
 
@@ -57,4 +62,5 @@ Ei kram e poro:
 
 - **Stock barate adjust e `+` na keno?** Notun maal shob shomoy batch e (kena dam, expiry, recall); bhul gona thik korte notun batch (`batch_code` "count").
 - **Wastage batch er stock komay, kintu order er stock?** Checkout shudhu `variant.stock` komay; batch kome packing e. Tai batch er mot `stock` er beshi thakte pare.
+- **Expire job 00:10 e na cholle?** Server bondho thakle porer slot e job chole; porer din er job o `expiry_date < aj` er shob batch dhore, tai kichu baki thake na.
 - **`variant_label` ki?** Variant er `options` JSON hubohu (`{"size": {"bn", "en"}}`); admin UI lekha banay.

@@ -86,6 +86,9 @@ type Worker struct {
 	log       *slog.Logger
 	handlers  map[string]Handler
 	lastSweep time.Time
+	// Recurring: onno package er recurring job enqueue (jemon shop er timezone e dine ekbar), protiti slot e;
+	// nijer dedupe_key diye duibar hoy na.
+	Recurring []func(context.Context, *sql.DB) error
 }
 
 // NewWorker: handlers kind → Handler; jobs.sweep ar jobs.cleanup nijei jog hoy.
@@ -121,7 +124,7 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 // schedule: recurring job, slot er dedupe_key diye (duita process e-o ekbar). jobs.cleanup ar cart.cleanup
-// (handler cart package e, main jog kore) UTC din er key e;
+// (handler cart package e, main jog kore) UTC din er key e; Recurring (jemon inventory.ScheduleExpire) nijer key e;
 // protiti slot e insert chesta kore, dedupe e dine ekbar-i row.
 func (w *Worker) schedule(ctx context.Context, now time.Time) error {
 	slot := now.UTC().Truncate(sweepInterval)
@@ -132,6 +135,9 @@ func (w *Worker) schedule(ctx context.Context, now time.Time) error {
 		Enqueue(ctx, w.db, New{Kind: "jobs.sweep", DedupeKey: "jobs.sweep:" + slot.Format(time.RFC3339), RunAt: slot}),
 		Enqueue(ctx, w.db, New{Kind: "jobs.cleanup", DedupeKey: "jobs.cleanup:" + slot.Format(time.DateOnly), RunAt: slot}),
 		Enqueue(ctx, w.db, New{Kind: "cart.cleanup", DedupeKey: "cart.cleanup:" + slot.Format(time.DateOnly), RunAt: slot}))
+	for _, r := range w.Recurring {
+		err = errors.Join(err, r(ctx, w.db))
+	}
 	if err == nil {
 		w.lastSweep = slot
 	}

@@ -23,6 +23,7 @@ import (
 	"vendrix/backend/internal/cart"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/db"
+	"vendrix/backend/internal/inventory"
 	"vendrix/backend/internal/jobs"
 	"vendrix/backend/internal/notify"
 	"vendrix/backend/internal/order"
@@ -86,11 +87,13 @@ func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog
 	sms := notify.NewSMS(cfg.Env, log)
 	handlers := order.JobHandlers(database, sms, log, cfg.ConfirmSecret)
 	maps.Copy(handlers, map[string]jobs.Handler{
-		"sms.send":       notify.SendSMSJob(sms, auth.SMSCode(database, cfg.OTPSecret)),
-		"alert.security": notify.SecurityAlertJob(log),
-		"cart.cleanup":   cart.CleanupJob(database),
+		"sms.send":         notify.SendSMSJob(sms, auth.SMSCode(database, cfg.OTPSecret)),
+		"alert.security":   notify.SecurityAlertJob(log),
+		"cart.cleanup":     cart.CleanupJob(database),
+		"inventory.expire": inventory.ExpireJob(database),
 	})
 	w := jobs.NewWorker(database, log, handlers)
+	w.Recurring = append(w.Recurring, inventory.ScheduleExpire)
 	wctx, stopWorker := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() { w.Run(wctx); close(done) }()
