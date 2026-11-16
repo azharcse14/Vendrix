@@ -121,7 +121,16 @@ func newCheckout(t *testing.T) *checkoutFx {
 	mux := http.NewServeMux()
 	var svURL string
 	f.sv, svURL = newSiteverify(t)
-	order.NewHandlers(f.d, log, order.Guard{Turnstile: auth.Turnstile{URL: svURL, Secret: tsSecret}, OTPSecret: otpSecret, ConfirmSecret: confirmSecret}).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
+	ts := auth.Turnstile{URL: svURL, Secret: tsSecret}
+	oh := order.NewHandlers(f.d, log, order.Guard{Turnstile: ts, OTPSecret: otpSecret, ConfirmSecret: confirmSecret})
+	oh.Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
+	login := httpx.RequireCustomer(log, auth.LookupSession(f.d))
+	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(login(h)) })
+	// login (14.2 test 11: guest order → OTP login → /api/me/orders)
+	ah := auth.NewHandlers(f.d, log, otpSecret, ts, func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
+		return cart.Merge(ctx, tx, shopID, userID, key, locale)
+	})
+	mux.Handle("POST /api/auth/otp/verify", public(http.HandlerFunc(ah.VerifyOTP)))
 	f.srv = httpx.JSONErrors(mux)
 	return f
 }

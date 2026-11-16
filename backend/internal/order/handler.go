@@ -49,6 +49,9 @@ func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handl
 	mux.Handle("POST /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.Confirm)))
 }
 
+// MeRoutes (7.3): wrap = public + RequireCustomer (Rule 16). Stub: step 10 er code e route.
+func (h *Handlers) MeRoutes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {}
+
 func invalid(w http.ResponseWriter, r *http.Request, field, code string) {
 	httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed",
 		Fields: map[string]string{field: code}})
