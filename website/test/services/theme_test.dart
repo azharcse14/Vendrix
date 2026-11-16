@@ -28,25 +28,58 @@ void main() {
       expect(css, contains('--font-heading:"Baloo Da 2";'));
     });
 
-    test('@font-face shudhu duita font er, swap, nijer server theke', () {
+    test(':root e v1.38 er notun variable', () {
+      final css = themeCss(settings('Baloo Da 2', 'Hind Siliguri'));
+      expect(css, contains('--color-primary-soft:'));
+      expect(css, contains('--color-focus:#1F5A32;'));
+      expect(css, contains('--color-text-rgb:59 42 26;'));
+      expect(css, contains('--radius-sm:7px;'));
+      expect(css, contains('--shadow-2:'));
+    });
+
+    test('@font-face: body shudhu 400, heading 500/600, swap, nijer server theke (9.6 v1.38)', () {
       final css = themeCss(settings('Baloo Da 2', 'Hind Siliguri'));
       final faces = RegExp('@font-face').allMatches(css).length;
-      expect(faces, 2 * 3 * 2); // 2 font × 400/500/600 × bengali/latin
+      expect(faces, (1 + 2) * 2); // body 400 + heading 500/600, × bengali/latin
+      expect(css, contains('src:url(/fonts/hind-siliguri-bengali-400.woff2) format("woff2")'));
+      expect(css, isNot(contains('hind-siliguri-bengali-500')));
+      expect(css, isNot(contains('hind-siliguri-latin-600')));
+      expect(css, contains('src:url(/fonts/baloo-da-2-bengali-500.woff2) format("woff2")'));
       expect(css, contains('src:url(/fonts/baloo-da-2-bengali-600.woff2) format("woff2")'));
+      expect(css, isNot(contains('baloo-da-2-bengali-400')));
       expect(css, contains('font-display:swap'));
       expect(css, contains('unicode-range:U+0951-0952'));
       expect(css, isNot(contains('noto-sans')));
       expect(css, isNot(contains('http')));
     });
 
-    test('Tiro Bangla shudhu 400; ek font duibar na', () {
-      final css = themeCss(settings('Tiro Bangla', 'Tiro Bangla'));
-      expect(RegExp('@font-face').allMatches(css).length, 2);
+    test('heading ar body ekoi font hole 400/500/600 ek shathe', () {
+      final css = themeCss(settings('Hind Siliguri', 'Hind Siliguri'));
+      expect(RegExp('@font-face').allMatches(css).length, 3 * 2);
+    });
+
+    test('Tiro Bangla shudhu 400 (heading e o); ek font duibar na', () {
+      expect(RegExp('@font-face').allMatches(themeCss(settings('Tiro Bangla', 'Tiro Bangla'))).length, 2);
+      final css = themeCss(settings('Tiro Bangla', 'Hind Siliguri'));
+      expect(RegExp('@font-face').allMatches(css).length, 4);
+      expect(css, contains('tiro-bangla-bengali-400'));
     });
 
     test('ochena font e @font-face na (variable thake)', () {
       final css = themeCss(settings('Comic Sans', 'Hind Siliguri'));
-      expect(RegExp('@font-face').allMatches(css).length, 6);
+      expect(RegExp('@font-face').allMatches(css).length, 2);
+    });
+
+    test('preload shudhu body font er bengali 400', () {
+      expect(fontPreload(settings('Baloo Da 2', 'Hind Siliguri')), '/fonts/hind-siliguri-bengali-400.woff2');
+      expect(fontPreload(settings('Baloo Da 2', 'Comic Sans')), isNull);
+    });
+
+    test('Tailwind font fallback stack (9.6 v1.38)', () {
+      final config = File('tailwind.config.js').readAsStringSync();
+      const stack = '\'"Noto Sans Bengali"\', \'"Nirmala UI"\', \'sans-serif\'';
+      expect(config, contains("heading: ['var(--font-heading)', $stack]"));
+      expect(config, contains("body: ['var(--font-body)', $stack]"));
     });
 
     test('protiti font er file ache', () {
