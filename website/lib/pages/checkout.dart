@@ -351,16 +351,17 @@ class CheckoutPage extends AsyncStatelessComponent {
               ),
             ],
           ),
-        ],
-      ),
-      div(
-        attributes: {'hidden': ''},
-        [
-          for (final code in _errors) span(attributes: {'data-error': code}, [.text(site.error(code))]),
-          span(
-            attributes: {'data-otp-text': ''},
+          // Client er lekha; form er bhetore, karon CheckoutForm form e khoje.
+          div(
+            attributes: {'hidden': ''},
             [
-              .text(site.t('checkout.otp_sent', {'phone': '{phone}'})),
+              for (final code in _errors) span(attributes: {'data-error': code}, [.text(site.error(code))]),
+              span(
+                attributes: {'data-otp-text': ''},
+                [
+                  .text(site.t('checkout.otp_sent', {'phone': '{phone}'})),
+                ],
+              ),
             ],
           ),
         ],
