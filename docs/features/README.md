@@ -23,6 +23,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5 | chalu (OTP SMS, cleanup, `cart.cleanup`; SMS provider ar alert email M12 e) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
 | Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec) |
+| Checkout: risk, OTP, order | [checkout.md](checkout.md) | 8.6, 8.7, 8.19 | M6 | cholche (risk flag, OTP ar COD confirm er niyom; order create porer step e) |
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4 | chalu (OTP send/verify, customer session, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
 | Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`; website `/cart`, heart) |
@@ -50,7 +51,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup` | [cart.md](cart.md) |
 | `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones` | [delivery-zone.md](delivery-zone.md) |
 | `backend/internal/coupon` | Coupon: atomic use, phone limit, karon, read-only peek, cancel e ferot | [coupon.md](coupon.md) |
-| `backend/internal/order` | Status er state machine (pure) | [order-status.md](order-status.md) |
+| `backend/internal/order` | Status er state machine (pure), checkout er risk flag, OTP ar COD confirm er niyom | [order-status.md](order-status.md), [checkout.md](checkout.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
 

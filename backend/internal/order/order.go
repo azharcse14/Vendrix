@@ -1,9 +1,3 @@
-// Package order: order ar fulfillment er status kon theke kon e jete pare.
-// v1.2 fix: (1) confirm e payment dekha hoy, (2) shob fulfillment cancel hole system order cancel
-// korte pare, (3) checkout e fulfillment insert er age Summary "confirmed" dey.
-// v1.3 fix: order cancel hole kon fulfillment cancel hobe sheta CancelCascade dey (niche-r cascade).
-//
-// Feature doc: docs/features/order-status.md
 package order
 
 // Status: order er nijer status (customer ar payment).

@@ -22,6 +22,7 @@ Ei kram e poro:
 
 | File → function | Ki kore |
 |---|---|
+| `backend/internal/order/doc.go` | Package comment (risk er niyom [checkout.md](checkout.md) e) |
 | `backend/internal/order/order.go` → `CanTransitionOrder`, `CanTransitionFulfillment` | Onumoti |
 | `order.go` → `CancelCascade`, `AllCancelled`, `Summary` | Cascade ar display |
 | `backend/internal/order/order_test.go` | Golden table |
