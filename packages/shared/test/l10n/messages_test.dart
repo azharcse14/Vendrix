@@ -49,5 +49,20 @@ void main() {
         }
       },
     );
+    test(
+      'Go er protiti order/fulfillment status (order/order.go) ar partial er order.status.<s> ache',
+      () {
+        final go = File(
+          '../../backend/internal/order/order.go',
+        ).readAsStringSync();
+        final codes = RegExp(
+          r'F?Status = "([a-z_]+)"',
+        ).allMatches(go).map((m) => m[1]!).toSet();
+        expect(codes, containsAll(['pending', 'confirmed', 'delivered']));
+        for (final c in [...codes, 'partial']) {
+          expect(defaultMessages['bn'], contains('order.status.$c'), reason: c);
+        }
+      },
+    );
   });
 }

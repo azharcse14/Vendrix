@@ -557,4 +557,266 @@ void main() {
       );
     });
   });
+  group('Checkout ar order (7.2, 7.3, 7.5, 8.6, 8.10, M6)', () {
+    late List<http.Request> seen;
+    ApiClient api(
+      Object Function(http.Request) body, {
+      String? token,
+      String? cartKey,
+      int status = 200,
+    }) {
+      seen = [];
+      return ApiClient(
+        Uri.parse('http://api.test'),
+        MockClient((r) async {
+          seen.add(r);
+          return json(body(r), status);
+        }),
+        token: token,
+        cartKey: cartKey,
+      );
+    }
+
+    Future<ApiError> err(Future<Object?> f) => f.then<ApiError>(
+      (_) => fail('error chai'),
+      onError: (Object e) => e as ApiError,
+    );
+    final quoteJson = {
+      'subtotal': 90000,
+      'discount': 0,
+      'delivery_charge': 6000,
+      'total': 96000,
+      'otp_required': false,
+      'problems': <String>[],
+    };
+    final placedJson = {
+      'order_number': 'SB-100001',
+      'public_token': 'TOKEN26',
+      'status': 'pending',
+      'payment_url': null,
+    };
+    final summary = {
+      'order_number': 'SB-100001',
+      'display_status': 'pending',
+      'placed_at': '2026-11-16T04:30:00Z',
+      'customer_name': 'রহিম',
+      'phone_masked': '+88017****5678',
+      'district': 'ঢাকা',
+      'area': 'ধানমন্ডি',
+      'payment_method': 'cod',
+      'total': 96000,
+      'items': <Object>[],
+    };
+
+    test('zones → GET /api/delivery-zones', () async {
+      final z = await CheckoutRepository(
+        api(
+          (_) => [
+            {'district': 'ঢাকা', 'areas': <Object>[], 'district_wide': true},
+          ],
+        ),
+      ).zones();
+      expect(
+        [seen.single.method, seen.single.url.path],
+        ['GET', '/api/delivery-zones'],
+      );
+      expect([z.single.district, z.single.districtWide], ['ঢাকা', true]);
+    });
+    test('quote → POST body hubohu, X-Cart-Key', () async {
+      final body = {
+        'district': 'ঢাকা',
+        'area': 'ধানমন্ডি',
+        'phone': '01712345678',
+        'payment_method': 'cod',
+        'coupon_code': '',
+      };
+      final q = await CheckoutRepository(
+        api((_) => quoteJson, cartKey: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+      ).quote(body);
+      expect(
+        [seen.single.method, seen.single.url.path],
+        ['POST', '/api/checkout/quote'],
+      );
+      expect(jsonDecode(seen.single.body), body);
+      expect(seen.single.headers['X-Cart-Key'], 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+      expect(q.total, 96000);
+    });
+    test(
+      'placeOrder → POST /api/orders, Idempotency-Key header, Bearer',
+      () async {
+        final body = {
+          'customer': {'name': 'রহিম', 'phone': '01712345678'},
+          'expected_total': 96000,
+          'consent': true,
+        };
+        final p = await CheckoutRepository(
+          api((_) => placedJson, token: 'TOK', status: 201),
+        ).placeOrder(body, idempotencyKey: 'abcdefghijklmnop1234');
+        final r = seen.single;
+        expect([r.method, r.url.path], ['POST', '/api/orders']);
+        expect(r.headers['Idempotency-Key'], 'abcdefghijklmnop1234');
+        expect(r.headers['Authorization'], 'Bearer TOK');
+        expect(jsonDecode(r.body), body);
+        expect([p.orderNumber, p.publicToken], ['SB-100001', 'TOKEN26']);
+      },
+    );
+    test(
+      '409 otp_required (phone_masked), price_changed (notun total) ApiError e',
+      () async {
+        final otp = await err(
+          CheckoutRepository(
+            api(
+              (_) => {
+                'error': {
+                  'code': 'otp_required',
+                  'message': 'x',
+                  'details': {'phone_masked': '+88017****5678'},
+                },
+              },
+              status: 409,
+            ),
+          ).placeOrder({}, idempotencyKey: 'abcdefghijklmnop1234'),
+        );
+        expect(
+          [otp.status, otp.code, otp.details['phone_masked']],
+          [409, 'otp_required', '+88017****5678'],
+        );
+        final pc = await err(
+          CheckoutRepository(
+            api(
+              (_) => {
+                'error': {
+                  'code': 'price_changed',
+                  'message': 'x',
+                  'details': {
+                    'total': 99000,
+                    'subtotal': 93000,
+                    'discount': 0,
+                    'delivery_charge': 6000,
+                  },
+                },
+              },
+              status: 409,
+            ),
+          ).placeOrder({}, idempotencyKey: 'abcdefghijklmnop1234'),
+        );
+        expect([pc.code, pc.details['total']], ['price_changed', 99000]);
+      },
+    );
+    test('byToken, cancel (body {} ba reason), confirmView, confirm', () async {
+      final repo = OrderRepository(
+        api(
+          (r) => switch (r.url.path) {
+            '/api/orders/TOK%2F1' => {
+              ...summary,
+              'recipient_name': 'রহিম',
+              'recipient_phone_masked': '+88017****5678',
+              'subtotal': 90000,
+              'discount': 0,
+              'delivery_charge': 6000,
+              'delivery_deadline': null,
+              'can_cancel': true,
+            },
+            '/api/confirm/CT' when r.method == 'GET' => summary,
+            '/api/confirm/CT' => {'status': 'confirmed'},
+            _ => {'status': 'cancelled'},
+          },
+        ),
+      );
+      final o = await repo.byToken('TOK/1');
+      expect(seen.last.method, 'GET');
+      expect(o.canCancel, isTrue);
+      expect(await repo.cancel('TOK'), 'cancelled');
+      expect(
+        [seen.last.method, seen.last.url.path],
+        ['POST', '/api/orders/TOK/cancel'],
+      );
+      expect(jsonDecode(seen.last.body), <String, dynamic>{});
+      await repo.cancel('TOK', reason: 'bhul order');
+      expect(jsonDecode(seen.last.body), {'reason': 'bhul order'});
+      final s = await repo.confirmView('CT');
+      expect(
+        [seen.last.method, seen.last.url.path],
+        ['GET', '/api/confirm/CT'],
+      );
+      expect(s.phoneMasked, '+88017****5678');
+      expect(await repo.confirm('CT'), 'confirmed');
+      expect(
+        [seen.last.method, seen.last.url.path],
+        ['POST', '/api/confirm/CT'],
+      );
+    });
+    test('track → POST body {number, phone}; 404 not_found', () async {
+      final t = await OrderRepository(
+        api(
+          (_) => {
+            'order_number': 'SB-100001',
+            'display_status': 'pending',
+            'placed_at': '2026-11-16T04:30:00Z',
+            'history': <Object>[],
+            'tracking': null,
+          },
+        ),
+      ).track('sb-100001', '01712345678');
+      expect(
+        [seen.single.method, seen.single.url.path],
+        ['POST', '/api/orders/track'],
+      );
+      expect(jsonDecode(seen.single.body), {
+        'number': 'sb-100001',
+        'phone': '01712345678',
+      });
+      expect(t.orderNumber, 'SB-100001');
+      final nf = await err(
+        OrderRepository(
+          api(
+            (_) => {
+              'error': {'code': 'not_found', 'message': 'x'},
+            },
+            status: 404,
+          ),
+        ).track('X', '01712345678'),
+      );
+      expect([nf.status, nf.code], [404, 'not_found']);
+    });
+    test('myOrders → GET /api/me/orders?page&limit, Bearer, Page', () async {
+      final p = await OrderRepository(
+        api(
+          (_) => {
+            'items': [
+              {
+                'order_number': 'SB-100001',
+                'public_token': 'TOK',
+                'display_status': 'confirmed',
+                'total': 96000,
+                'placed_at': '2026-11-16T04:30:00Z',
+              },
+            ],
+            'page': 2,
+            'limit': 10,
+            'total': 11,
+          },
+          token: 'T',
+        ),
+      ).myOrders(page: 2, limit: 10);
+      final r = seen.single;
+      expect(
+        [r.method, r.url.path, r.url.queryParameters],
+        [
+          'GET',
+          '/api/me/orders',
+          {'page': '2', 'limit': '10'},
+        ],
+      );
+      expect(r.headers['Authorization'], 'Bearer T');
+      expect([p.page, p.items.single.publicToken], [2, 'TOK']);
+      await OrderRepository(
+        api(
+          (_) => {'items': <Object>[], 'page': 1, 'limit': 20, 'total': 0},
+          token: 'T',
+        ),
+      ).myOrders();
+      expect(seen.single.url.hasQuery, isFalse);
+    });
+  });
 }
