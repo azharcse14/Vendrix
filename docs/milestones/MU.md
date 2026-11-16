@@ -3,7 +3,7 @@
 Design: Section 9.3 (v1.38 derived token), 9.4, 9.5, 9.6 (v1.38 font weight, scale, loading), 10.5 (v1.38 UI niyom, budget), 10.7 (v1.38 focus ring, `accent-color`, heading order); shathe 1.4 (Rule 1: discount % shudhu display; Rule 4: `website/` e hex ba Bangla literal na), 3.3 (font size), 15 (MU row), 16.1 (MU Q1–Q8). Plan ar ekhon er obostha er proman: [ui-upgrade-plan.md](../plans/ui-upgrade-plan.md).
 Branch: main
 
-**Obostha: cholche** (plan approve 16 November 2026: user shob recommendation nilen, MU M6 er por ar M7 er age; design v1.38). U0–U10 shesh (U10 proman 16 November 2026); baki design review ar Report.
+**Obostha: shesh (16 November 2026)** (plan approve 16 November 2026: user shob recommendation nilen, MU M6 er por ar M7 er age; design v1.38–v1.39). U0–U10, design review fix ar Safari re-check shesh; [Report](#report).
 
 ## Scope (15 er row theke)
 - **Already ache** (M2–M6): `deriveTokens`/`cssVariables` (`packages/shared/lib/theme/tokens.dart`, test `packages/shared/test/theme/tokens_test.dart`), `themeCss` + `_fonts` (`website/lib/services/theme.dart`, test `website/test/services/theme_test.dart`), Tailwind config `var()` (`website/tailwind.config.js`, `website/tailwind.css`, `scripts/tailwind.sh`), page ar component (`website/lib/pages/*`, `website/lib/components/*`), page test (`website/test/pages/*`). 44px tap target, 16px input, safe-area, `srcset`, kom `@client` thakbe.
@@ -25,6 +25,8 @@ Branch: main
 | CLS < 0.05 | Lighthouse U10 | ☑ U10: 0.001–0.005 |
 | 360/390/412/768/1280 × bn/en screenshot, horizontal scroll nai | Safari `safaridriver` U10 | ☑ U10: 13 page × 5 width × bn/en = 130 check, `scrollWidth` ≤ `innerWidth`, error 0 |
 | Rule 4: `website/` e hex/Bangla literal nai | `make quick-check` (rule check) | ☑ U10: `rule check: ok` |
+
+Proman er shima: Android Chrome ar Facebook in-app browser e proman **hoy ni** (ei Mac e shudhu Safari; user er device lagbe, Report follow-up).
 
 ## 14.2 er test
 MU te 14.2 er notun test nai (UI pass); ager test (24 ar M6 er page test) green thakbe.
@@ -82,6 +84,49 @@ Protiti phase alada commit (test + code), por `make quick-check`. Logic thaka ja
   - **Note (thik kora hoy ni, review e)**: Turnstile widget 300px fixed; 360 e login/checkout card er bhetore (~279px) dan dik kata (test widget e dekha; `compact` ba card padding er decision); announcement `p` o `text-center` + base 70ch (seed e announcement nai, dekha hoy ni; hero er moto `mx-auto`/`max-w-none` lagbe mone hoy); checkout summary er taka phone dewar age faka (M6 er niyom); track timeline er line shesh dot er niche-o; 1280 e Cart badge lekha "Cart" er kache gheshe. Android Chrome/Facebook in-app browser proman na (Mac e shudhu Safari, user device). Shesh e process bondho, WebDriver session delete, `shop_muproof` drop.
 - **Review fix** (16 November 2026, design review er finding + U10 note; Claude decide): test `73d9e02`, fix `1657ea1` (bottom nav lekha `text-sm` + nijer `aria-label` `nav.bottom`; `.input[aria-invalid="true"]` `danger` border CSS only; cart + max e `cart.max_quantity` lekha `aria-describedby` shoho; `shopTrust` `components/trust.dart` e, key `trust.*`, return `plural` (en "1 day"); `.chip:has(:focus-visible)` shared; `Price` `tabular-nums`; `checkout.summary` `{count}`, `product.image_n` `{n}`; `cart.update`, `order.done.number` key bad), `e87b5ef` (proman er note: `.card` phone e `p-3` tai 360 e Turnstile 300px dhore, announcement `max-w-none`, timeline er line shesh dot e thame, `md` e Cart lekha badge theke `ml-2`), font budget `f7fa677` (v1.39: ≤ 4 file ≈ 155 KB, 16.1 decided), doc `4dcd67d` (`website.md` bhag: page er lekha `docs/features/website-pages.md` e; `website.md` 29,708 B, `website-pages.md` 32,346 B). Size: `main.client.dart.js` 176,182 B (gzip -9 54,084), deferred 123,966 B: hubohu (+0); `styles.css` minify 21,321 B, gzip -9 5,126 B (≤ 7 KB). Website 255 test, shared 115, quick-check ar docsync (`-count=1`) green.
   - Decision (Claude): cart e qty ± stepper-i thake, shorasori number likhar input na (U7 e bad; 10.12 item 4 er `PATCH` stepper-i use kore). Checkout field er nijer bhul lekha (per-field message) pore: ekhon `aria-invalid` border + general error box (`#checkout-error`), JS +0. Order page e status timeline na (U9 e bad): API order er history dey na (shudhu track e), notun API lagbe, porer milestone e. Proman er UI fix CSS/class bodol, notun test na (visual).
-  - Baki: MU Report (`make check`, Report, Obostha shesh).
+  - **Safari re-check** (16 November 2026, HEAD `a0c67bb`, scratch `mu2/`: `shop-api` 8092, `jaspr build` 8083, Caddy 8445, `shop_mu2` 5433, dev seed, SQL e `homepage.announcement` bn/en, Turnstile test key; Safari `safaridriver` `acceptInsecureCerts`): 360 ar 1280 × bn/en, 22 check + 2 Turnstile scroll screenshot, shob e `scrollWidth` ≤ `innerWidth`, inject kora console error 0; screenshot nije dekha. Login ar checkout: 360 e `.card` padding 12px, Turnstile widget 285px card er bhetore (card 16–327, widget 29–314), 1280 e 16px. Home: announcement card er puro width (16–327 / 16–1247, `text-center`), bame shore na. Track (SB-100001, 3 ta history): timeline er line shesh dot e thame. Cart max (qty = `max_quantity` 16): "+" `disabled`, "সর্বোচ্চ ১৬টি"/"Up to 16" dekha. 1280 header Cart badge icon er upor, "Cart" lekha theke faka. Bottom nav 360: 4 item 86px kore, lekha 14px, nav `scrollWidth` = `clientWidth` (overflow nai). Checkout validation (naam shudhu space → server `validation_failed` `customer.name`): field e `aria-invalid`, border `rgb(180, 35, 24)` (danger), focus field e, `#checkout-error` lekha. Kono bug na, fix commit na. Shesh e process bondho, WebDriver session delete, `shop_mu2` drop. Tarpor `make quick-check` (`TEST_DATABASE_URL` chhara) ar `go test -count=1 ./internal/docsync` green.
 
 ## Report
+
+16 November 2026, MU shesh (design v1.38–v1.39).
+
+- **Ki banano holo** (phase onujayi):
+  - **U0 design** (`f31d5d6`, v1.38): 9.3 derived token, 9.6 font weight/loading, 10.5 UI niyom + CSS/font/JS budget, 10.7 focus/heading order, 15 MU row, 16.1 MU Q1–Q8, 1.5 row 20.
+  - **U1 token ar font**: `deriveTokens` e `primary-soft`, `accent-soft`, `success`/`danger`/`warning` + soft, `focus` (contrast nijei thik); `cssVariables` 28 variable (`--color-text-rgb`, `--radius-sm`/`-lg`, `--shadow-1`/`-2`); body 400 + heading 500/600, preload body bn 400, fallback stack; organic font 12 → 6 file (458,956 → 221,024 B).
+  - **U2 component class ar icon**: `tailwind.css` base (focus ring, `accent-color`, reduced-motion, pore `[hidden]` `!important`) + `@layer components` (`.btn*`, `.input`, `.card`, `.badge*`, `.notice*`, `.chip`, `.section-title`); `components/icon.dart` Lucide v0.460.0 (ISC); CSS budget test `website/test/styles_test.dart`.
+  - **U3 layout**: header (logo fallback naam + leaf, search, Cart icon + badge), bottom nav (icon + lekha, active pill), footer 3 column; `aria-current="page"`, ekta `h1`.
+  - **U4 card ar listing**: shared `discountPercent`, card 1:1 + discount/stock shesh badge + `h2`, `Price` heading font, placeholder tint + leaf, listing empty state, category tile.
+  - **U5 home**: banner chhara text hero, trust strip (COD, return; settings theke shudhu ja shotto), announcement `accent-soft`.
+  - **U6 product**: gallery thumbnail row, variant `.chip`, price block badge, certificate badge, product trust, description `<details>`, sticky bar.
+  - **U7 cart**: 64px thumbnail, JS chhara −/+ stepper (`max_quantity` e "+" bondho), summary, empty state.
+  - **U8 checkout**: numbered section card 1–4, `.input`, payment radio card, OTP box, mobile `<details>` summary, desktop sticky summary, notice.
+  - **U9 order/done/confirm/track/account/login**: shared `orderStatusTones` → `statusBadge`, done success, track CSS-only timeline, account menu card, order card + empty state, login `.card`.
+  - **U10 proman** + **review fix** (upore U10 ar "Review fix" note): bottom nav `text-sm`, `.input[aria-invalid]` danger border, cart max lekha, `trust.*` + `plural`, chip focus, `tabular-nums`, `.card` phone e `p-3`, announcement `max-w-none`, timeline, Cart badge; `website.md` bhag (`website-pages.md`).
+  - **Doc**: `theme.md`, `website.md`, notun `website-pages.md`, `l10n.md`, `api-client.md` milano.
+- **Acceptance → proman**: upore table er shob row ☑ (Android Chrome/FB in-app baad, niche follow-up).
+  | Lighthouse 12.8.2 mobile | Perf (simulate / devtools) | A11y | LCP simulate | CLS |
+  |---|---|---|---|---|
+  | home | 97 / 100 | 100 | 2.2s | 0.001 |
+  | category | 98 / 100 | 100 | 2.1s | 0.001–0.002 |
+  | product | 99 / 99–100 | 100 | 2.1s | 0.005 |
+
+  | Size | MU er age | MU er por | Budget |
+  |---|---|---|---|
+  | `main.client.dart.js` | 176,175 B (acceptance row er maap) | 176,182 B (gzip -9 54,084), deferred 123,966 B; protiti phase er build ager build er hubohu, notun `@client` na | +0 |
+  | `styles.css` minify / gzip | 13,443 / 3,620 B | 21,321 / 5,126 B (~5.1 KB) | ≤ 30 KB / ≤ 7 KB |
+  | Prothom view font | (12 `@font-face`, 458,956 B mot) | 4 file ≈ 153.8 KB (≈ 155 KB) | ≤ 4 file, ≈ 155 KB (v1.39) |
+- **14.2 er test**: MU te notun nai; ager test green (shared 115, website 255, Go quick-check).
+- **Design version**: v1.38 (plan approve: token, font, UI niyom, budget, focus, MU row, 16.1 MU Q1–Q8), v1.39 (prothom view font budget ≤ 4 file ≈ 155 KB, Claude decide).
+- **User approve kora plan default (8, 16.1 MU Q1–Q8)**: Q1 organic preset + derived token; Q2 font (a) Hind 400 + Baloo 500/600 (LCP > 2.5s hole Noto `local()`, dorkar hoy ni); Q3 trust strip settings theke shudhu shotto, Claude l10n draft, owner review; Q4 logo na thakle naam + leaf; Q5 Lucide ~12 inline SVG; Q6 discount % card e (< 5% na); Q7 tint + icon placeholder, asol chobi M12 er age; Q8 alada MU, M6 er por M7 er age.
+- **Claude er decision (user review korun, ulte dite paren)**:
+  - Font budget v1.39: ≤ 4 file ≈ 155 KB (latin subset e space thakay Bangla page eo ase; 16.1 "MU U10 prothom view font").
+  - Cart e −/+ stepper-i, shorasori number likhar input na (qty 1 e "−" bondho, bad alada button).
+  - Checkout field er nijer bhul lekha (per-field) pore; ekhon `aria-invalid` danger border + general error box (JS +0).
+  - Order page e status timeline na (API order er history dey na; shudhu `/track` e).
+  - `price_changed` `#checkout-error` e `.notice-danger` (lal) e (warning dite JS bodol lagto).
+  - Badge tone map: `pending`/`partial` warning, `confirmed`/`open`/`packed`/`shipped` accent, `delivered` success, `returned` muted, `cancelled` danger, ochena muted.
+  - Phase note er choto decision (U1–U9 "Choto decision"): delivery din ar certification home trust e na, origin badge na, free-delivery progress na, ityadi.
+  - **Claude er draft lekha (shop owner review korben; `/api/translations` e override)**: `trust.cod` "ক্যাশ অন ডেলিভারি: পণ্য হাতে পেয়ে টাকা দিন" / "Cash on delivery: pay when it arrives"; `trust.return` "{count} দিনের মধ্যে ফেরত" / "Returns within {count} day(s)"; `product.certified` "সনদ: {name}" / "Certified: {name}"; `product.discount` "{percent}% ছাড়" / "{percent}% off"; `category.browse` "সব ক্যাটাগরি দেখুন" / "Browse categories"; `checkout.contact` "যোগাযোগ" / "Contact"; `checkout.shipping` "ডেলিভারির ঠিকানা" / "Delivery address"; `checkout.otp_title` "মোবাইল যাচাই" / "Verify mobile"; `checkout.summary` "অর্ডারের সারাংশ ({count})" / "Order summary ({count})"; `cart.decrease`/`increase` "পরিমাণ কমান"/"পরিমাণ বাড়ান" / "Decrease/Increase quantity"; `cart.max_quantity` "সর্বোচ্চ {count}টি" / "Up to {count}"; `nav.bottom` "নিচের মেনু" / "Bottom menu".
+- **Review** (16 November 2026, `design-reviewer`): **high 0**. Thik holo (test `73d9e02`, fix `1657ea1`, `e87b5ef`, design `f7fa677` v1.39, doc `4dcd67d`): bottom nav lekha 14px + nijer `aria-label`, field `aria-invalid` danger border, cart max lekha `aria-describedby`, trust `plural` (en "1 day"), chip focus ring, `Price` `tabular-nums`, l10n placeholder, 2 ta use na hoya key bad, `website.md` 60 KB er niche (bhag). U10 note er UI dosh (Turnstile 360, announcement, timeline, Cart badge) `e87b5ef` e.
+- **Proman**: U10 Safari 130 check (13 page × 5 width × bn/en) ok, Lighthouse upore, bug fix `35a7dbc` (hero contrast), `27df5d3` (doc size). Re-check (HEAD `a0c67bb`, upore note): 22 check + Turnstile screenshot, shob ok, horizontal scroll nai, console error 0, kono notun fix na. `make quick-check` ar docsync (`-count=1`) green; `make check` U10 e (Mac e jana `TestSearchRankingIntegration` chhara green).
+- **Baki / follow-up**: (a) shop owner Claude er draft lekha review (upore list); (b) checkout field er nijer bhul lekha (per-field error text); (c) order page e status timeline, API order history dile; (d) Android Chrome ar Facebook in-app browser e check, user er asol device e; (e) asol logo ar product chobi M12 er age (shop owner); (f) push (`gh auth switch -u azharcse14`, `git push origin main`) ar CI green kina (user).
