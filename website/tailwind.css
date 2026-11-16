@@ -13,3 +13,51 @@
   p { max-width: 70ch; }
   @media (min-width: 1024px) { h3 { font-size: 1.375rem; } }
 }
+
+/* 10.7 v1.38: focus shob shomoy dekha jay (focus/bg 3:1, 9.3); radio/checkbox shop er rong e. */
+@layer base {
+  :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  input[type="radio"], input[type="checkbox"] { accent-color: var(--color-primary); }
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
+}
+
+/* 10.5 v1.38 UI niyom: choto class set, shudhu token (Rule 4). Use na hole Tailwind purge kore, tai byte lage na. */
+@layer components {
+  .btn { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded px-4 font-heading transition-colors duration-150 disabled:opacity-50; font-weight: 500; }
+  .btn-primary { @apply bg-primary text-on-primary hover:bg-primary-hover; }
+  .btn-secondary { @apply border border-primary bg-surface text-primary hover:bg-primary-soft; }
+  .btn-ghost { @apply text-primary hover:bg-primary-soft; }
+  .btn-danger { @apply border border-danger bg-surface text-danger hover:bg-danger-soft; }
+
+  /* input/select/textarea ekoi; 16px jate iOS zoom na kore (10.5). */
+  .input { @apply block min-h-11 w-full rounded-sm border border-line bg-surface px-3 py-2 text-base text-ink; }
+  /* Chevron gradient diye: data-URI SVG e currentColor kaj kore na, hex lagto (Rule 4). */
+  select.input {
+    appearance: none; padding-right: 2.5rem; background-repeat: no-repeat; background-size: 0.375rem 0.375rem;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 1.25rem) 50%, calc(100% - 0.875rem) 50%;
+  }
+
+  .card { @apply rounded border border-line bg-surface p-4; }
+
+  /* Lekha/pichon jora 9.3 er derive e 4.5 (status/soft, text/accent-soft). */
+  .badge { @apply inline-flex items-center gap-1 rounded-sm px-2 text-sm; }
+  .badge-success { @apply bg-success-soft text-success; }
+  .badge-danger { @apply bg-danger-soft text-danger; }
+  .badge-warning { @apply bg-warning-soft text-warning; }
+  .badge-accent { @apply bg-accent-soft text-ink; }
+  .badge-muted { @apply border border-line bg-surface text-muted; }
+
+  /* Icon + lekha; role="status"/"alert" HTML e. Default info: primary/primary-soft. */
+  .notice { @apply flex items-start gap-2 rounded p-3 bg-primary-soft text-primary; }
+  .notice-success { @apply bg-success-soft text-success; }
+  .notice-danger { @apply bg-danger-soft text-danger; }
+  .notice-warning { @apply bg-warning-soft text-warning; }
+
+  .chip { @apply inline-flex min-h-11 items-center gap-1 rounded-full border border-line bg-surface px-3 text-sm text-ink transition-colors duration-150; }
+  .chip[aria-pressed="true"], .chip[aria-current], .chip:has(:checked) { @apply border-primary bg-primary-soft text-primary; }
+
+  .section-title { @apply mb-4 flex items-center justify-between gap-3; }
+}
