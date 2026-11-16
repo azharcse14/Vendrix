@@ -21,6 +21,7 @@ const _errors = [
   'out_of_stock',
   'vendor_unavailable',
   'price_changed',
+  'otp_required',
   'otp_invalid',
   'otp_too_many_attempts',
   'turnstile_failed',

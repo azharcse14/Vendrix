@@ -35,6 +35,9 @@ String newIdempotencyKey() {
   return out.toString();
 }
 
+/// OTP code 6 ASCII digit (8.2). Khali code e submit hole `otp_code` jay na, Go abar Turnstile chay.
+bool otpCodeOk(String code) => RegExp(r'^[0-9]{6}$').hasMatch(code);
+
 /// Ekoi body (hash er field, 8.6 step 1) er retry (network, OTP) e ekoi key; body bodlale notun key.
 class IdempotencyKeys {
   String? _body, _key;
@@ -217,11 +220,16 @@ class _CheckoutFormState extends State<CheckoutForm> {
 
   Future<void> _submit({bool resend = false}) async {
     if (_busy || _total == null) return;
-    _busy = true;
     _error(null);
     _invalid(const []);
     final otpBox = _el('#checkout-otp');
     final otp = otpBox != null && !otpBox.hasAttribute('hidden') && !resend ? _v('otp_code') : null;
+    if (otp != null && !otpCodeOk(otp)) {
+      _invalid(const ['otp_code']);
+      _error('otp_required');
+      return;
+    }
+    _busy = true;
     final hashed = _hashed();
     try {
       final res = await _bff.send(

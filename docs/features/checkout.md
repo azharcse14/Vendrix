@@ -131,6 +131,7 @@ Ei kram e poro:
 - Settings e ochena `otp_mode` ba `cod_confirmation`: OTP ar confirm duitai lage (fail closed), order atke na.
 - `ip` jana na (`""`): `many_orders` ar order rate limit shudhu phone diye. `orders.ip` TEXT, tulona `ip::inet` cast e: `ip` shudhu `httpx.ClientIP` er valid IP theke ashe, tai cast fail kore na (onno path theke bhul text likhle query `500`).
 - Quote e guest er `otp_required` `false` kintu order e history flag: `409 otp_required`, form OTP box dekhay (ekta beshi request).
+- OTP submit e `otp_code` khali ba nai: Turnstile lage (fail closed), purono token e `400 turnstile_failed`. Website form khali/bhul format er code pathay na ([website.md](website.md) item 23).
 - Turnstile siteverify er network bhul: `500` (token bhul bola na), order na.
 - Checkout OTP SMS cap ba send limit shesh: `429` + `Retry-After`; COD na hole-o blocked phone e OTP pathay na (`403 phone_blocked`, fail closed).
 - Settings e `payment_methods` nai: quote `400` (kono method chalu na); `delivery_charge_mode` nai: `per_order`.
