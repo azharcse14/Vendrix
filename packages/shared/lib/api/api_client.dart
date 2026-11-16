@@ -77,12 +77,14 @@ class ApiClient {
   Future<Object?> get(String path, {Map<String, String>? query}) =>
       send('GET', path, query: query);
 
-  /// Je kono method; `body` JSON hoye jay; `204` e null. Bhul hole [ApiError].
+  /// Je kono method; `body` JSON hoye jay; `204` e null; [headers] shudhu ei request er (jemon
+  /// `Idempotency-Key`). Bhul hole [ApiError].
   Future<Object?> send(
     String method,
     String path, {
     Object? body,
     Map<String, String>? query,
+    Map<String, String> headers = const {},
   }) async {
     final req =
         http.Request(
@@ -90,6 +92,7 @@ class ApiClient {
             baseUrl.resolve(path).replace(queryParameters: query),
           )
           ..headers.addAll({
+            ...this.headers,
             ...headers,
             if (token != null) 'Authorization': 'Bearer $token',
             'X-Cart-Key': ?cartKey,

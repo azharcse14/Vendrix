@@ -1,5 +1,6 @@
 import '../models/cart.dart';
 import '../models/catalog.dart';
+import '../models/order.dart';
 import '../models/page.dart';
 import '../models/settings.dart';
 import '../models/user.dart';
@@ -173,4 +174,99 @@ class WishlistRepository {
   /// `POST /api/wishlist/merge` (guest er `wl` cookie er ID, login er por).
   Future<List<ProductCard>> merge(List<int> productIds) =>
       _send('POST', '/api/wishlist/merge', {'product_ids': productIds});
+}
+
+/// Checkout (7.2, 7.5, 8.6): login (`token`) ba guest cart (`cartKey`). Body 7.5 er field (BFF hubohu
+/// forward kore); dam/total er field nai, server hishab kore (Rule 1).
+class CheckoutRepository {
+  /// Client.
+  final ApiClient api;
+
+  /// CheckoutRepository.
+  const CheckoutRepository(this.api);
+
+  /// `GET /api/delivery-zones`.
+  Future<List<DeliveryZone>> zones() async => [
+    for (final z in await api.get('/api/delivery-zones') as List<dynamic>)
+      DeliveryZone.fromJson(z as Map<String, dynamic>),
+  ];
+
+  /// `POST /api/checkout/quote` (`district`, `area`, `phone`, `payment_method`, `coupon_code`).
+  Future<Quote> quote(Map<String, Object?> body) async => Quote.fromJson(
+    await api.send('POST', '/api/checkout/quote', body: body)
+        as Map<String, dynamic>,
+  );
+
+  /// `POST /api/orders`; ekoi body er retry e ekoi [idempotencyKey] (8.6 step 1). `409 otp_required`
+  /// (`details.phone_masked`), `price_changed` (`details.total` ...) `ApiError` e.
+  Future<PlacedOrder> placeOrder(
+    Map<String, Object?> body, {
+    required String idempotencyKey,
+  }) async => PlacedOrder.fromJson(
+    await api.send(
+          'POST',
+          '/api/orders',
+          body: body,
+          headers: {'Idempotency-Key': idempotencyKey},
+        )
+        as Map<String, dynamic>,
+  );
+}
+
+/// Order (7.3, 7.5, 8.10): token er page, cancel, tracking, COD confirm, account er order.
+class OrderRepository {
+  /// Client.
+  final ApiClient api;
+
+  /// OrderRepository.
+  const OrderRepository(this.api);
+
+  Future<String> _status(String path, [Object? body]) async => field(
+    (await api.send('POST', path, body: body)) as Map<String, dynamic>,
+    'status',
+  );
+
+  /// `GET /api/orders/{token}` (Rule 11); na mille `not_found`.
+  Future<Order> byToken(String token) async => Order.fromJson(
+    await api.get('/api/orders/${Uri.encodeComponent(token)}')
+        as Map<String, dynamic>,
+  );
+
+  /// `POST /api/orders/{token}/cancel`; notun status. Na hole `invalid_transition`.
+  Future<String> cancel(String token, {String? reason}) => _status(
+    '/api/orders/${Uri.encodeComponent(token)}/cancel',
+    {'reason': ?reason}, // server JSON body chay, khali hole-o `{}`
+  );
+
+  /// `POST /api/orders/track` (number ar phone body te, URL e na).
+  Future<TrackedOrder> track(String number, String phone) async =>
+      TrackedOrder.fromJson(
+        await api.send(
+              'POST',
+              '/api/orders/track',
+              body: {'number': number, 'phone': phone},
+            )
+            as Map<String, dynamic>,
+      );
+
+  /// `GET /api/confirm/{confirm_token}` (8.10).
+  Future<ConfirmSummary> confirmView(String confirmToken) async =>
+      ConfirmSummary.fromJson(
+        await api.get('/api/confirm/${Uri.encodeComponent(confirmToken)}')
+            as Map<String, dynamic>,
+      );
+
+  /// `POST /api/confirm/{confirm_token}`; abar hole `invalid_transition`.
+  Future<String> confirm(String confirmToken) =>
+      _status('/api/confirm/${Uri.encodeComponent(confirmToken)}');
+
+  /// `GET /api/me/orders` (`token` lage); na deya page/limit query te jay na.
+  Future<Page<OrderSummary>> myOrders({int? page, int? limit}) async {
+    final query = {'page': ?page?.toString(), 'limit': ?limit?.toString()};
+    return Page.fromJson(
+      await api.get('/api/me/orders', query: query.isEmpty ? null : query)
+          as Map<String, dynamic>,
+      OrderSummary.fromJson,
+    );
+  }
 }

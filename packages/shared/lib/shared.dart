@@ -10,6 +10,7 @@ export 'l10n/translator.dart';
 export 'models/cart.dart';
 export 'models/catalog.dart';
 export 'models/localized_text.dart';
+export 'models/order.dart';
 export 'models/page.dart';
 export 'models/settings.dart';
 export 'models/user.dart';
