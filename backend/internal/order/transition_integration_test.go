@@ -438,3 +438,41 @@ func TestDisplayStatusIntegration(t *testing.T) {
 		}
 	}
 }
+
+// TestRestockExpiredBatchIntegration (11.7 item 3): cancel e pack er batch already expire (shop er timezone e)
+// hole oi ongsho batch e ferot na, variant.stock e o na: movement cancel +qty ar expired −qty (net 0); expire
+// na hoya batch ar batch chhara ongsho age er moto ferot. Undo (step 6) ar return (step 8) case pore.
+func TestRestockExpiredBatchIntegration(t *testing.T) {
+	f := newCheckout(t)
+	fish := f.variant("fish", 10000, 5)
+	batch := func(rem, daysAgo int) int64 {
+		return f.id(`INSERT INTO inventory_batches (shop_id, variant_id, quantity_received, quantity_remaining, expiry_date)
+			VALUES ($1, $2, 10, $3, (SELECT (now() AT TIME ZONE timezone)::date - $4::int FROM shops WHERE id = $1)) RETURNING id`,
+			f.shop, fish, rem, daysAgo)
+	}
+	ok, exp := batch(7, 0), batch(0, 1) // ajker batch expire na; kalker ta expire (job 0 koreche)
+	oid, _ := f.seedOrder("cod", "unpaid", "confirmed", seedF{vendor: f.vnd, status: "packed", items: [][2]int64{{fish, 6}}})
+	f.exec(`INSERT INTO order_item_batches (shop_id, order_item_id, batch_id, variant_id, quantity)
+		SELECT $1, i.id, b.id, $2, b.q FROM order_items i, (VALUES ($3::bigint, 2), ($4::bigint, 3)) b(id, q)
+		WHERE i.order_id = $5`, f.shop, fish, ok, exp, oid)
+	if err := f.txOrder(oid, order.Cancelled, staff, "mana"); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		name      string
+		got, want int64
+	}{
+		{"ok batch", f.count(`SELECT quantity_remaining FROM inventory_batches WHERE id = $1`, ok), 9},
+		{"expire batch", f.count(`SELECT quantity_remaining FROM inventory_batches WHERE id = $1`, exp), 0},
+		{"stock (2 batch + 1 batch chhara)", f.count(`SELECT stock FROM product_variants WHERE id = $1`, fish), 8},
+		{"expire batch cancel +3", f.count(`SELECT count(*) FROM inventory_movements WHERE order_id = $1 AND batch_id = $2
+			AND reason = 'cancel' AND change = 3`, oid, exp), 1},
+		{"expire batch expired −3", f.count(`SELECT count(*) FROM inventory_movements WHERE order_id = $1 AND batch_id = $2
+			AND reason = 'expired' AND change = -3`, oid, exp), 1},
+		{"movement net = stock er bodol", f.count(`SELECT sum(change) FROM inventory_movements WHERE order_id = $1`, oid), 3},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s: %d, chai %d", c.name, c.got, c.want)
+		}
+	}
+}
