@@ -52,14 +52,11 @@ func Use(ctx context.Context, tx querier, shopID int64, code, phone string) (Cou
 	return c, checkPhone(ctx, tx, c, phone)
 }
 
-// Peek: quote er read-only check (8.19 item 5), Use er ekoi karon, kichu bodlay na.
-func Peek(ctx context.Context, q querier, shopID int64, code, phone string) (Coupon, error) {
+// Peek: quote er read-only check (8.19 item 5), Use er karon kintu per-phone chhara (item 13 b: quote e onno
+// phone er coupon use jana jay na; Use e dhore). Kichu bodlay na.
+func Peek(ctx context.Context, q querier, shopID int64, code string) (Coupon, error) {
 	code, _ = Normalize(code)
-	c, err := check(ctx, q, shopID, code)
-	if err != nil {
-		return Coupon{}, err
-	}
-	return c, checkPhone(ctx, q, c, phone)
+	return check(ctx, q, shopID, code)
 }
 
 // check: karon (8.19 item 5): nai/bondho/shomoy er baire age (ErrInvalid), tarpor usage_limit.

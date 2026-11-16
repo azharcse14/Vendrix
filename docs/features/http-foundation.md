@@ -31,7 +31,8 @@ Ei kram e poro:
 | `backend/internal/httpx/cors.go` → `CORS` | Admin er CORS |
 | `backend/internal/httpx/page.go` → `JSONErrors`, `captureWriter`, `Page`, `NewPaged` | 404/405 JSON, paging |
 | `backend/internal/httpx/message.go` → `messages`, `lang`, `message`, `Locale` | Error message er bhasha (`invalid_phone`, `turnstile_failed`, `phone_blocked`, `otp_invalid`, `otp_too_many_attempts`, `session_expired`, `invalid_credentials`, `mfa_invalid`, `mfa_too_many_attempts`, `setup_required`, `password_change_required`, `out_of_stock`, `cart_full`, `wishlist_full`, M6: `area_not_served`, `below_min_order`, `coupon_invalid`, `coupon_limit_reached`, `cart_empty`, `vendor_unavailable`, `missing_idempotency_key`, `idempotency_key_reused`, `price_changed`, `otp_required`, `invalid_transition`, `payment_required` shoho; `phone_blocked` er lekha login ar checkout duitay chole); `Locale` public lekha er bhasha (catalog) |
-| `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow`, `clientKey` | Public rate limit |
+| `backend/internal/httpx/ratelimit.go` → `RateLimit`, `rateLimiter.allow`, `ClientKey` | Public rate limit; `ClientKey` `orders.ip` er tulona o (order, 8.19 item 13 c) |
+| `backend/internal/httpx/ratelimit.go` → `Limit`, `NewLimit`, `Middleware`, `Take` | Ekoi gona route er middleware ar code e (login ar checkout er OTP send, 7.8) |
 | `backend/internal/httpx/ratelimit.go` → `FailLimit`, `NewFailLimit`, `Take`, `Refund` | Staff login er client IP limit: shudhu bhul gone (Take age, bhul na hole Refund; 7.8) |
 | `backend/internal/httpx/cookie.go` → `AdminCookie`, `AdminCookieName` | Admin session cookie `__Host-asid` (`HttpOnly; Secure; SameSite=Strict; Path=/`, Max-Age; 11.3) |
 | `backend/internal/httpx/staff.go` → `Staff`, `WithStaff`, `StaffFrom`, `RequireStaff`, `RequireRole` | Admin er staff ar role, setup gate |
@@ -57,7 +58,7 @@ Ei kram e poro:
 | `__Host-asid` flag: `HttpOnly; Secure; SameSite=Strict; Path=/`, Domain na; Max-Age 43200/900, logout e 0 (11.3) | `AdminCookie` | `TestAdminCookie` |
 | Customer route: Bearer na, bhul, onno shop er, staff er ba revoke kora token `401 unauthenticated`, expire `401 session_expired` (3.2, Rule 16) | `RequireCustomer`, `auth.LookupSession` | `TestCustomerSessionIntegration`, `TestSessionShopIsolationIntegration` |
 | Cart route: Bearer na thakle guest; thakle `RequireCustomer` er path, bhul/expire `401` (8.4 item 2) | `OptionalCustomer` | `TestOptionalCustomer`, `TestCartKeyIntegration` |
-| Public: ek shop e ek client IP te minute e 120, tarpor `429 rate_limited` + `Retry-After`; key `shop_id:ip`, IPv6 e /64 (address ghuriye edano na) (7.8) | `RateLimit`, `clientKey` | `TestRateLimit` |
+| Public: ek shop e ek client IP te minute e 120, tarpor `429 rate_limited` + `Retry-After`; key `shop_id:ip`, IPv6 e /64 (address ghuriye edano na) (7.8) | `RateLimit`, `ClientKey` | `TestRateLimit` |
 | Paging `page`/`limit` (default 24, limit max 100, page max 10000: OFFSET overflow na), bhul e `400 validation_failed`; response `{"items","page","limit","total"}`, items `[]` (7.1) | `Page`, `NewPaged` | `TestPage` |
 | Client er pathano request id mane na | `RequestID` | `TestRequestID` |
 
@@ -75,7 +76,7 @@ Nai. `IP(ctx)` `sessions.ip`, `audit_logs.ip`, Turnstile er `remoteip` ar rate l
 
 - `statusWriter` er `Unwrap` muchbe na: upload er deadline `http.ResponseController` diye (2.2).
 - Log e notun field dile personal data (phone, thikana, IP, token) na (12.2).
-- Public rate limit process er memory te (fixed window, window bodlale map notun); ek er beshi process hole protitir alada gona. Alada limit (7.8): OTP send route e `RateLimit(10, time.Hour)`, staff login `FailLimit` (shudhu bhul); `POST /api/orders/track` e `RateLimit(10, time.Minute)` ([checkout.md](checkout.md)); `POST /api/orders` er limit DB theke (hoya order gona).
+- Public rate limit process er memory te (fixed window, window bodlale map notun); ek er beshi process hole protitir alada gona. Alada limit (7.8): OTP send route e `NewLimit(10, time.Hour).Middleware`, ar checkout er OTP send ei `Limit` er `Take` e (ek gona; [checkout.md](checkout.md)), staff login `FailLimit` (shudhu bhul); `POST /api/orders/track` e `RateLimit(10, time.Minute)`, `POST /api/checkout/quote` e `RateLimit(30, time.Minute)` ([checkout.md](checkout.md)); `POST /api/orders` er limit DB theke (hoya order gona).
 - Staff context `AdminSession` boshay (test e `WithStaff`); notun admin route e `AdminSession` → `RequireRole` (ba `RequireStaff`), shudhu setup route e `RequireStaff` chhara. Admin handler `StaffFrom` er `ShopID` (ar `VendorID`) diye query filter kore, request body theke na (3.2).
 - Notun error code: `message.go` er `messages` e bn ar en duitai (test dhore); `WriteError` e `r` lage, `Message` faka rakho.
 

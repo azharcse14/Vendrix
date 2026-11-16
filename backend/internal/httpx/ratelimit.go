@@ -53,7 +53,7 @@ func (l *rateLimiter) allow(k rateKey) (bool, int) {
 func (l *rateLimiter) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s, _ := ShopFrom(r.Context())
-		if ok, retry := l.allow(rateKey{s.ID, clientKey(IP(r.Context()))}); !ok {
+		if ok, retry := l.allow(rateKey{s.ID, ClientKey(IP(r.Context()))}); !ok {
 			w.Header().Set("Retry-After", strconv.Itoa(max(retry, 1)))
 			WriteError(w, r, http.StatusTooManyRequests, ErrorBody{Code: "rate_limited"})
 			return
@@ -62,8 +62,8 @@ func (l *rateLimiter) middleware(next http.Handler) http.Handler {
 	})
 }
 
-// clientKey: IPv6 hole /64 (ek client er puro subnet; address ghuriye limit edano na), IPv4 hubohu.
-func clientKey(ip string) string {
+// ClientKey: IPv6 hole /64 (ek client er puro subnet; address ghuriye limit edano na), IPv4 hubohu. orders.ip er tulona o eta diye (8.19 item 13 c).
+func ClientKey(ip string) string {
 	a, err := netip.ParseAddr(ip)
 	if err != nil || a.Unmap().Is4() {
 		return ip
@@ -83,7 +83,7 @@ func (l *Limit) Middleware(next http.Handler) http.Handler { return l.l.middlewa
 // Take: ctx er shop ar client IP er slot; na pele false ar koto second por.
 func (l *Limit) Take(ctx context.Context) (bool, int) {
 	s, _ := ShopFrom(ctx)
-	return l.l.allow(rateKey{s.ID, clientKey(IP(ctx))})
+	return l.l.allow(rateKey{s.ID, ClientKey(IP(ctx))})
 }
 
 // FailLimit (7.8 staff login): ek client IP te window e limit ta bhul. Take age gone (parallel e-o limit par
@@ -96,14 +96,14 @@ func NewFailLimit(limit int, window time.Duration) *FailLimit {
 
 // Take: request er client IP (ctx) er slot; na pele false ar koto second por.
 func (f *FailLimit) Take(ctx context.Context) (bool, int) {
-	return f.l.allow(rateKey{ip: clientKey(IP(ctx))})
+	return f.l.allow(rateKey{ip: ClientKey(IP(ctx))})
 }
 
 // Refund: Take er slot ferot (thik login, lock ba server er bhul).
 func (f *FailLimit) Refund(ctx context.Context) {
 	f.l.mu.Lock()
 	defer f.l.mu.Unlock()
-	if k := (rateKey{ip: clientKey(IP(ctx))}); f.l.counts[k] > 0 {
+	if k := (rateKey{ip: ClientKey(IP(ctx))}); f.l.counts[k] > 0 {
 		f.l.counts[k]--
 	}
 }

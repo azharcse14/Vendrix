@@ -47,11 +47,11 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/translations", public(http.HandlerFunc(sh.Translations)))
 	mux.Handle("GET /api/policies/{kind}", public(http.HandlerFunc(sh.Policy)))
 
-	// OTP send e public limit er upore client IP te ghontay 10 (7.8)
+	// OTP send e public limit er upore client IP te ghontay 10 (7.8); checkout er OTP send o ei gonay (Guard.OTPIP)
 	ts := auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret}
 	ah := auth.NewHandlers(d, log, cfg.OTPSecret, ts, cartMerge)
-	otpIP := httpx.RateLimit(10, time.Hour)
-	mux.Handle("POST /api/auth/otp/send", public(otpIP(http.HandlerFunc(ah.SendOTP))))
+	otpIP := httpx.NewLimit(10, time.Hour)
+	mux.Handle("POST /api/auth/otp/send", public(otpIP.Middleware(http.HandlerFunc(ah.SendOTP))))
 	mux.Handle("POST /api/auth/otp/verify", public(http.HandlerFunc(ah.VerifyOTP)))
 	// customer route: oi shop er customer session (3.2, Rule 16)
 	customer := httpx.RequireCustomer(log, auth.LookupSession(d))
@@ -82,7 +82,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	ch.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	ch.WishlistRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 	// checkout (7.5): cart er moto owner
-	oh := order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret})
+	oh := order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret, OTPIP: otpIP})
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 

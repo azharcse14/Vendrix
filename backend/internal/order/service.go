@@ -49,10 +49,11 @@ func (q *Quote) problem(code string) {
 	}
 }
 
-// QuoteCart (7.5, 8.5, 8.19 item 2, 5): kichu save na (coupon Peek, cart read-only). Total na banano jay
+// QuoteCart (7.5, 8.5, 8.19 item 2, 5, 13 b): kichu save na (coupon Peek, cart read-only). Total na banano jay
 // emon bhul error (area_not_served, cart_empty); baki problems e, total shoho: kena jay na emon line bad,
-// coupon na khatle coupon chhara total, zone min_order (discount er por) er kom.
-func QuoteCart(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in QuoteInput, ip string) (Quote, error) {
+// coupon na khatle coupon chhara total, zone min_order (discount er por) er kom. Phone er history ar coupon er
+// per-phone use dekhe na: je keu ochena phone diye ta jante parto; asol niyom order e.
+func QuoteCart(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in QuoteInput) (Quote, error) {
 	s, err := loadSettings(ctx, d, shopID)
 	if err != nil {
 		return Quote{}, err
@@ -91,7 +92,7 @@ func QuoteCart(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in Qu
 	}
 	var pc *pricing.Coupon
 	if in.CouponCode != "" {
-		c, err := coupon.Peek(ctx, d, shopID, in.CouponCode, in.Phone)
+		c, err := coupon.Peek(ctx, d, shopID, in.CouponCode)
 		switch code := coupon.ErrorCode(err); {
 		case code != "":
 			q.problem(code)
@@ -114,14 +115,13 @@ func QuoteCart(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in Qu
 		q.problem("below_min_order")
 	}
 	q.Subtotal, q.Discount, q.DeliveryCharge, q.Total = r.Subtotal, r.Discount, r.DeliveryCharge, r.Total
-	if o.UserID == 0 { // login e OTP kokhono na, history lage na
-		cod := in.PaymentMethod == "cod"
-		h, err := LoadRiskHistory(ctx, d, shopID, in.Phone, in.Phone, ip)
-		if err != nil {
-			return Quote{}, err
-		}
-		q.OTPRequired = OTPRequired(s.OTPMode, RiskFlags(h, s.Risk, cod, q.Total), cod, false)
+	// history chhara flag shudhu cod_high_amount; risky er baki flag order e 409 otp_required (8.19 item 13 b)
+	cod := in.PaymentMethod == "cod"
+	var flags []string
+	if cod && q.Total > s.Risk.CODAmountOver {
+		flags = []string{"cod_high_amount"}
 	}
+	q.OTPRequired = OTPRequired(s.OTPMode, flags, cod, o.UserID != 0)
 	return q, nil
 }
 
@@ -281,6 +281,13 @@ func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Ow
 	flags := RiskFlags(h, s.Risk, cod, in.ExpectedTotal)
 	otpVerified := loggedIn || otpID != 0
 	if !otpVerified && OTPRequired(s.OTPMode, flags, cod, loggedIn) { // step 8: OTP customer phone e (8.19 item 4)
+		// login er OTP send er ekoi client IP limit (7.8, 8.19 item 13 a)
+		if g.OTPIP == nil {
+			return Placed{}, LimitError{time.Hour}
+		}
+		if ok, retry := g.OTPIP.Take(ctx); !ok {
+			return Placed{}, LimitError{time.Duration(retry) * time.Second}
+		}
 		if err := auth.SendCheckoutOTP(ctx, d, g.OTPSecret, shopID, in.Timezone, in.Customer.Phone); err != nil {
 			return Placed{}, authErr(err)
 		}

@@ -35,7 +35,7 @@ type Guard struct {
 	Turnstile     auth.Turnstile
 	OTPSecret     string
 	ConfirmSecret string       // COD confirm token er HMAC (8.10)
-	OTPIP         *httpx.Limit // login er OTP send er ekoi client IP limit (7.8)
+	OTPIP         *httpx.Limit // login er OTP send er ekoi client IP limit (7.8); nil = OTP pathano na (fail closed)
 }
 
 func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {
@@ -44,7 +44,8 @@ func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {
 
 // Routes: wrap = public + OptionalCustomer (cart er moto: login e account cart, na hole X-Cart-Key).
 func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
-	mux.Handle("POST /api/checkout/quote", wrap(http.HandlerFunc(h.Quote)))
+	// quote: client IP te minute e 30 (7.8); cart/coupon/zone er query bot e na chale
+	mux.Handle("POST /api/checkout/quote", wrap(httpx.RateLimit(30, time.Minute)(http.HandlerFunc(h.Quote))))
 	mux.Handle("POST /api/orders", wrap(http.HandlerFunc(h.Place)))
 	mux.Handle("GET /api/orders/{token}", wrap(http.HandlerFunc(h.View)))
 	mux.Handle("POST /api/orders/{token}/cancel", wrap(http.HandlerFunc(h.Cancel)))
@@ -105,8 +106,7 @@ func (h *Handlers) Quote(w http.ResponseWriter, r *http.Request) {
 	}
 	s, _ := httpx.ShopFrom(r.Context())
 	q, err := QuoteCart(r.Context(), h.db, s.ID, cart.OwnerFrom(r),
-		QuoteInput{CouponCode: code, District: district, Area: area, PaymentMethod: in.PaymentMethod, Phone: p},
-		httpx.IP(r.Context()))
+		QuoteInput{CouponCode: code, District: district, Area: area, PaymentMethod: in.PaymentMethod, Phone: p})
 	var fe FieldError
 	switch {
 	case errors.As(err, &fe):

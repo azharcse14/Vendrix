@@ -247,37 +247,36 @@ func TestCouponUseIntegration(t *testing.T) {
 	}
 }
 
-// TestCouponPeekIntegration (8.19 item 5): quote er read-only check: Use er ekoi karon, used_count bodlay na.
+// TestCouponPeekIntegration (8.19 item 5, 13 b): quote er read-only check: Use er karon (per-phone chhara: quote e
+// onno phone er coupon use jana jay na, v1.34; Use e TestCouponUseIntegration), used_count bodlay na.
 func TestCouponPeekIntegration(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	f.redeem(t, f.shopA, "PP1", phoneX)
 
 	for _, c := range []struct {
-		name  string
-		shop  int64
-		code  string
-		phone string
-		want  error
+		name string
+		shop int64
+		code string
+		want error
 	}{
-		{"chole", f.shopA, " save10", phoneX, nil},
-		{"limit er bhitore", f.shopA, "flat50", phoneX, nil},
-		{"limit shesh", f.shopA, "ONCE", phoneX, coupon.ErrLimitReached},
-		{"bondho", f.shopA, "OFF", phoneX, coupon.ErrInvalid},
-		{"bondho ar shesh", f.shopA, "OFFFULL", phoneX, coupon.ErrInvalid},
-		{"shuru hoy ni", f.shopA, "LATER", phoneX, coupon.ErrInvalid},
-		{"meyad shesh", f.shopA, "OLD", phoneX, coupon.ErrInvalid},
-		{"nai", f.shopA, "NAI", phoneX, coupon.ErrInvalid},
-		{"onno shop er code", f.shopA, "BONLY", phoneX, coupon.ErrInvalid},
-		{"phone limit", f.shopA, "PP1", phoneX, coupon.ErrLimitReached},
-		{"onno phone", f.shopA, "PP1", phoneY, nil},
+		{"chole", f.shopA, " save10", nil},
+		{"limit er bhitore", f.shopA, "flat50", nil},
+		{"limit shesh", f.shopA, "ONCE", coupon.ErrLimitReached},
+		{"bondho", f.shopA, "OFF", coupon.ErrInvalid},
+		{"bondho ar shesh", f.shopA, "OFFFULL", coupon.ErrInvalid},
+		{"shuru hoy ni", f.shopA, "LATER", coupon.ErrInvalid},
+		{"meyad shesh", f.shopA, "OLD", coupon.ErrInvalid},
+		{"nai", f.shopA, "NAI", coupon.ErrInvalid},
+		{"onno shop er code", f.shopA, "BONLY", coupon.ErrInvalid},
+		{"phone limit shesh, quote e dekhay na", f.shopA, "PP1", nil},
 	} {
-		got, err := coupon.Peek(ctx, f.d, c.shop, c.code, c.phone)
+		got, err := coupon.Peek(ctx, f.d, c.shop, c.code)
 		if !errors.Is(err, c.want) || (c.want == nil && got.ID == 0) {
 			t.Errorf("%s: %+v %v, chai %v", c.name, got, err, c.want)
 		}
 	}
-	if c, _ := coupon.Peek(ctx, f.d, f.shopA, "SAVE10", phoneX); c.MaxDiscount != 10000 || c.Kind != "percent" {
+	if c, _ := coupon.Peek(ctx, f.d, f.shopA, "SAVE10"); c.MaxDiscount != 10000 || c.Kind != "percent" {
 		t.Errorf("Peek shorto: %+v", c)
 	}
 	for code, want := range map[string]int{"SAVE10": 0, "Flat50": 4, "PP1": 0, "ONCE": 1} {

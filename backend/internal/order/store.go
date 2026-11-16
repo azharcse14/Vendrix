@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"vendrix/backend/internal/coupon"
+	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/pricing"
 )
 
@@ -18,16 +19,16 @@ type querier interface {
 }
 
 // LoadRiskHistory (8.19 item 3): 8.6 step 8 e, ei order insert er age. Phone er query orders_phone_idx,
-// ip er orders_placed_idx e (shop er shesh ghonta choto). ip "" = jana nai.
+// ip er orders_placed_idx e (shop er shesh ghonta choto). ip "" = jana nai; IPv6 er /64 ek IP (item 13 c).
 func LoadRiskHistory(ctx context.Context, q querier, shopID int64, customerPhone, recipientPhone, ip string) (RiskHistory, error) {
 	var h RiskHistory
 	err := q.QueryRowContext(ctx, `SELECT
 		(SELECT count(*) FROM orders WHERE shop_id = $1 AND placed_at > now() - interval '60 minutes'
-			AND (customer_phone = $2 OR ip = NULLIF($4, ''))),
+			AND (customer_phone = $2 OR ip::inet <<= NULLIF($4, '')::inet)),
 		EXISTS (SELECT 1 FROM orders o JOIN order_fulfillments f ON f.shop_id = o.shop_id AND f.order_id = o.id
 			WHERE o.shop_id = $1 AND o.customer_phone IN ($2, $3) AND f.status = 'returned'),
 		EXISTS (SELECT 1 FROM orders WHERE shop_id = $1 AND customer_phone = $2)`,
-		shopID, customerPhone, recipientPhone, ip).Scan(&h.RecentOrders, &h.Returned, &h.PriorOrders)
+		shopID, customerPhone, recipientPhone, httpx.ClientKey(ip)).Scan(&h.RecentOrders, &h.Returned, &h.PriorOrders)
 	return h, err
 }
 
@@ -79,15 +80,16 @@ func findByKey(ctx context.Context, q querier, shopID int64, key string) (prior,
 }
 
 // orderLimit (7.8, 8.19 item 9): shesh 60 minute e ekoi customer_phone er 5 ba ekoi ip er 10 ta order thakle
-// limit; retry = oi shima-r purono order window theke ber howa porjonto. ip "" = shudhu phone.
+// limit; retry = oi shima-r purono order window theke ber howa porjonto. ip "" = shudhu phone. IPv6 e /64 (item 13 c):
+// orders.ip TEXT, kintu shob shomoy ClientIP er valid IP, tai ::inet cast nirapod.
 func orderLimit(ctx context.Context, q querier, shopID int64, phone, ip string) (time.Duration, bool, error) {
 	var secs sql.NullInt64
 	err := q.QueryRowContext(ctx, `SELECT ceil(max(extract(epoch FROM placed_at + interval '60 minutes' - now())))::bigint FROM (
 		(SELECT placed_at FROM orders WHERE shop_id = $1 AND customer_phone = $2 AND placed_at > now() - interval '60 minutes'
 		 ORDER BY placed_at DESC OFFSET 4 LIMIT 1)
 		UNION ALL
-		(SELECT placed_at FROM orders WHERE shop_id = $1 AND ip = NULLIF($3, '') AND placed_at > now() - interval '60 minutes'
-		 ORDER BY placed_at DESC OFFSET 9 LIMIT 1)) x`, shopID, phone, ip).Scan(&secs)
+		(SELECT placed_at FROM orders WHERE shop_id = $1 AND ip::inet <<= NULLIF($3, '')::inet AND placed_at > now() - interval '60 minutes'
+		 ORDER BY placed_at DESC OFFSET 9 LIMIT 1)) x`, shopID, phone, httpx.ClientKey(ip)).Scan(&secs)
 	return time.Duration(secs.Int64) * time.Second, secs.Valid, err
 }
 
