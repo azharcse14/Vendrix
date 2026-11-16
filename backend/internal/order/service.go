@@ -1,13 +1,19 @@
 package order
 
 import (
+	"bytes"
+	"cmp"
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"slices"
 
 	"vendrix/backend/internal/cart"
+	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/coupon"
+	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/pricing"
 	"vendrix/backend/internal/shipping"
 )
@@ -115,4 +121,271 @@ func QuoteCart(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in Qu
 		q.OTPRequired = OTPRequired(s.OTPMode, RiskFlags(h, s.Risk, cod, q.Total), cod, false)
 	}
 	return q, nil
+}
+
+var (
+	ErrKeyReused     = errors.New("order: ekoi Idempotency-Key e alada body")   // 422 idempotency_key_reused
+	ErrPhoneBlocked  = errors.New("order: phone blocked, COD na")               // 403 phone_blocked
+	ErrBelowMinOrder = errors.New("order: zone er min_order er kom")            // 409 below_min_order
+	ErrVendorClosed  = errors.New("order: vendor active na")                    // 409 vendor_unavailable
+	ErrOTPRequired   = errors.New("order: OTP lagbe")                           // 409 otp_required
+	ErrOTPInvalid    = errors.New("order: OTP bhul")                            // 400 otp_invalid
+	errKeyTaken      = errors.New("order: ekoi key er order insert e conflict") // lock er por hoy na
+)
+
+// OutOfStockError: 409 out_of_stock + details {variant_id} (8.19 item 12 v).
+type OutOfStockError struct{ VariantID int64 }
+
+func (e OutOfStockError) Error() string { return "order: stock nai" }
+
+// PriceChangedError: 409 price_changed + details notun quote (8.19 item 12 iv).
+type PriceChangedError struct{ pricing.Totals }
+
+func (e PriceChangedError) Error() string { return "order: dam bodleche" }
+
+// Person: customer ba recipient; handler e trim/normalize hoye ashe.
+type Person struct {
+	Name, Phone, Email string
+}
+
+// PlaceInput: handler e format check hoye ashe (8.19 item 10); Recipient customer er copy hote pare.
+type PlaceInput struct {
+	Customer, Recipient                                   Person
+	District, Area, Line, Note, CouponCode, PaymentMethod string
+	ExpectedTotal                                         int64
+	OTPCode                                               string
+	Key                                                   string
+	Hash                                                  []byte // idempotency_hash (8.19 item 12 ii)
+	Locale, IP                                            string
+}
+
+// Placed: 7.5 er response; Created false = ager order (200).
+type Placed struct {
+	OrderNumber string  `json:"order_number"`
+	PublicToken string  `json:"public_token"`
+	Status      string  `json:"status"`
+	PaymentURL  *string `json:"payment_url"`
+	Created     bool    `json:"-"`
+}
+
+// again: ager order (8.6 step 2): hash mile → sheta, na → ErrKeyReused.
+func (p prior) again(hash []byte) (Placed, error) {
+	if !bytes.Equal(p.hash, hash) {
+		return Placed{}, ErrKeyReused
+	}
+	return p.resp, nil
+}
+
+// PlaceOrder (8.6 step 1–2, 4–17; step 3/8 er Turnstile ar OTP M6 step 6 e). Bhul hole kichu save na.
+func PlaceOrder(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in PlaceInput) (Placed, error) {
+	if p, err := findByKey(ctx, d, shopID, in.Key); err != nil || p.found {
+		if err != nil {
+			return Placed{}, err
+		}
+		return p.again(in.Hash)
+	}
+	if in.OTPCode != "" { // ponytail: step 6 e checkout OTP verify; tar age code mane na (fail closed)
+		return Placed{}, ErrOTPInvalid
+	}
+	s, err := loadSettings(ctx, d, shopID)
+	if err != nil {
+		return Placed{}, err
+	}
+	if !slices.Contains(s.PaymentMethods, in.PaymentMethod) {
+		return Placed{}, FieldError("payment_method")
+	}
+	loggedIn := o.UserID != 0
+	if loggedIn { // 8.19 item 4: login e customer phone = account phone
+		p, err := userPhone(ctx, d, shopID, o.UserID)
+		if err != nil {
+			return Placed{}, err
+		}
+		if p != in.Customer.Phone {
+			return Placed{}, FieldError("customer.phone")
+		}
+	}
+	zone, err := shipping.Lookup(ctx, d, shopID, in.District, in.Area)
+	if err != nil {
+		return Placed{}, err
+	}
+	cod := in.PaymentMethod == "cod"
+	if cod {
+		blocked, err := phoneBlocked(ctx, d, shopID, in.Customer.Phone, in.Recipient.Phone)
+		if err != nil {
+			return Placed{}, err
+		}
+		if blocked {
+			return Placed{}, ErrPhoneBlocked
+		}
+	}
+	lines, err := checkoutLines(ctx, d, shopID, o)
+	if err != nil {
+		// ekoi key er onno request ei matro commit kore cart khali/stock 0 korle eta tar fol: ager order dao
+		if p, perr := findByKey(ctx, d, shopID, in.Key); perr == nil && p.found {
+			return p.again(in.Hash)
+		}
+		return Placed{}, err
+	}
+	h, err := LoadRiskHistory(ctx, d, shopID, in.Customer.Phone, in.Recipient.Phone, in.IP)
+	if err != nil {
+		return Placed{}, err
+	}
+	flags := RiskFlags(h, s.Risk, cod, in.ExpectedTotal)
+	if OTPRequired(s.OTPMode, flags, cod, loggedIn) { // ponytail: OTP pathano M6 step 6 e; tar age order na
+		return Placed{}, ErrOTPRequired
+	}
+	otpVerified := loggedIn
+	status, payStatus := "confirmed", "unpaid"
+	switch {
+	case !cod:
+		status, payStatus = "pending", "pending"
+	case ConfirmRequired(s.CODConfirmation, flags, cod, otpVerified):
+		status = "pending"
+	}
+	days := 10
+	if zone.SameCity {
+		days = 5
+	}
+
+	var out Placed
+	err = db.InTx(ctx, d, func(tx *sql.Tx) error {
+		out = Placed{}
+		// step 9
+		if err := lockKey(ctx, tx, shopID, in.Key); err != nil {
+			return err
+		}
+		p, err := findByKey(ctx, tx, shopID, in.Key)
+		if err != nil {
+			return err
+		}
+		if p.found {
+			out, err = p.again(in.Hash)
+			return err
+		}
+		// step 10: variant_id er kram e (deadlock na, 8.8)
+		slices.SortFunc(lines, func(a, b cart.CheckoutLine) int { return cmp.Compare(a.VariantID, b.VariantID) })
+		items := make([]item, len(lines))
+		priced := make([]pricing.Line, len(lines))
+		for i, l := range lines {
+			st, ok, err := takeStock(ctx, tx, shopID, l.VariantID, l.Line.Qty)
+			if err != nil {
+				return err
+			}
+			if !ok || (st.VariableWeight && !st.NominalWeightG.Valid) {
+				return OutOfStockError{VariantID: l.VariantID}
+			}
+			it := item{VariantID: l.VariantID, Stock: st, Qty: l.Line.Qty}
+			priced[i] = pricing.Line{VendorID: st.VendorID, UnitPrice: st.Price, Qty: l.Line.Qty, VariableWeight: st.VariableWeight}
+			if st.VariableWeight {
+				w := int(st.NominalWeightG.Int64) * l.Line.Qty
+				priced[i].WeightG, it.OrderedWeightG = w, sql.NullInt64{Int64: int64(w), Valid: true}
+			}
+			if it.Label, err = variantLabel(st.Options); err != nil {
+				return err
+			}
+			items[i] = it
+		}
+		// step 11
+		var c *coupon.Coupon
+		var pc *pricing.Coupon
+		if in.CouponCode != "" {
+			cp, err := coupon.Use(ctx, tx, shopID, in.CouponCode, in.Customer.Phone)
+			if err != nil {
+				return err
+			}
+			c = &cp
+			pc = &pricing.Coupon{Kind: cp.Kind, Value: cp.Value, MinOrder: cp.MinOrder, MaxDiscount: cp.MaxDiscount, VendorID: cp.VendorID}
+		}
+		// step 12
+		r, err := pricing.Calculate(priced, pc, pricing.Zone{Charge: zone.Charge, FreeDeliveryOver: zone.FreeDeliveryOver}, s.DeliveryMode)
+		if errors.Is(err, pricing.ErrCouponNotApplicable) {
+			return coupon.ErrInvalid
+		}
+		if err != nil {
+			return err // ErrInvalidInput: bug, ROLLBACK + 500 log (8.5)
+		}
+		if r.Subtotal-r.Discount < zone.MinOrder {
+			return ErrBelowMinOrder
+		}
+		if r.Total != in.ExpectedTotal {
+			return PriceChangedError{r.Totals}
+		}
+		// step 13–15
+		number, err := nextOrderNumber(ctx, tx, shopID)
+		if err != nil {
+			return err
+		}
+		token := rand.Text()
+		orderID, ok, err := insertOrder(ctx, tx, newOrder{ShopID: shopID, UserID: o.UserID, ZoneID: zone.ID, Number: number,
+			Token: token, Key: in.Key, Hash: in.Hash, In: in, Totals: r.Totals, Coupon: c, PaymentStatus: payStatus,
+			Status: status, Display: Summary(Status(status), nil), Flags: flags, OTPVerified: otpVerified, DeadlineDays: days})
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errKeyTaken
+		}
+		// step 16
+		fid := map[int64]int64{}
+		for i, g := range r.Groups {
+			if fid[g.VendorID], err = insertFulfillment(ctx, tx, shopID, orderID, i+1, g); err != nil {
+				return err
+			}
+		}
+		vendorFunded := c != nil && c.FundedBy == "vendor"
+		for i, it := range items {
+			it.FulfillmentID, it.Result = fid[it.Stock.VendorID], r.Lines[i]
+			it.Commission = pricing.Commission(it.Result, vendorFunded, it.Stock.CommissionBps)
+			if err := insertItem(ctx, tx, shopID, orderID, it); err != nil {
+				return err
+			}
+		}
+		if err := insertPlaced(ctx, tx, shopID, orderID, o.UserID, status, c, in.Customer.Phone); err != nil {
+			return err
+		}
+		// step 17; step 18 er job (sms.order_placed, alert.new_order, auto_cancel) M6 step 9 e
+		if err := cart.Clear(ctx, tx, shopID, o); err != nil {
+			return err
+		}
+		out = Placed{OrderNumber: number, PublicToken: token, Status: status, Created: true}
+		return nil
+	})
+	if errors.Is(err, errKeyTaken) {
+		if p, perr := findByKey(ctx, d, shopID, in.Key); perr == nil && p.found {
+			return p.again(in.Hash)
+		}
+	}
+	return out, err
+}
+
+// checkoutLines (8.6 step 7): khali → ErrCartEmpty; kena jay na emon line thakle fail (chupchap bad na, 8.19 item 12 v).
+func checkoutLines(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner) ([]cart.CheckoutLine, error) {
+	lines, err := cart.CheckoutLines(ctx, d, shopID, o)
+	if err != nil {
+		return nil, err
+	}
+	if len(lines) == 0 {
+		return nil, ErrCartEmpty
+	}
+	for _, l := range lines {
+		switch l.Problem {
+		case "vendor_unavailable":
+			return nil, ErrVendorClosed
+		case "out_of_stock":
+			return nil, OutOfStockError{VariantID: l.VariantID}
+		}
+	}
+	return lines, nil
+}
+
+// variantLabel: order_items.variant_label snapshot {bn, en} (7.4 er label); option na thakle {}.
+func variantLabel(raw []byte) ([]byte, error) {
+	var opts map[string]catalog.Text
+	if err := json.Unmarshal(raw, &opts); err != nil {
+		return nil, err
+	}
+	if len(opts) == 0 {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(catalog.Text{"bn": cart.Label(opts, "bn"), "en": cart.Label(opts, "en")})
 }

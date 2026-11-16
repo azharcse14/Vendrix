@@ -364,6 +364,8 @@ func TestSessionRouteKind(t *testing.T) {
 		{"customer wishlist", "GET", "/api/wishlist", "cust-token", "", 200, ""},
 		{"guest quote (body nai)", "POST", "/api/checkout/quote", "", "", 400, "validation_failed"},
 		{"staff token Bearer quote e", "POST", "/api/checkout/quote", "staff-token", "", 401, "unauthenticated"},
+		{"guest order (key nai)", "POST", "/api/orders", "", "", 400, "missing_idempotency_key"},
+		{"staff token Bearer order e", "POST", "/api/orders", "staff-token", "", 401, "unauthenticated"},
 		{"setup_pending logout", "POST", "/api/admin/auth/logout", "", "setup-token", 204, ""},
 		{"logout er por", "POST", "/api/admin/auth/totp/setup", "", "setup-token", 401, "unauthenticated"},
 	} {

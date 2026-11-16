@@ -106,8 +106,8 @@ func (f *checkoutFx) exec(query string, args ...any) {
 // variant: fixed variant, kena dam = price/2, option "size".
 func (f *checkoutFx) variant(sku string, price int64, stock int) int64 {
 	f.t.Helper()
-	p := f.id(`INSERT INTO products (shop_id, vendor_id, slug, name) VALUES ($1, $2, $3, '{"bn":"পণ্য `+sku+`","en":"Item `+sku+`"}') RETURNING id`,
-		f.shop, f.vnd, sku)
+	p := f.id(`INSERT INTO products (shop_id, vendor_id, slug, name)
+		VALUES ($1, $2, $3, jsonb_build_object('bn', 'পণ্য ' || $3, 'en', 'Item ' || $3)) RETURNING id`, f.shop, f.vnd, sku)
 	return f.id(`INSERT INTO product_variants (shop_id, product_id, vendor_id, sku, price, cost_price, stock, options)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, '{"size":{"bn":"১ কেজি","en":"1 kg"}}') RETURNING id`, f.shop, p, f.vnd, sku, price, price/2, stock)
 }
@@ -345,7 +345,7 @@ func TestCheckoutStockRaceIntegration(t *testing.T) {
 			continue
 		}
 		e := wantErr(t, fmt.Sprint("checkout ", i), rec, http.StatusConflict, "out_of_stock")
-		if id, _ := e.Details["variant_id"].(float64); int64(id) != v {
+		if fmt.Sprint(e.Details["variant_id"]) != fmt.Sprint(v) {
 			t.Errorf("checkout %d: details %v, variant_id %d chai", i, e.Details, v)
 		}
 	}
@@ -520,7 +520,7 @@ func TestCheckoutTotalsSavedIntegration(t *testing.T) {
 			  OR o.discount <> (SELECT sum(discount_share) FROM order_items i WHERE i.order_id = o.id)
 			  OR o.subtotal <> (SELECT sum(line_total) FROM order_items i WHERE i.order_id = o.id)
 			  OR (o.subtotal, o.discount, o.delivery_charge, o.total) IS DISTINCT FROM
-			     (SELECT (sum(subtotal), sum(discount), sum(delivery_charge), sum(total))::record FROM order_fulfillments x WHERE x.order_id = o.id)))`,
+			     (SELECT (sum(subtotal)::bigint, sum(discount)::bigint, sum(delivery_charge)::bigint, sum(total)::bigint) FROM order_fulfillments x WHERE x.order_id = o.id)))`,
 			p.PublicToken, total).Scan(&bad); err != nil {
 			t.Fatal(err)
 		}
@@ -635,7 +635,7 @@ func TestCheckoutValidationIntegration(t *testing.T) {
 	wantErr(t, "blocked recipient", f.place(idemKey(), ck, set("recipient", map[string]any{"name": "K", "phone": "+8801311000003"})),
 		http.StatusForbidden, "phone_blocked")
 	e := wantErr(t, "dam bodleche", f.place(idemKey(), ck, set("expected_total", 100000)), http.StatusConflict, "price_changed")
-	want := map[string]any{"total": float64(106000), "subtotal": float64(100000), "discount": float64(0), "delivery_charge": float64(6000)}
+	want := map[string]any{"total": 106000, "subtotal": 100000, "discount": 0, "delivery_charge": 6000} // JSON number, Sprint e ekoi
 	if fmt.Sprint(e.Details) != fmt.Sprint(want) {
 		t.Errorf("price_changed details %v, chai %v", e.Details, want)
 	}
@@ -643,7 +643,7 @@ func TestCheckoutValidationIntegration(t *testing.T) {
 	wantErr(t, "below_min_order", f.place(idemKey(), minCart, orderBody(phoneN(1), 26000)), http.StatusConflict, "below_min_order")
 	offCart := f.guestCart([2]int64{rice, 1}, [2]int64{off, 1})
 	e = wantErr(t, "bondho product", f.place(idemKey(), offCart, orderBody(phoneN(1), 66000)), http.StatusConflict, "out_of_stock")
-	if id, _ := e.Details["variant_id"].(float64); int64(id) != off {
+	if fmt.Sprint(e.Details["variant_id"]) != fmt.Sprint(off) {
 		t.Errorf("out_of_stock details %v, variant_id %d chai", e.Details, off)
 	}
 	wantErr(t, "cart nai", f.place(idemKey(), "", orderBody(phoneN(1), total)), http.StatusBadRequest, "cart_empty")
@@ -714,7 +714,7 @@ func TestCheckoutSnapshotIntegration(t *testing.T) {
 	}
 	// item snapshot: naam, label, sku, dam, kena dam, ojon
 	rows, err := f.d.QueryContext(f.ctx, `SELECT variant_id, product_name::text, variant_label::text, sku, unit_price, cost_price,
-		quantity, variable_weight, ordered_weight_g, line_total, status, f.seq, f.status
+		quantity, variable_weight, ordered_weight_g, line_total, i.status, f.seq, f.status
 		FROM order_items i JOIN order_fulfillments f ON f.id = i.fulfillment_id
 		JOIN orders o ON o.id = i.order_id WHERE o.public_token = $1 ORDER BY variant_id`, p.PublicToken)
 	if err != nil {

@@ -140,8 +140,8 @@ func line(it itemRow) (pricing.Line, bool) {
 	return l, true
 }
 
-// label: variant er option er value (key er kram e), locale e.
-func label(opts map[string]catalog.Text, locale string) string {
+// Label: variant er option er value (key er kram e), locale e; order_items.variant_label er snapshot o.
+func Label(opts map[string]catalog.Text, locale string) string {
 	var parts []string
 	for _, k := range slices.Sorted(maps.Keys(opts)) {
 		parts = append(parts, opts[k].In(locale))
@@ -187,7 +187,7 @@ func View(ctx context.Context, d *sql.DB, shopID int64, o Owner, locale string) 
 			priced = append(priced, l)
 		}
 		c.Items = append(c.Items, Item{VariantID: it.VariantID, ProductSlug: it.ProductSlug, Name: it.Name.In(locale),
-			VariantLabel: label(it.Options, locale), Image: it.Image, UnitPrice: it.Price, CompareAtPrice: it.CompareAt,
+			VariantLabel: Label(it.Options, locale), Image: it.Image, UnitPrice: it.Price, CompareAtPrice: it.CompareAt,
 			VariableWeight: it.VariableWeight, Quantity: it.Quantity, MaxQuantity: MaxQuantity(it.Stock),
 			InStock: inStock, LineTotal: total})
 	}
@@ -439,4 +439,13 @@ func CheckoutLines(ctx context.Context, q querier, shopID int64, o Owner) ([]Che
 		out = append(out, c)
 	}
 	return out, nil
+}
+
+// Clear (8.6 step 17): checkout er tx e order er por owner er cart khali (cart row thake).
+func Clear(ctx context.Context, q querier, shopID int64, o Owner) error {
+	cartID, err := findCart(ctx, q, shopID, o)
+	if err != nil || cartID == 0 {
+		return err
+	}
+	return clearItems(ctx, q, shopID, cartID)
 }

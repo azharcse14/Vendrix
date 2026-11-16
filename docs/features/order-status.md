@@ -16,6 +16,8 @@ Order (customer ar payment: pending theke confirmed ba cancelled) ar fulfillment
 
 `TransitionOrder` ar `TransitionFulfillment` (M6) ei function gulo diye database e bodlabe; onno kothao `UPDATE ... SET status` na.
 
+Prothom status (M6, 8.6 step 14) checkout e insert er shomoy boshe, bodol na: `PlaceOrder` ([checkout.md](checkout.md)) COD e `ConfirmRequired` hole `pending`, na hole `confirmed`; online e `pending`. `display_status = Summary(status, nil)` (fulfillment tokhono insert hoyni), fulfillment `open`, `order_status_history` e `from_status` NULL, actor `customer`.
+
 ## Code er map
 
 Ei kram e poro:
@@ -37,6 +39,7 @@ Ei kram e poro:
 | Order cancel → open ar packed fulfillment cancel (8.8) | `CancelCascade` | `TestCancelCascade` |
 | Shob bodol golden table e (14.2 test 7) | table | `TestOrderTransitionGolden`, `TestFulfillmentTransitionGolden` |
 | `display_status` (14.2 test 16) | `Summary` | `TestSummary` |
+| Checkout e prothom status, `display_status`, history row (8.6 step 14, 16) | `PlaceOrder` | `TestCheckoutSnapshotIntegration` |
 
 ## Data
 

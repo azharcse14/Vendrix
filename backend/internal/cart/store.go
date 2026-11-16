@@ -411,3 +411,8 @@ func checkoutRows(ctx context.Context, q querier, shopID, cartID int64) ([]check
 	}
 	return out, rows.Err()
 }
+
+func clearItems(ctx context.Context, q querier, shopID, cartID int64) error {
+	_, err := q.ExecContext(ctx, `DELETE FROM cart_items WHERE shop_id = $1 AND cart_id = $2`, shopID, cartID)
+	return err
+}
