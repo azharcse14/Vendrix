@@ -162,6 +162,15 @@ void main() {
         expect(items.every((li) => li.querySelector('svg[aria-hidden="true"]') != null), isTrue, reason: locale);
       }
 
+      // en e 1 din: "1 day" (MU review L3, Translator.plural).
+      t.pumpComponent(
+        site({
+          'checkout': {'return_window_days': 1},
+        }, locale: 'en'),
+      );
+      expect((await t.request('/en')).document!.querySelector('#trust')!.text, contains('Returns within 1 day'));
+      expect((await t.request('/en')).document!.querySelector('#trust')!.text, isNot(contains('1 days')));
+
       // COD na (shudhu online), return na → strip na.
       t.pumpComponent(
         site({
@@ -188,6 +197,8 @@ void main() {
       expect(imgs.first.attributes['fetchpriority'], 'high');
       expect(imgs.last.attributes['loading'], 'lazy');
       expect(imgs.every((i) => i.attributes['alt'] == 'লাল চাল' && i.attributes['width'] == '800'), isTrue);
+      // Thumbnail link er label ek key te (MU review L7: string jora na).
+      expect(doc.querySelector('a[href="#img-1"]')!.attributes['aria-label'], 'ছবি ১');
       // Stock e thaka variant (8) shuru te bachai; dam API theke.
       // v1.28: radio er naam `variant_id` (cart e add er JS chhara form er field, 10.12 item 4).
       expect(doc.querySelector('input[name="variant_id"][value="8"]')!.attributes.containsKey('checked'), isTrue);
@@ -329,6 +340,14 @@ void main() {
       expect(current((await t.request('/cart')).document!), [('/cart', true), ('/cart', false)]);
       expect(current((await t.request('/')).document!), [('/', false)]);
       expect(current((await t.request('/c/lal')).document!), isEmpty);
+    });
+
+    testServer('bottom nav er nijer label, header er nav.main theke alada (MU review L4)', (t) async {
+      t.pumpComponent(site({}));
+      final doc = (await t.request('/')).document!;
+      final labels = doc.querySelectorAll('nav[aria-label]').map((n) => n.attributes['aria-label']).toList();
+      expect(labels.toSet(), hasLength(labels.length), reason: '$labels');
+      expect(doc.querySelector('nav.fixed')!.attributes['aria-label'], 'নিচের মেনু');
     });
 
     testServer('logo na thakle naam + leaf icon; thakle chobi (alt = naam)', (t) async {

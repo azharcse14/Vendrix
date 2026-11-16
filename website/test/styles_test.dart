@@ -20,6 +20,9 @@ void main() {
       'prefers-reduced-motion:reduce',
       // `hidden` attribute `.notice`/`.input` er display ke harabe (MU U8).
       '[hidden]{display:none!important}',
+      // MU review: bhul field er border (JS +0, aria-invalid client dey); chip er bhetore focus.
+      'aria-invalid=true]{',
+      '.chip:has(:focus-visible){outline:2px solid var(--color-focus)',
     ]) {
       expect(s.contains(rule), isTrue, reason: 'styles.css e nai: $rule');
     }

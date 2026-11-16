@@ -253,7 +253,7 @@ void main() {
       // Mobile summary: JS chhara `<details>` + `<summary>`, form er shurute, line er naam.
       final details = form.querySelector('details')!;
       expect(form.children.first, details);
-      expect(details.querySelector('summary')!.text, contains(t.t('checkout.summary')));
+      expect(details.querySelector('summary')!.text.trim(), t.t('checkout.summary', {'count': '১'}));
       expect(details.text, contains('লাল চাল'));
 
       // Ekta-i submit button.

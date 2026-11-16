@@ -169,6 +169,13 @@ void main() {
       final steps = doc.querySelectorAll('form[action="/_/cart/items/9"] button[name="quantity"]');
       expect(steps.map((b) => b.attributes['value']), ['0', '2']);
       expect(steps.every((b) => b.attributes.containsKey('disabled')), isTrue);
+      // MU review M3: + bondho keno, lekha + aria-describedby (rong/disabled only na).
+      final note = doc.getElementById(steps.last.attributes['aria-describedby'] ?? '')!;
+      expect(note.text, t.t('cart.max_quantity', {'count': '১'}));
+      // Stock shesh line (max 0) e note na (badge-i bole).
+      expect(doc.querySelector('form[action="/_/cart/items/7"] button[aria-describedby]'), isNull);
+      // Max er niche + e note na.
+      expect(doc.querySelector('form[action="/_/cart/items/8"] [aria-describedby]'), isNull);
     });
 
     test('line e thumbnail (alt khali, naam pashe) ba placeholder', () async {
