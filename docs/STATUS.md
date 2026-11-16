@@ -25,7 +25,6 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## User er kache proshno
 
-- **MU Report er age**: prothom view font budget (9.6, 10.5): Lighthouse e bn page eo 4 file ≈ 154 KB (latin subset space er jonno ase); (a) budget 4 file ≈ 155 KB mene neya (recommendation; Perf/LCP mile), (b) latin `@font-face` bad, (c) bengali file e Latin jog kore abar subset (16.1 "MU U10 prothom view font").
 - **M12 er age**: client JS er `?v=<git sha>` (10.10 item 10): Jaspr nijei script tag dey, hook nai; recommendation deploy e Cloudflare purge (16.1).
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M10 er age**: SSLCommerz validation er HTTP call DB lock er bhetore naki baire (16.1).

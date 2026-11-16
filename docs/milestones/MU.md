@@ -20,7 +20,7 @@ Branch: main
 | LCP < 2.5s, simulate (Lantern) o | `npx lighthouse --throttling-method=simulate` U10 | ☑ U10: home 2.2s, category 2.1s, product 2.1s |
 | Client JS +0 byte (`main.client.dart.js` 176,175 B, gzip 54,444) | `jaspr build` er size, U8 ar U10 e log | ☑ U10: `main.client.dart.js` 176,182 B (gzip -9 54,084), deferred 9 part 123,966 B, shob U9 er hubohu (+0) |
 | `styles.css` minify gzip ≤ 7 KB (≤ 30 KB) | `website/test` er budget test (U2) | ☑ U10: 20,455 B / gzip 4,961 B |
-| Prothom view font ≤ 3 file, ≈ 140 KB | `theme_test` (`@font-face` count/weight, U1) + Lighthouse network U10 | ☐ U10: Lighthouse e 4 file ≈ 153.8 KB (latin subset space er jonno-o ase); 16.1 "MU U10 prothom view font", user er decision baki |
+| Prothom view font ≤ 4 file, ≈ 155 KB (v1.39; age ≤ 3 file, ≈ 140 KB) | `theme_test` (`@font-face` count/weight, U1) + Lighthouse network U10 | ☑ U10: Lighthouse e 4 file ≈ 153.8 KB (latin subset space er jonno-o ase); 16.1 "MU U10 prothom view font" decided v1.39 (budget bodlano) |
 | Notun token er contrast AA 3 preset e (lekha 4.5, focus 3.0) + kharap rong | `packages/shared/test/theme/tokens_test.dart` (U1) | ☑ U1: `deriveTokens` group er "notun jora (v1.38)", "halka primary", "rongin background" test |
 | CLS < 0.05 | Lighthouse U10 | ☑ U10: 0.001–0.005 |
 | 360/390/412/768/1280 × bn/en screenshot, horizontal scroll nai | Safari `safaridriver` U10 | ☑ U10: 13 page × 5 width × bn/en = 130 check, `scrollWidth` ≤ `innerWidth`, error 0 |
