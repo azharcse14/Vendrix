@@ -441,6 +441,11 @@ func CheckoutLines(ctx context.Context, q querier, shopID int64, o Owner) ([]Che
 	return out, nil
 }
 
+// ClearVariants: seam (test er jonno), fix e shudhu ei variant.
+func ClearVariants(ctx context.Context, q querier, shopID int64, o Owner, variantIDs []int64) error {
+	return Clear(ctx, q, shopID, o)
+}
+
 // Clear (8.6 step 17): checkout er tx e order er por owner er cart khali (cart row thake).
 func Clear(ctx context.Context, q querier, shopID int64, o Owner) error {
 	cartID, err := findCart(ctx, q, shopID, o)

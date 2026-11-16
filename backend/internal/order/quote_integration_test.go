@@ -250,3 +250,41 @@ func TestQuoteIntegration(t *testing.T) {
 		t.Errorf("login cart bodlalo: %d %v", n, err)
 	}
 }
+
+// TestQuotePrivacyIntegration (7.5, 7.8, 8.19 item 13 b): quote e guest phone er history ar coupon er per-phone
+// use dekha jay na (otp_required history chhara, per_phone_limit order e); order e asol niyom; route e minute e 30.
+// Ager niyom (v1.32) e quote egulo dekhato: v1.34 e ichchha kore bodol (privacy), durbol na.
+func TestQuotePrivacyIntegration(t *testing.T) {
+	f := newCheckout(t)
+	rice := f.variant("rice", 50000, 100)
+	f.exec(`INSERT INTO coupons (shop_id, code, kind, value, per_phone_limit) VALUES ($1, 'ONEPP', 'fixed', 5000, 1)`, f.shop)
+	ph := phoneN(1)
+	b := orderBody(ph, 51000)
+	b["coupon_code"] = "ONEPP"
+	decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), b), http.StatusCreated)
+	decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000)), http.StatusCreated)
+	f.otpMode("risky")
+
+	ck := f.guestCart([2]int64{rice, 1})
+	quote := func() *httptest.ResponseRecorder {
+		return f.post("/api/checkout/quote", "", ck, "", map[string]string{"coupon_code": "ONEPP", "district": "Dhaka",
+			"area": "Dhanmondi", "payment_method": "cod", "phone": ph})
+	}
+	rec := quote()
+	var q quoteJSON
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &q) != nil {
+		t.Fatalf("quote: %d %s", rec.Code, rec.Body.String())
+	}
+	if q.OTPRequired || len(q.Problems) != 0 || q.Discount != 5000 {
+		t.Errorf("quote e history/coupon use dekha jay: %+v", q)
+	}
+	// order e asol niyom: many_orders → OTP; coupon per-phone step 11 e (OTP er por)
+	wantErr(t, "order e many_orders", f.place(idemKey(), ck, orderBody(ph, 56000)), http.StatusConflict, "otp_required")
+
+	for i := 2; i <= 30; i++ {
+		if rec := quote(); rec.Code != http.StatusOK {
+			t.Fatalf("quote %d: %d", i, rec.Code)
+		}
+	}
+	wantRetry(t, "quote 31 tomo", quote())
+}

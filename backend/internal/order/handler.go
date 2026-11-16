@@ -34,7 +34,8 @@ type Handlers struct {
 type Guard struct {
 	Turnstile     auth.Turnstile
 	OTPSecret     string
-	ConfirmSecret string // COD confirm token er HMAC (8.10)
+	ConfirmSecret string       // COD confirm token er HMAC (8.10)
+	OTPIP         *httpx.Limit // login er OTP send er ekoi client IP limit (7.8)
 }
 
 func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {

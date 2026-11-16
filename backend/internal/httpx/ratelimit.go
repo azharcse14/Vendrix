@@ -72,6 +72,20 @@ func clientKey(ip string) string {
 	return p.String()
 }
 
+// Limit: RateLimit er ekoi gona route er middleware ar code er Take duijaygay (7.8 v1.34: login ar checkout er
+// OTP send ek client IP limit).
+type Limit struct{ l *rateLimiter }
+
+func NewLimit(limit int, window time.Duration) *Limit { return &Limit{newRateLimiter(limit, window)} }
+
+func (l *Limit) Middleware(next http.Handler) http.Handler { return l.l.middleware(next) }
+
+// Take: ctx er shop ar client IP er slot; na pele false ar koto second por.
+func (l *Limit) Take(ctx context.Context) (bool, int) {
+	s, _ := ShopFrom(ctx)
+	return l.l.allow(rateKey{s.ID, clientKey(IP(ctx))})
+}
+
 // FailLimit (7.8 staff login): ek client IP te window e limit ta bhul. Take age gone (parallel e-o limit par
 // hoy na), bhul na hole Refund; tai shudhu bhul gona thake.
 type FailLimit struct{ l *rateLimiter }

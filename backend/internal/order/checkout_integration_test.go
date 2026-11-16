@@ -39,6 +39,7 @@ type checkoutFx struct {
 	user      int64
 	tok       string // login customer er Bearer
 	sv        *siteverify
+	otpIP     *httpx.Limit // login ar checkout er OTP send er ekoi IP limit (router er moto)
 }
 
 const (
@@ -122,7 +123,8 @@ func newCheckout(t *testing.T) *checkoutFx {
 	var svURL string
 	f.sv, svURL = newSiteverify(t)
 	ts := auth.Turnstile{URL: svURL, Secret: tsSecret}
-	oh := order.NewHandlers(f.d, log, order.Guard{Turnstile: ts, OTPSecret: otpSecret, ConfirmSecret: confirmSecret})
+	f.otpIP = httpx.NewLimit(10, time.Hour)
+	oh := order.NewHandlers(f.d, log, order.Guard{Turnstile: ts, OTPSecret: otpSecret, ConfirmSecret: confirmSecret, OTPIP: f.otpIP})
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
 	login := httpx.RequireCustomer(log, auth.LookupSession(f.d))
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(login(h)) })
@@ -131,6 +133,7 @@ func newCheckout(t *testing.T) *checkoutFx {
 		return cart.Merge(ctx, tx, shopID, userID, key, locale)
 	})
 	mux.Handle("POST /api/auth/otp/verify", public(http.HandlerFunc(ah.VerifyOTP)))
+	mux.Handle("POST /api/auth/otp/send", public(f.otpIP.Middleware(http.HandlerFunc(ah.SendOTP))))
 	f.srv = httpx.JSONErrors(mux)
 	return f
 }

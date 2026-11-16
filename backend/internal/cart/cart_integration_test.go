@@ -799,3 +799,27 @@ func TestCartCleanupIntegration(t *testing.T) {
 		t.Errorf("notun guest cart: %+v", c)
 	}
 }
+
+// TestClearVariantsIntegration (8.6 step 17, 8.19 item 13 f): checkout shudhu order er variant muche; onno tab e
+// majhe add kora item thake; onno shop/owner er cart e hat na.
+func TestClearVariantsIntegration(t *testing.T) {
+	f := newFixture(t)
+	vs := f.variants(t, "a", "cv", 3)
+	_, hash := cart.NewKey()
+	c := f.id(t, `INSERT INTO carts (shop_id, session_key) VALUES ($1, $2) RETURNING id`, f.ids["a"], hash)
+	for _, v := range vs {
+		f.exec(t, `INSERT INTO cart_items (shop_id, cart_id, variant_id, quantity) VALUES ($1, $2, $3, 1)`, f.ids["a"], c, v)
+	}
+	err := db.InTx(context.Background(), f.d, func(tx *sql.Tx) error {
+		return cart.ClearVariants(context.Background(), tx, f.ids["a"], cart.Owner{KeyHash: hash}, vs[:2])
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := f.id(t, `SELECT count(*) FROM cart_items WHERE cart_id = $1 AND variant_id = $2`, c, vs[2]); n != 1 {
+		t.Error("order er baire item muche gelo")
+	}
+	if n := f.id(t, `SELECT count(*) FROM cart_items WHERE cart_id = $1`, c); n != 1 {
+		t.Errorf("cart e %d item, 1 chai", n)
+	}
+}
