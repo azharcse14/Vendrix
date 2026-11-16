@@ -141,6 +141,10 @@ Future<Response> renderPage(
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       head: [
         link(rel: 'stylesheet', href: '/styles.css'),
+        // 9.6 v1.38: shudhu body bn 400; LCP bhalo na hole bad (U10).
+        if (page.css != null)
+          if (fontPreload(page.site.settings) case final f?)
+            link(rel: 'preload', href: f, as: 'font', type: 'font/woff2', attributes: const {'crossorigin': ''}),
         // Raw: CSS shudhu validate kora rong/font/radius theke (`cssVariables`), `</style>` ashte pare na.
         if (page.css != null) Component.element(tag: 'style', children: [RawText(page.css!)]),
       ],

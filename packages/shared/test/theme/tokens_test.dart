@@ -146,12 +146,8 @@ void main() {
       expect(t['primary-soft'], t['background']);
       _newPairsOk(t, primarySoft: false);
     });
-    test('gaḍho background e status rong text er dike shore (v1.38)', () {
-      final t = deriveTokens({
-        ...presets['organic']!,
-        'background': '#5A5A5A',
-        'text': '#FFFFFF',
-      });
+    test('rongin background e status rong text er dike shore (v1.38)', () {
+      final t = deriveTokens({...presets['organic']!, 'background': '#C9A5A5'});
       expect(t['danger'], isNot('#B42318'));
       _newPairsOk(t, primarySoft: false);
     });

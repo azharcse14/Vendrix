@@ -20,8 +20,8 @@ const _subsets = {
       'U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD',
 };
 
-/// `<head>` er `<style>` (9.3, 9.6): `:root` e settings er rong, radius, font; settings er duita font er
-/// `@font-face` (`font-display: swap`). Bhul rong ba font naam e `ArgumentError` (`cssVariables`).
+/// `<head>` er `<style>` (9.3, 9.6): `:root` e settings er rong, radius, font; `@font-face` (`font-display: swap`)
+/// body font e shudhu 400, heading font e 500/600 (na thakle 400). Bhul rong ba font naam e `ArgumentError` (`cssVariables`).
 String themeCss(PublicSettings s) {
   final vars = cssVariables(
     deriveTokens(s.colors),
@@ -32,9 +32,19 @@ String themeCss(PublicSettings s) {
   final out = StringBuffer(':root{');
   vars.forEach((k, v) => out.write('$k:$v;'));
   out.write('}');
-  for (final family in {s.headingFont, s.bodyFont}) {
-    final (id, weights) = _fonts[family] ?? (null, const <int>[]);
-    for (final w in weights) {
+  // 9.6 v1.38: prothom view e kom file; emphasis heading font diye.
+  final want = <String, Set<int>>{};
+  void add(String family, Set<int> ws) {
+    final have = _fonts[family]?.$2 ?? const <int>[];
+    final pick = have.where(ws.contains).toSet();
+    want.putIfAbsent(family, () => {}).addAll(pick.isEmpty ? have.take(1) : pick);
+  }
+
+  add(s.bodyFont, {400});
+  add(s.headingFont, {500, 600});
+  for (final MapEntry(key: family, value: weights) in want.entries) {
+    final id = _fonts[family]?.$1;
+    for (final w in weights.toList()..sort()) {
       for (final e in _subsets.entries) {
         out.write(
           '@font-face{font-family:"$family";font-style:normal;font-weight:$w;font-display:swap;'
@@ -44,6 +54,12 @@ String themeCss(PublicSettings s) {
     }
   }
   return out.toString();
+}
+
+/// `<link rel=preload>` er font (9.6 v1.38): shudhu body font er bengali 400; ochena font e `null`.
+String? fontPreload(PublicSettings s) {
+  final id = _fonts[s.bodyFont]?.$1;
+  return id == null ? null : '/fonts/$id-bengali-400.woff2';
 }
 
 /// `web/fonts/` e je file thakar kotha (test).

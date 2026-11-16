@@ -64,8 +64,9 @@ Map<String, String> deriveTokens(Map<String, String> colors) {
       break;
     }
   }
+  final primary = c['primary']!;
   return {
-    'primary': c['primary']!,
+    'primary': primary,
     'primary-hover': mixColor(c['primary']!, '#000000', 0.08),
     'on-primary': _onColor(c['primary']!, text),
     'accent': c['accent']!,
@@ -76,7 +77,49 @@ Map<String, String> deriveTokens(Map<String, String> colors) {
     'background': bg,
     'surface': surface,
     'border': mixColor(bg, text, 0.12),
+    // v1.38: soft pichon; lekha 4.5 na hole % komano (0 hole background).
+    'primary-soft': _soft(bg, primary, 10, primary),
+    'accent-soft': _soft(bg, c['accent']!, 18, text),
+    for (final s in _status.entries) ..._statusPair(s.key, s.value, bg, text),
+    // Focus ring (WCAG 1.4.11) 3:1; primary halka hole text.
+    'focus':
+        contrastRatio(primary, bg) >= 3 && contrastRatio(primary, surface) >= 3
+        ? primary
+        : text,
   };
+}
+
+const _status = {
+  'success': '#1E6B3A',
+  'danger': '#B42318',
+  'warning': '#8A5A00',
+};
+
+String _soft(String bg, String color, int percent, String fg) {
+  for (var p = percent; p > 0; p--) {
+    final s = mixColor(bg, color, p / 100);
+    if (contrastRatio(fg, s) >= minContrast) return s;
+  }
+  return bg;
+}
+
+// Fixed rong background ar nijer soft e 4.5 na hole text er dike 1% kore (muted er moto).
+Map<String, String> _statusPair(
+  String name,
+  String base,
+  String bg,
+  String text,
+) {
+  var x = text, soft = mixColor(bg, text, 0.12);
+  for (var p = 0; p <= 100; p++) {
+    x = mixColor(base, text, p / 100);
+    soft = mixColor(bg, x, 0.12);
+    if (contrastRatio(x, bg) >= minContrast &&
+        contrastRatio(x, soft) >= minContrast) {
+      break;
+    }
+  }
+  return {name: x, '$name-soft': soft};
 }
 
 /// Kom contrast er ek jora (admin e warning `theme.low_contrast`).
@@ -123,11 +166,20 @@ const _cssNames = {
   'background': '--color-bg',
   'surface': '--color-surface',
   'border': '--color-border',
+  'primary-soft': '--color-primary-soft',
+  'accent-soft': '--color-accent-soft',
+  'success': '--color-success',
+  'success-soft': '--color-success-soft',
+  'danger': '--color-danger',
+  'danger-soft': '--color-danger-soft',
+  'warning': '--color-warning',
+  'warning-soft': '--color-warning-soft',
+  'focus': '--color-focus',
 };
 
 final _font = RegExp(r'^[A-Za-z0-9 ]{1,60}$');
 
-/// 9.3 er CSS variable (website `<head>` er `:root`): [deriveTokens] er rong, radius (px), font.
+/// 9.3 er CSS variable (website `<head>` er `:root`): [deriveTokens] er rong, `text` er triplet, radius (px), shadow, font.
 /// Font er naam admin er, tai shudhu harf, shonkhya, space (CSS e kichu dhukano na); bhul hole [ArgumentError].
 Map<String, String> cssVariables(
   Map<String, String> tokens, {
@@ -139,12 +191,18 @@ Map<String, String> cssVariables(
     if (!_font.hasMatch(f)) throw ArgumentError.value(f, 'font');
   }
   if (radius < 0 || radius > 64) throw ArgumentError.value(radius, 'radius');
+  final rgb = _rgb(tokens['text'] ?? '').join(' ');
   return {
     for (final e in _cssNames.entries)
       e.value:
           tokens[e.key] ??
           (throw ArgumentError.value(tokens, 'tokens', '${e.key} nai')),
+    '--color-text-rgb': rgb,
     '--radius': '${radius}px',
+    '--radius-sm': '${(radius / 2).round()}px',
+    '--radius-lg': '${math.min((radius * 1.5).round(), 24)}px',
+    '--shadow-1': '0 1px 3px rgb($rgb / .08),0 2px 8px rgb($rgb / .06)',
+    '--shadow-2': '0 8px 24px rgb($rgb / .14)',
     '--font-heading': '"$headingFont"',
     '--font-body': '"$bodyFont"',
   };

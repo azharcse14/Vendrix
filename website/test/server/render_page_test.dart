@@ -51,6 +51,32 @@ void main() {
       expect(html, isNot(matches(RegExp(r'<script[^>]*src="(?!/)'))));
     });
 
+    test('font preload shudhu body bn 400 (9.6 v1.38)', () async {
+      Future<ShopSettings> themed(String _) async => const ShopSettings(
+        PublicSettings({
+          'theme': {
+            'colors': {
+              'primary': '#1F5A32',
+              'accent': '#F2C230',
+              'tint': '#E3EED3',
+              'text': '#3B2A1A',
+              'background': '#FBFBF6',
+            },
+            'fonts': {'heading': 'Baloo Da 2', 'body': 'Hind Siliguri'},
+            'radius': 14,
+          },
+        }),
+        1,
+        {},
+      );
+      final html = await (await get('/policy/terms', themed)).readAsString();
+      final preloads = RegExp(r'<link[^>]*rel="preload"[^>]*>').allMatches(html).map((m) => m[0]!).toList();
+      expect(preloads, hasLength(1));
+      expect(preloads.single, contains('href="/fonts/hind-siliguri-bengali-400.woff2"'));
+      expect(preloads.single, contains('as="font"'));
+      expect(preloads.single, contains('crossorigin'));
+    });
+
     test('bondho shop: 503 + Retry-After', () async {
       final res = await get('/', (_) async => throw const ApiError(423, 'shop_suspended'));
       expect(res.statusCode, 503);
