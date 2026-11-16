@@ -181,3 +181,54 @@ func TestOTPTemplateLength(t *testing.T) {
 		}
 	}
 }
+
+// TestTotalChangedSMSLength (8.16 v1.42, 11.7 item 13 iv): sms.total_changed er default bn ≤ 134 unit, en ≤ 160
+// GSM-7 (৳ na, Tk); {total} lakh-style comma, English digit, poisha 0 hole doshomik na; {number} ba {total}
+// chhara override bad.
+func TestTotalChangedSMSLength(t *testing.T) {
+	for _, c := range []struct {
+		poisha int64
+		bn, en string
+	}{
+		{88800, "৳888", "Tk 888"},
+		{50, "৳0.50", "Tk 0.50"},
+		{100000, "৳1,000", "Tk 1,000"},
+		{12345600, "৳1,23,456", "Tk 1,23,456"},
+		{12345678999, "৳12,34,56,789.99", "Tk 12,34,56,789.99"},
+	} {
+		bn, en := TotalText("bn", nil, "S", "N-1", c.poisha), TotalText("en", nil, "S", "N-1", c.poisha)
+		if !strings.HasSuffix(bn, " "+c.bn+"।") || !strings.HasSuffix(en, " "+c.en+".") { // template er shesh e {total}
+			t.Errorf("%d: %q %q, chai %s / %s", c.poisha, bn, en, c.bn, c.en)
+		}
+	}
+	const (
+		shopBn = "সবুজবাজার অর্গানিক"
+		shopEn = "Sobujbazar Organic"
+		number = "SBORG-1000001"
+	)
+	bn, en := TotalText("bn", nil, shopBn, number, 12345678999), TotalText("en", nil, shopEn, number, 12345678999)
+	if n := len(utf16.Encode([]rune(bn))); n > 134 || !strings.Contains(bn, number) || !strings.Contains(bn, shopBn) {
+		t.Errorf("bn %d unit (≤ 134 chai): %q", n, bn)
+	}
+	for _, r := range en {
+		if r > 0x7e || r < 0x20 {
+			t.Errorf("en e GSM-7 er baire %q: %q", r, en)
+		}
+	}
+	if len(en) > 160 || !strings.Contains(en, number) || strings.Contains(bn+en, "{") || en == bn {
+		t.Errorf("en %d (≤ 160 chai): %q", len(en), en)
+	}
+	def := TotalText("en", nil, "S", "N-1", 100)
+	for _, c := range []struct {
+		override map[string]string
+		want     string
+	}{
+		{map[string]string{"en": "#{number} = {total}"}, "#N-1 = Tk 1"},
+		{map[string]string{"en": "#{number}"}, def},
+		{map[string]string{"en": "{total}"}, def},
+	} {
+		if got := TotalText("en", c.override, "S", "N-1", 100); got != c.want {
+			t.Errorf("%v: %q, chai %q", c.override, got, c.want)
+		}
+	}
+}
