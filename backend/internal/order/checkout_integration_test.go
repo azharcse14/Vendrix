@@ -12,8 +12,11 @@ import (
 	mrand "math/rand/v2"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -35,6 +38,39 @@ type checkoutFx struct {
 	shop, vnd int64
 	user      int64
 	tok       string // login customer er Bearer
+	sv        *siteverify
+}
+
+const (
+	otpSecret = "test-otp-secret-0123456789abcdef"
+	tsSecret  = "ts-secret"
+)
+
+// siteverify: Cloudflare er moto fake; token "tok" ba "tok:<x>" → success, hostname a.com; "b:<x>" → success
+// kintu hostname b.com (onno site er token); baki fail. calls gone (otp_code e Turnstile dake na, 14.2 test 23).
+type siteverify struct {
+	calls atomic.Int64
+	last  atomic.Value // shesh form (url.Values)
+}
+
+func newSiteverify(t *testing.T) (*siteverify, string) {
+	sv := &siteverify{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sv.calls.Add(1)
+		if err := r.ParseForm(); err != nil || r.PostForm.Get("secret") != tsSecret {
+			http.Error(w, "bad", http.StatusBadRequest)
+			return
+		}
+		sv.last.Store(r.PostForm)
+		tok := r.PostForm.Get("response")
+		host, ok := "a.com", tok == "tok" || strings.HasPrefix(tok, "tok:")
+		if strings.HasPrefix(tok, "b:") {
+			host, ok = "b.com", true
+		}
+		json.NewEncoder(w).Encode(map[string]any{"success": ok, "hostname": host})
+	}))
+	t.Cleanup(srv.Close)
+	return sv, srv.URL
 }
 
 const (
@@ -82,7 +118,9 @@ func newCheckout(t *testing.T) *checkoutFx {
 	public := httpx.ShopFromHost(log, shop.NewResolver(f.d).Resolve)
 	opt := httpx.OptionalCustomer(log, auth.LookupSession(f.d))
 	mux := http.NewServeMux()
-	order.NewHandlers(f.d, log).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
+	var svURL string
+	f.sv, svURL = newSiteverify(t)
+	order.NewHandlers(f.d, log, order.Guard{Turnstile: auth.Turnstile{URL: svURL, Secret: tsSecret}, OTPSecret: otpSecret}).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
 	f.srv = httpx.JSONErrors(mux)
 	return f
 }
@@ -793,5 +831,243 @@ func TestCheckoutSnapshotIntegration(t *testing.T) {
 	}
 	if n := f.count(`SELECT count(*) FROM cart_items`); n != 1 {
 		t.Errorf("guest cart o khali holo: %d item", n)
+	}
+}
+
+// otpMode: published checkout.otp_mode bodlay.
+func (f *checkoutFx) otpMode(mode string) {
+	f.t.Helper()
+	f.exec(`UPDATE shop_settings SET published = jsonb_set(published, '{checkout,otp_mode}', to_jsonb($2::text)) WHERE shop_id = $1`, f.shop, mode)
+}
+
+// otpCode: ei phone er shesh checkout OTP er code, sms.send job er payload decrypt kore (SMS je code pathabe).
+func (f *checkoutFx) otpCode(phone string) string {
+	f.t.Helper()
+	var id int64
+	var raw []byte
+	if err := f.d.QueryRowContext(f.ctx, `SELECT o.id, j.payload FROM otp_codes o
+		JOIN jobs j ON j.kind = 'sms.send' AND (j.payload->>'otp_id')::bigint = o.id
+		WHERE o.shop_id = $1 AND o.phone = $2 AND o.purpose = 'checkout' ORDER BY o.id DESC LIMIT 1`, f.shop, phone).Scan(&id, &raw); err != nil {
+		f.t.Fatalf("checkout OTP nai: %v", err)
+	}
+	var p struct {
+		Nonce []byte `json:"nonce"`
+		CT    []byte `json:"ct"`
+	}
+	if err := json.Unmarshal(raw, &p); err != nil {
+		f.t.Fatal(err)
+	}
+	o, err := auth.SMSCode(f.d, otpSecret)(f.ctx, f.shop, id, p.Nonce, p.CT)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return o.Code
+}
+
+// withOTP: body te otp_code, Turnstile token chhara (OTP resubmit, 8.6 step 3).
+func withOTP(b map[string]any, code string) map[string]any {
+	b["otp_code"], b["turnstile_token"] = code, ""
+	return b
+}
+
+func otherCode(code string) string {
+	if code == "000000" {
+		return "111111"
+	}
+	return "000000"
+}
+
+// TestCheckoutTurnstileIntegration (14.2 test 23, 8.6 step 2, 3, 8): otp_code na thakle Turnstile (hostname
+// shoho); otp_code thakle Turnstile dake na kintu code shob shomoy verify (OTP na lagleo), bhul 400
+// otp_invalid; retry (ekoi key, notun Turnstile token) ager order.
+func TestCheckoutTurnstileIntegration(t *testing.T) {
+	f := newCheckout(t)
+	rice := f.variant("rice", 50000, 10)
+	ck := f.guestCart([2]int64{rice, 1})
+	body := func(tok string) map[string]any {
+		b := orderBody(phoneN(1), 56000)
+		b["turnstile_token"] = tok
+		return b
+	}
+	for name, tok := range map[string]string{"bhul": "nope", "khali": "", "onno site": "b:x"} {
+		wantErr(t, name, f.place(idemKey(), ck, body(tok)), http.StatusBadRequest, "turnstile_failed")
+	}
+	if form, _ := f.sv.last.Load().(url.Values); form.Get("response") != "b:x" || form.Get("secret") != tsSecret {
+		t.Errorf("siteverify form %v", form)
+	}
+	// otp_mode never: OTP lage na, tobu bhul otp_code 400 (Turnstile thik holeo), siteverify dake na
+	calls := f.sv.calls.Load()
+	wantErr(t, "otp_code, Turnstile chhara", f.place(idemKey(), ck, withOTP(body(""), "123456")), http.StatusBadRequest, "otp_invalid")
+	b := body("tok")
+	b["otp_code"] = "123456"
+	wantErr(t, "otp_code + Turnstile", f.place(idemKey(), ck, b), http.StatusBadRequest, "otp_invalid")
+	if n := f.sv.calls.Load(); n != calls {
+		t.Errorf("otp_code e siteverify %d bar dakche", n-calls)
+	}
+	if n := f.count(`SELECT count(*) FROM orders`); n != 0 {
+		t.Fatalf("bhul e order %d", n)
+	}
+
+	// risky: guest e flag → 409 otp_required (Turnstile ekbar), tarpor code diye Turnstile chhara 201
+	f.otpMode("risky")
+	big := f.variant("big", 250000, 10) // new_phone_high_amount
+	bigCart := f.guestCart([2]int64{big, 1})
+	key := idemKey()
+	e := wantErr(t, "otp lagbe", f.place(key, bigCart, orderBody(phoneN(2), 250000)), http.StatusConflict, "otp_required")
+	if e.Details["phone_masked"] != "+88018****0002" {
+		t.Errorf("details %v, phone_masked +88018****0002 chai", e.Details)
+	}
+	if n := f.sv.calls.Load(); n != calls+1 {
+		t.Errorf("siteverify %d bar, chai 1", n-calls)
+	}
+	code := f.otpCode(phoneN(2))
+	wantErr(t, "bhul code", f.place(key, bigCart, withOTP(orderBody(phoneN(2), 250000), otherCode(code))), http.StatusBadRequest, "otp_invalid")
+	p := decodePlaced(t, f.place(key, bigCart, withOTP(orderBody(phoneN(2), 250000), code)), http.StatusCreated)
+	if n := f.sv.calls.Load(); n != calls+1 {
+		t.Errorf("OTP resubmit e siteverify dakche (%d)", n-calls-1)
+	}
+	// response harano retry: ekoi key, notun Turnstile token, otp_code chhara → 200 ager order (step 2 Turnstile er age)
+	retry := orderBody(phoneN(2), 250000)
+	retry["turnstile_token"] = "tok:notun"
+	if p2 := decodePlaced(t, f.place(key, bigCart, retry), http.StatusOK); p2 != p {
+		t.Errorf("retry %+v, chai %+v", p2, p)
+	}
+	if n := f.count(`SELECT count(*) FROM orders`); n != 1 {
+		t.Errorf("order %d, chai 1", n)
+	}
+}
+
+// TestCheckoutOTPRetryIntegration (14.2 test 40, 8.6 step 8, 9): OTP thik kintu price_changed/out_of_stock →
+// ROLLBACK e OTP thake, ekoi code e order; order er por ekoi code onno key e 400 otp_invalid.
+func TestCheckoutOTPRetryIntegration(t *testing.T) {
+	f := newCheckout(t)
+	f.otpMode("risky")
+	big := f.variant("big", 250000, 10)
+	ck := f.guestCart([2]int64{big, 1})
+	ph := phoneN(3)
+	wantErr(t, "otp lagbe", f.place(idemKey(), ck, orderBody(ph, 250000)), http.StatusConflict, "otp_required")
+	code := f.otpCode(ph)
+
+	wantErr(t, "dam bodleche", f.place(idemKey(), ck, withOTP(orderBody(ph, 240000), code)), http.StatusConflict, "price_changed")
+	f.exec(`UPDATE product_variants SET stock = 0 WHERE id = $1`, big)
+	wantErr(t, "stock nai", f.place(idemKey(), ck, withOTP(orderBody(ph, 250000), code)), http.StatusConflict, "out_of_stock")
+	f.exec(`UPDATE product_variants SET stock = 10 WHERE id = $1`, big)
+	if n := f.count(`SELECT count(*) FROM otp_codes WHERE consumed_at IS NOT NULL`); n != 0 {
+		t.Fatalf("fail er por OTP consumed %d", n)
+	}
+
+	key := idemKey()
+	body := withOTP(orderBody(ph, 250000), code)
+	p := decodePlaced(t, f.place(key, ck, body), http.StatusCreated)
+	var verified bool
+	var status string
+	if err := f.d.QueryRowContext(f.ctx, `SELECT otp_verified, status FROM orders WHERE public_token = $1`, p.PublicToken).Scan(&verified, &status); err != nil {
+		t.Fatal(err)
+	}
+	if !verified || status != "confirmed" { // risky: OTP e phone proman, confirm SMS lage na (8.19 item 4)
+		t.Errorf("otp_verified %v status %s, chai true confirmed", verified, status)
+	}
+	if n := f.count(`SELECT count(*) FROM otp_codes WHERE consumed_at IS NOT NULL AND purpose = 'checkout'`); n != 1 {
+		t.Errorf("consumed %d, chai 1", n)
+	}
+	// ekoi code, onno key (notun cart) → 400 otp_invalid
+	wantErr(t, "use kora code", f.place(idemKey(), f.guestCart([2]int64{big, 1}), withOTP(orderBody(ph, 250000), code)),
+		http.StatusBadRequest, "otp_invalid")
+	// ekoi key retry → 200 ager order
+	if p2 := decodePlaced(t, f.place(key, ck, body), http.StatusOK); p2 != p {
+		t.Errorf("retry %+v", p2)
+	}
+	if n := f.count(`SELECT count(*) FROM orders`); n != 1 {
+		t.Errorf("order %d, chai 1", n)
+	}
+}
+
+// TestCheckoutRiskIntegration (8.6 step 4, 8; 8.7; 8.19 item 3, 4, 9; 7.8): flag orders.risk_flags e, login e
+// OTP na, guest e 409 otp_required + checkout OTP (login er send limit ar SMS cap e gona), rate limit 429.
+func TestCheckoutRiskIntegration(t *testing.T) {
+	f := newCheckout(t)
+	f.srv = httpx.ClientIP("")(f.srv) // orders.ip = httptest er 192.0.2.1
+	f.otpMode("risky")
+	big, rice := f.variant("big", 250000, 50), f.variant("rice", 50000, 100)
+	row := func(token string) (flags string, verified bool, status, ip string) {
+		t.Helper()
+		if err := f.d.QueryRowContext(f.ctx, `SELECT risk_flags::text, otp_verified, status, coalesce(ip, '') FROM orders WHERE public_token = $1`,
+			token).Scan(&flags, &verified, &status, &ip); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+
+	// login customer: flag thakleo OTP na, otp_verified true
+	f.userCart([2]int64{big, 1})
+	p := decodePlaced(t, f.post("/api/orders", idemKey(), "", f.tok, orderBody(userPhone, 250000)), http.StatusCreated)
+	if fl, v, st, ip := row(p.PublicToken); fl != `["new_phone_high_amount"]` || !v || st != "confirmed" || ip != "192.0.2.1" {
+		t.Errorf("login order: flags %s verified %v status %s ip %s", fl, v, st, ip)
+	}
+	if n := f.count(`SELECT count(*) FROM otp_codes`); n != 0 {
+		t.Errorf("login e OTP %d", n)
+	}
+
+	// guest risky: 409 otp_required + phone_masked, checkout OTP ar sms.send job, order na
+	e := wantErr(t, "guest risky", f.place(idemKey(), f.guestCart([2]int64{big, 1}), orderBody(phoneN(4), 250000)),
+		http.StatusConflict, "otp_required")
+	if e.Details["phone_masked"] != "+88018****0004" {
+		t.Errorf("details %v", e.Details)
+	}
+	if o, j := f.count(`SELECT count(*) FROM otp_codes WHERE phone = $1 AND purpose = 'checkout'`, phoneN(4)),
+		f.count(`SELECT count(*) FROM jobs WHERE kind = 'sms.send'`); o != 1 || j != 1 {
+		t.Errorf("otp %d job %d, chai 1, 1", o, j)
+	}
+	// send limit login er sathe (7.8 shob purpose): 2 ta login OTP + 1 checkout = 3, tarpor 429
+	for range 2 {
+		f.exec(`INSERT INTO otp_codes (shop_id, phone, purpose, code_hash, expires_at) VALUES ($1, $2, 'login', '\x00', now() + interval '5 minutes')`,
+			f.shop, phoneN(5))
+	}
+	ck := f.guestCart([2]int64{big, 1})
+	wantErr(t, "3 tomo send", f.place(idemKey(), ck, orderBody(phoneN(5), 250000)), http.StatusConflict, "otp_required")
+	wantRetry(t, "4 tomo send", f.place(idemKey(), ck, orderBody(phoneN(5), 250000)))
+	// shop er sms_daily_cap
+	f.exec(`UPDATE shop_settings SET published = jsonb_set(published, '{checkout,sms_daily_cap}', '0') WHERE shop_id = $1`, f.shop)
+	wantRetry(t, "sms cap", f.place(idemKey(), ck, orderBody(phoneN(6), 250000)))
+	if n := f.count(`SELECT count(*) FROM orders`); n != 1 {
+		t.Fatalf("OTP chhara order %d", n)
+	}
+
+	// otp_mode never: flag save, otp_verified false, risky confirm e pending
+	f.otpMode("never")
+	p = decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{big, 1}), orderBody(phoneN(7), 250000)), http.StatusCreated)
+	if fl, v, st, _ := row(p.PublicToken); !strings.Contains(fl, "new_phone_high_amount") || v || st != "pending" {
+		t.Errorf("guest order: flags %s verified %v status %s", fl, v, st)
+	}
+
+	// rate limit (8.19 item 9): ek phone e ghontay 5 ta hoya order; price_changed gone na; idempotent retry 200
+	ph := phoneN(8)
+	first, firstCart := idemKey(), f.guestCart([2]int64{rice, 1})
+	decodePlaced(t, f.place(first, firstCart, orderBody(ph, 56000)), http.StatusCreated)
+	for range 3 {
+		decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000)), http.StatusCreated)
+	}
+	for range 3 {
+		wantErr(t, "price_changed", f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 1)), http.StatusConflict, "price_changed")
+	}
+	decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000)), http.StatusCreated)
+	wantRetry(t, "phone 6 tomo", f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000)))
+	decodePlaced(t, f.place(first, firstCart, orderBody(ph, 56000)), http.StatusOK)
+	// ek IP te ghontay 10
+	for i := f.count(`SELECT count(*) FROM orders WHERE ip = '192.0.2.1'`); i < 10; i++ {
+		decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(phoneN(20+int(i)), 56000)), http.StatusCreated)
+	}
+	wantRetry(t, "IP 11 tomo", f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(phoneN(40), 56000)))
+	if n := f.count(`SELECT count(*) FROM orders`); n != 10 {
+		t.Errorf("order %d, chai 10", n)
+	}
+}
+
+// wantRetry: 429 rate_limited + Retry-After 1..3600.
+func wantRetry(t *testing.T, name string, rec *httptest.ResponseRecorder) {
+	t.Helper()
+	wantErr(t, name, rec, http.StatusTooManyRequests, "rate_limited")
+	if s, err := strconv.Atoi(rec.Header().Get("Retry-After")); err != nil || s < 1 || s > 3600 {
+		t.Errorf("%s: Retry-After %q", name, rec.Header().Get("Retry-After"))
 	}
 }

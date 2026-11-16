@@ -113,7 +113,7 @@ func TestQuoteIntegration(t *testing.T) {
 	public := httpx.ShopFromHost(log, shop.NewResolver(d).Resolve)
 	opt := httpx.OptionalCustomer(log, auth.LookupSession(d))
 	mux := http.NewServeMux()
-	order.NewHandlers(d, log).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
+	order.NewHandlers(d, log, order.Guard{}).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
 	srv := httpx.JSONErrors(mux)
 	do := func(token string, body any) *httptest.ResponseRecorder {
 		t.Helper()

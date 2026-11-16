@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/cart"
 	"vendrix/backend/internal/coupon"
 	"vendrix/backend/internal/httpx"
@@ -21,11 +22,20 @@ import (
 
 // Handlers: checkout ar order route (7.5).
 type Handlers struct {
-	db  *sql.DB
-	log *slog.Logger
+	db    *sql.DB
+	log   *slog.Logger
+	guard Guard
 }
 
-func NewHandlers(d *sql.DB, log *slog.Logger) *Handlers { return &Handlers{db: d, log: log} }
+// Guard: 8.6 step 3 er Turnstile ar step 8 er checkout OTP (auth er login er ekoi niyom).
+type Guard struct {
+	Turnstile auth.Turnstile
+	OTPSecret string
+}
+
+func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {
+	return &Handlers{db: d, log: log, guard: g}
+}
 
 // Routes: wrap = public + OptionalCustomer (cart er moto: login e account cart, na hole X-Cart-Key).
 func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {

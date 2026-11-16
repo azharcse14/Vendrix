@@ -48,7 +48,8 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("GET /api/policies/{kind}", public(http.HandlerFunc(sh.Policy)))
 
 	// OTP send e public limit er upore client IP te ghontay 10 (7.8)
-	ah := auth.NewHandlers(d, log, cfg.OTPSecret, auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret}, cartMerge)
+	ts := auth.Turnstile{URL: siteverifyURL, Secret: cfg.TurnstileSecret}
+	ah := auth.NewHandlers(d, log, cfg.OTPSecret, ts, cartMerge)
 	otpIP := httpx.RateLimit(10, time.Hour)
 	mux.Handle("POST /api/auth/otp/send", public(otpIP(http.HandlerFunc(ah.SendOTP))))
 	mux.Handle("POST /api/auth/otp/verify", public(http.HandlerFunc(ah.VerifyOTP)))
@@ -81,7 +82,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	ch.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	ch.WishlistRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 	// checkout (7.5): cart er moto owner
-	order.NewHandlers(d, log).Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
+	order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret}).Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
