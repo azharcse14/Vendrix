@@ -26,6 +26,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4 | chalu (OTP send/verify, customer session, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
 | Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`; website `/cart`, heart) |
+| Delivery zone | [delivery-zone.md](delivery-zone.md) | 7.2, 8.6, 8.19 | M6 | cholche (lookup, `GET /api/delivery-zones`, dev seed; admin M7 e) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
@@ -46,6 +47,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/notify` | SMS sender, `sms.send` (OTP template), `alert.security` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
 | `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup` | [cart.md](cart.md) |
+| `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones` | [delivery-zone.md](delivery-zone.md) |
 | `backend/internal/order` | Status er state machine (pure) | [order-status.md](order-status.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |

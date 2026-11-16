@@ -1,5 +1,6 @@
 -- Shudhu local (M3): `sobujbazar.localhost` shop e category, product, variant ar stock (batch + movement, 8.12).
 -- Admin product API M4 er staff session chhara 401, tai SQL. Abar chalale kichu bodlay na (slug/sku thakle bad).
+-- Delivery zone (M6, 8.19 item 2): Dhaka er kichu area + Dhaka district-wide ("Onno area"), Gazipur district-wide.
 -- Chobi nai: website `tint` placeholder dekhay (10.10 item 3). Chalano: make dev-seed (shop_owner).
 \set ON_ERROR_STOP on
 BEGIN;
@@ -75,5 +76,19 @@ BEGIN
   END LOOP;
 END
 $$;
+
+-- Delivery zone (8.19 item 2): production e M7 er admin theke; ekhane shudhu local
+INSERT INTO delivery_zones (shop_id, name, district, area, charge, min_order, free_delivery_over, same_city)
+SELECT d.shop_id, z.name::jsonb, z.district, z.area, z.charge, z.min_order, z.free, z.same_city
+FROM shop_domains d, (VALUES
+  ('{"bn":"ধানমন্ডি","en":"Dhanmondi"}', 'Dhaka', 'Dhanmondi', 6000::bigint, 0::bigint, 200000::bigint, true),
+  ('{"bn":"মিরপুর","en":"Mirpur"}', 'Dhaka', 'Mirpur', 6000, 0, 200000, true),
+  ('{"bn":"গুলশান","en":"Gulshan"}', 'Dhaka', 'Gulshan', 6000, 0, 200000, true),
+  ('{"bn":"উত্তরা","en":"Uttara"}', 'Dhaka', 'Uttara', 7000, 0, 200000, true),
+  ('{"bn":"ঢাকা (অন্য এলাকা)","en":"Dhaka (other area)"}', 'Dhaka', NULL, 8000, 0, NULL, true),
+  ('{"bn":"গাজীপুর","en":"Gazipur"}', 'Gazipur', NULL, 12000, 50000, NULL, false)
+) AS z(name, district, area, charge, min_order, free, same_city)
+WHERE d.domain = 'sobujbazar.localhost'
+ON CONFLICT (shop_id, district, area) DO NOTHING;
 
 COMMIT;
