@@ -403,6 +403,7 @@ var (
 	allRoles   = []string{"owner", "admin", "staff", "vendor_owner", "vendor_staff"}
 	shopAdmin  = []string{"owner", "admin"}
 	vendorProd = []string{"owner", "admin", "vendor_owner"}
+	shopRoles  = []string{"owner", "admin", "staff"}
 )
 
 type routeRoles struct {
@@ -432,6 +433,15 @@ var adminRoutes = map[string]routeRoles{
 	"PATCH /api/admin/products/{id}":         {roles: vendorProd},
 	"POST /api/admin/products/{id}/variants": {roles: vendorProd},
 	"PATCH /api/admin/variants/{id}":         {roles: vendorProd},
+
+	// order (7.7, 11.2, 11.7 item 13 vii): dekha shob role (vendor nijer); order confirm/cancel/note shop er role
+	// (cancel e staff 403 service e); fulfillment transition er role niyom service e (cancel staff/vendor_staff 403)
+	"GET /api/admin/orders":                        {roles: allRoles},
+	"GET /api/admin/orders/{id}":                   {roles: allRoles},
+	"POST /api/admin/orders/{id}/transition":       {roles: shopRoles},
+	"POST /api/admin/orders/{id}/notes":            {roles: shopRoles},
+	"GET /api/admin/fulfillments":                  {roles: allRoles},
+	"POST /api/admin/fulfillments/{id}/transition": {roles: allRoles},
 }
 
 // registeredAdminRoutes: backend er (test chhara) Go source e "METHOD /api/admin/..." pattern gulo. ServeMux

@@ -128,6 +128,8 @@ func newCheckout(t *testing.T) *checkoutFx {
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
 	login := httpx.RequireCustomer(log, auth.LookupSession(f.d))
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(login(h)) })
+	// admin (M7a): staff context test e request e (httpx.WithStaff); RequireRole handler e
+	oh.AdminRoutes(mux, func(h http.Handler) http.Handler { return h })
 	// login (14.2 test 11: guest order → OTP login → /api/me/orders)
 	ah := auth.NewHandlers(f.d, log, otpSecret, ts, func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
 		return cart.Merge(ctx, tx, shopID, userID, key, locale)
