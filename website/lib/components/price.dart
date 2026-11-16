@@ -22,7 +22,7 @@ class Price extends StatelessComponent {
   Component build(BuildContext context) {
     final site = Site.of(context);
     return p(classes: 'flex flex-wrap items-baseline gap-x-2', [
-      span(classes: 'font-heading text-lg font-medium text-ink', [
+      span(classes: 'font-heading text-lg font-medium text-ink tabular-nums', [
         .text(site.taka(price)),
         if (perKg) span(classes: 'font-body text-sm font-normal text-muted', [.text(' ${site.t('product.per_kg')}')]),
       ]),

@@ -151,10 +151,19 @@ class _Line extends StatelessComponent {
     final site = Site.of(context);
     final x = item;
     // qty 1 e − na (bad alada button), max_quantity (min(stock, 50), 8.4) e + na.
-    Component step(String label, int to, bool off) => button(
+    // + bondho keno: lekha (disabled/rong only na); stock shesh (max 0) e badge-i bole.
+    final atMax = x.inStock && x.maxQuantity > 0 && x.quantity >= x.maxQuantity;
+    final maxId = 'cart-max-${x.variantId}';
+    Component step(String label, int to, bool off, [String? describedBy]) => button(
       type: ButtonType.submit,
       classes: 'btn btn-ghost min-w-11 px-0 text-lg',
-      attributes: {'name': 'quantity', 'value': '$to', 'aria-label': label, if (off) 'disabled': ''},
+      attributes: {
+        'name': 'quantity',
+        'value': '$to',
+        'aria-label': label,
+        if (off) 'disabled': '',
+        'aria-describedby': ?describedBy,
+      },
       [.text(to < x.quantity ? '−' : '+')],
     );
     return li(classes: 'flex gap-3 py-4', [
@@ -175,12 +184,16 @@ class _Line extends StatelessComponent {
             [
               step(site.t('cart.decrease'), x.quantity - 1, x.quantity <= 1),
               span(classes: 'min-w-8 text-center', [.text(site.number(x.quantity))]),
-              step(site.t('cart.increase'), x.quantity + 1, x.quantity >= x.maxQuantity),
+              step(site.t('cart.increase'), x.quantity + 1, x.quantity >= x.maxQuantity, atMax ? maxId : null),
             ],
           ),
           form(action: '/_/cart/items/${x.variantId}/delete', method: FormMethod.post, [
             button(type: ButtonType.submit, classes: 'btn btn-ghost px-2', [.text(site.t('cart.remove'))]),
           ]),
+          if (atMax)
+            p(id: maxId, classes: 'w-full text-sm text-muted', [
+              .text(site.t('cart.max_quantity', {'count': site.number(x.maxQuantity)})),
+            ]),
           p(classes: 'ml-auto font-heading font-medium', [
             .text(site.taka(x.lineTotal)),
             if (x.variableWeight && x.inStock)

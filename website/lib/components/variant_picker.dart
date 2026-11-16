@@ -84,7 +84,7 @@ class VariantPicker extends StatelessComponent {
         for (final v in variants)
           label(
             // `.chip:has(:checked)` bachai kora ta primary-soft (JS chhara-o).
-            classes: 'chip cursor-pointer has-[:focus-visible]:outline',
+            classes: 'chip cursor-pointer',
             [
               input(
                 type: InputType.radio,

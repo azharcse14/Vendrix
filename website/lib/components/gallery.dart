@@ -44,7 +44,9 @@ class Gallery extends StatelessComponent {
             a(
               href: '#img-${i + 1}',
               classes: 'block w-16 overflow-hidden rounded-sm border border-line hover:border-primary',
-              attributes: {'aria-label': '${site.t('product.images')} ${site.number(i + 1)}'},
+              attributes: {
+                'aria-label': site.t('product.image_n', {'n': site.number(i + 1)}),
+              },
               [ResponsiveImage(im.storageKey, alt: '', sizes: '64px', width: im.width, height: im.height)],
             ),
           ]),

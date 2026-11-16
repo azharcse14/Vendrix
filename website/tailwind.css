@@ -35,6 +35,8 @@
 
   /* input/select/textarea ekoi; 16px jate iOS zoom na kore (10.5). */
   .input { @apply block min-h-11 w-full rounded-sm border border-line bg-surface px-3 py-2 text-base text-ink; }
+  /* Bhul field (client `aria-invalid` dey): border danger, JS +0; field er alada lekha pore. */
+  .input[aria-invalid="true"] { @apply border-danger; }
   /* Chevron gradient diye: data-URI SVG e currentColor kaj kore na, hex lagto (Rule 4). */
   select.input {
     appearance: none; padding-right: 2.5rem; background-repeat: no-repeat; background-size: 0.375rem 0.375rem;
@@ -60,6 +62,8 @@
 
   .chip { @apply inline-flex min-h-11 items-center gap-1 rounded-full border border-line bg-surface px-3 text-sm text-ink transition-colors duration-150; }
   .chip[aria-pressed="true"], .chip[aria-current], .chip:has(:checked) { @apply border-primary bg-primary-soft text-primary; }
+  /* Bhetorer radio/checkbox sr-only, tai focus ring chip e. */
+  .chip:has(:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
   .section-title { @apply mb-4 flex items-center justify-between gap-3; }
 }

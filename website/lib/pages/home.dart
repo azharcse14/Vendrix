@@ -8,6 +8,7 @@ import '../components/icon.dart';
 import '../components/product_card.dart';
 import '../components/responsive_image.dart';
 import '../components/site.dart';
+import '../components/trust.dart';
 import '../services/link.dart';
 import 'status.dart';
 import '../seo/meta.dart';
@@ -149,15 +150,4 @@ ProductCard _card(Product p) {
     p.reviewCount,
     p.images.isEmpty ? null : p.images.first.storageKey,
   );
-}
-
-/// Trust (10.5 v1.38 item 3, home ar product): shudhu settings e ja shotto. Delivery din na (zone er notun API call
-/// lagto); certification ekhane na (settings e shop er certificate nai, shudhu product e).
-List<(Icons, String)> shopTrust(Site site) {
-  final s = site.settings;
-  final returnDays = s.returnWindowDays;
-  return [
-    if (s.paymentMethods.contains('cod')) (Icons.cash, site.t('home.trust.cod')),
-    if (returnDays != null) (Icons.check, site.t('home.trust.return', {'days': site.number(returnDays)})),
-  ];
 }

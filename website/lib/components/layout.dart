@@ -140,7 +140,7 @@ class _Header extends StatelessComponent {
   }
 }
 
-// Cart M5 e (10.10 item 6, badge 10.12 item 5); Account M4 e (v1.19). Icon + choto lekha, active pill (plan 4).
+// Cart M5 e (10.10 item 6, badge 10.12 item 5); Account M4 e (v1.19). Icon + lekha (Bangla min 14px, 9.6), active pill.
 class _BottomNav extends StatelessComponent {
   const _BottomNav();
 
@@ -153,7 +153,7 @@ class _BottomNav extends StatelessComponent {
       return a(
         href: target.startsWith('#') ? '${site.href('/')}$target' : site.href(target),
         classes:
-            'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 text-xs '
+            'flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-sm '
             '${on ? 'text-primary' : 'text-muted'}',
         attributes: _current(path, target),
         [
@@ -167,7 +167,7 @@ class _BottomNav extends StatelessComponent {
       classes:
           'fixed inset-x-0 bottom-0 flex h-[calc(3.5rem+env(safe-area-inset-bottom))] border-t border-line '
           'bg-surface pb-[env(safe-area-inset-bottom)] md:hidden',
-      attributes: {'aria-label': site.t('nav.main')},
+      attributes: {'aria-label': site.t('nav.bottom')},
       [
         item('/', Icons.home, 'nav.home'),
         item('#categories', Icons.category, 'nav.category'),

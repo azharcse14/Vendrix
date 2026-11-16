@@ -164,7 +164,9 @@ class CheckoutPage extends AsyncStatelessComponent {
           // Mobile e upore bondho summary (JS chhara); desktop e dan er card e line.
           details(classes: 'card mb-4 lg:hidden', [
             summary(classes: 'flex min-h-11 cursor-pointer items-center justify-between gap-2', [
-              span([.text('${site.t('checkout.summary')} (${site.number(cart.items.length)})')]),
+              span([
+                .text(site.t('checkout.summary', {'count': site.number(cart.items.length)})),
+              ]),
               const Icon(Icons.chevronDown),
             ]),
             lines(),
