@@ -256,3 +256,313 @@ func insertPlaced(ctx context.Context, tx *sql.Tx, shopID, orderID, userID int64
 		shopID, c.ID, orderID, phone)
 	return err
 }
+
+// Admin list tab (11.7 item 13 vii).
+const (
+	TabAwaitingConfirm = "awaiting_confirm" // COD pending
+	TabDeadlineSoon    = "deadline_soon"    // delivery_deadline < now + 24h, shesh hoyni
+)
+
+// ListFilter: admin order list; Vendor 0 = shob, > 0 oi vendor er fulfillment ache emon order, -1 = kichu na.
+// VendorRole: vendor staff (taka nijer, ShopView na). Phone (normalize kora) ba Number (boro hater), ekta.
+type ListFilter struct {
+	Status, Tab, From, To, Phone, Number string
+	Risk, VendorRole                     bool
+	Vendor                               int64
+}
+
+// ShopView: shudhu shop staff (vendor role e nil: payment, customer, risk, order er puro taka na; 7.7).
+type ShopView struct {
+	CustomerName   string          `json:"customer_name"`
+	CustomerPhone  string          `json:"customer_phone"`
+	PaymentMethod  string          `json:"payment_method"`
+	PaymentStatus  string          `json:"payment_status"`
+	RiskFlags      json.RawMessage `json:"risk_flags"`
+	Subtotal       int64           `json:"subtotal"`
+	Discount       int64           `json:"discount"`
+	DeliveryCharge int64           `json:"delivery_charge"`
+}
+
+// AdminOrder: list er row; Total vendor role e nijer fulfillment er mot.
+type AdminOrder struct {
+	ID               int64      `json:"id"`
+	OrderNumber      string     `json:"order_number"`
+	Status           string     `json:"status"`
+	DisplayStatus    string     `json:"display_status"`
+	RecipientName    string     `json:"recipient_name"`
+	RecipientPhone   string     `json:"recipient_phone"`
+	District         string     `json:"district"`
+	Area             string     `json:"area"`
+	Total            int64      `json:"total"`
+	PlacedAt         time.Time  `json:"placed_at"`
+	DeliveryDeadline *time.Time `json:"delivery_deadline"`
+	*ShopView
+}
+
+// scanAdminOrder: vendor (hide) e ShopView nil.
+func scanAdminOrder(sc func(...any) error, hide bool, extra ...any) (AdminOrder, error) {
+	var o AdminOrder
+	v := &ShopView{}
+	err := sc(append([]any{&o.ID, &o.OrderNumber, &o.Status, &o.DisplayStatus, &o.RecipientName, &o.RecipientPhone,
+		&o.District, &o.Area, &o.Total, &o.PlacedAt, &o.DeliveryDeadline, &v.CustomerName, &v.CustomerPhone,
+		&v.PaymentMethod, &v.PaymentStatus, &v.RiskFlags, &v.Subtotal, &v.Discount, &v.DeliveryCharge}, extra...)...)
+	if !hide {
+		o.ShopView = v
+	}
+	return o, err
+}
+
+// listOrders (11.7 item 13 vii): placed_at DESC. Rule 12: static SQL, khali parameter = filter na; count ar list er
+// WHERE ekoi (ekta bodlale duita). $1 shop, $2 vendor role er vendor (taka nijer ongsho; count e shudhu type), $3 vendor
+// (0 = shob), $4 status, $5 tab, $6 risk, $7 phone, $8 number, $9/$10 from/to (shop timezone er din).
+func listOrders(ctx context.Context, d *sql.DB, shopID int64, f ListFilter, page, limit int) ([]AdminOrder, int64, error) {
+	own := int64(0)
+	if f.VendorRole {
+		own = f.Vendor
+	}
+	args := []any{shopID, own, f.Vendor, f.Status, f.Tab, f.Risk, f.Phone, f.Number, f.From, f.To}
+	var total int64
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM orders o
+		WHERE o.shop_id = $1 AND $2::bigint IS NOT NULL
+		AND ($3::bigint = 0 OR EXISTS (SELECT 1 FROM order_fulfillments f WHERE f.shop_id = o.shop_id AND f.order_id = o.id AND f.vendor_id = $3))
+		AND ($4::text = '' OR o.display_status = $4)
+		AND ($5::text <> 'awaiting_confirm' OR (o.payment_method = 'cod' AND o.status = 'pending'))
+		AND ($5::text <> 'deadline_soon' OR (o.delivery_deadline < now() + interval '24 hours'
+			AND o.display_status NOT IN ('delivered', 'returned', 'cancelled')))
+		AND (NOT $6::boolean OR o.risk_flags <> '[]'::jsonb)
+		AND ($7::text = '' OR o.customer_phone = $7::text OR o.recipient_phone = $7::text)
+		AND ($8::text = '' OR o.order_number = $8)
+		AND ($9::text = '' OR o.placed_at >= NULLIF($9, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))
+		AND ($10::text = '' OR o.placed_at < (NULLIF($10, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))`,
+		args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := d.QueryContext(ctx, `SELECT o.id, o.order_number, o.status, o.display_status, o.recipient_name, o.recipient_phone,
+		o.ship_district, o.ship_area, CASE WHEN $2 > 0 THEN (SELECT COALESCE(sum(f.total), 0) FROM order_fulfillments f
+			WHERE f.shop_id = o.shop_id AND f.order_id = o.id AND f.vendor_id = $2) ELSE o.total END,
+		o.placed_at, o.delivery_deadline, o.customer_name, o.customer_phone, o.payment_method, o.payment_status, o.risk_flags,
+		o.subtotal, o.discount, o.delivery_charge
+		FROM orders o WHERE o.shop_id = $1
+		AND ($3::bigint = 0 OR EXISTS (SELECT 1 FROM order_fulfillments f WHERE f.shop_id = o.shop_id AND f.order_id = o.id AND f.vendor_id = $3))
+		AND ($4::text = '' OR o.display_status = $4)
+		AND ($5::text <> 'awaiting_confirm' OR (o.payment_method = 'cod' AND o.status = 'pending'))
+		AND ($5::text <> 'deadline_soon' OR (o.delivery_deadline < now() + interval '24 hours'
+			AND o.display_status NOT IN ('delivered', 'returned', 'cancelled')))
+		AND (NOT $6::boolean OR o.risk_flags <> '[]'::jsonb)
+		AND ($7::text = '' OR o.customer_phone = $7::text OR o.recipient_phone = $7::text)
+		AND ($8::text = '' OR o.order_number = $8)
+		AND ($9::text = '' OR o.placed_at >= NULLIF($9, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))
+		AND ($10::text = '' OR o.placed_at < (NULLIF($10, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))
+		ORDER BY o.placed_at DESC, o.id DESC LIMIT $11 OFFSET $12`, append(args, limit, (page-1)*limit)...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []AdminOrder
+	for rows.Next() {
+		o, err := scanAdminOrder(rows.Scan, f.VendorRole)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, o)
+	}
+	return out, total, rows.Err()
+}
+
+// AdminItem: order_items er snapshot (cost_price, commission na).
+type AdminItem struct {
+	ID             int64           `json:"id"`
+	FulfillmentID  int64           `json:"fulfillment_id"`
+	VariantID      int64           `json:"variant_id"`
+	ProductName    json.RawMessage `json:"product_name"`
+	VariantLabel   json.RawMessage `json:"variant_label"`
+	SKU            string          `json:"sku"`
+	UnitPrice      int64           `json:"unit_price"`
+	Quantity       int             `json:"quantity"`
+	VariableWeight bool            `json:"variable_weight"`
+	OrderedWeightG *int64          `json:"ordered_weight_g"`
+	PackedWeightG  *int64          `json:"packed_weight_g"`
+	LineTotal      int64           `json:"line_total"`
+	DiscountShare  int64           `json:"discount_share"`
+	Status         string          `json:"status"`
+}
+
+type AdminFulfillment struct {
+	ID             int64       `json:"id"`
+	VendorID       int64       `json:"vendor_id"`
+	Seq            int         `json:"seq"`
+	Status         string      `json:"status"`
+	Subtotal       int64       `json:"subtotal"`
+	Discount       int64       `json:"discount"`
+	DeliveryCharge int64       `json:"delivery_charge"`
+	Total          int64       `json:"total"`
+	Items          []AdminItem `json:"items"`
+}
+
+type HistoryRow struct {
+	FulfillmentID *int64    `json:"fulfillment_id"`
+	From          *string   `json:"from_status"`
+	To            string    `json:"to_status"`
+	ActorType     string    `json:"actor_type"`
+	ActorID       *int64    `json:"actor_id"`
+	Note          *string   `json:"note"`
+	At            time.Time `json:"at"`
+}
+
+// OrderDetail: GET /api/admin/orders/{id}; vendor role e nijer fulfillment/item/history, note na.
+type OrderDetail struct {
+	AdminOrder
+	Address      string             `json:"address"`
+	Note         *string            `json:"note"`
+	CancelReason *string            `json:"cancel_reason"`
+	Fulfillments []AdminFulfillment `json:"fulfillments"`
+	History      []HistoryRow       `json:"history"`
+	Notes        []Note             `json:"notes,omitempty"`
+}
+
+// orderDetail: vendor (> 0 ba -1) er fulfillment na thakle ErrNotFound (onno vendor er order ache kina bola na).
+func orderDetail(ctx context.Context, d *sql.DB, shopID, orderID, vendor int64) (OrderDetail, error) {
+	var o OrderDetail
+	own := max(vendor, 0)
+	var err error
+	o.AdminOrder, err = scanAdminOrder(d.QueryRowContext(ctx, `SELECT o.id, o.order_number, o.status, o.display_status,
+		o.recipient_name, o.recipient_phone, o.ship_district, o.ship_area, CASE WHEN $2 > 0 THEN (SELECT COALESCE(sum(f.total), 0)
+			FROM order_fulfillments f WHERE f.shop_id = o.shop_id AND f.order_id = o.id AND f.vendor_id = $2) ELSE o.total END,
+		o.placed_at, o.delivery_deadline, o.customer_name, o.customer_phone, o.payment_method, o.payment_status, o.risk_flags,
+		o.subtotal, o.discount, o.delivery_charge, o.ship_address, o.note, o.cancel_reason
+		FROM orders o WHERE o.shop_id = $1 AND o.id = $3`, shopID, own, orderID).Scan, vendor != 0, &o.Address, &o.Note, &o.CancelReason)
+	if errors.Is(err, sql.ErrNoRows) {
+		return o, ErrNotFound
+	}
+	if err != nil {
+		return o, err
+	}
+	rows, err := d.QueryContext(ctx, `SELECT id, vendor_id, seq, status, subtotal, discount, delivery_charge, total
+		FROM order_fulfillments WHERE shop_id = $1 AND order_id = $2 AND ($3 = 0 OR vendor_id = $3) ORDER BY id`, shopID, orderID, vendor)
+	if err != nil {
+		return o, err
+	}
+	idx := map[int64]int{}
+	for rows.Next() {
+		var f AdminFulfillment
+		if err := rows.Scan(&f.ID, &f.VendorID, &f.Seq, &f.Status, &f.Subtotal, &f.Discount, &f.DeliveryCharge, &f.Total); err != nil {
+			rows.Close()
+			return o, err
+		}
+		f.Items = []AdminItem{}
+		idx[f.ID] = len(o.Fulfillments)
+		o.Fulfillments = append(o.Fulfillments, f)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return o, err
+	}
+	if vendor != 0 && len(o.Fulfillments) == 0 {
+		return OrderDetail{}, ErrNotFound
+	}
+	rows, err = d.QueryContext(ctx, `SELECT id, fulfillment_id, variant_id, product_name, variant_label, sku, unit_price, quantity,
+		variable_weight, ordered_weight_g, packed_weight_g, line_total, discount_share, status
+		FROM order_items WHERE shop_id = $1 AND order_id = $2 AND ($3 = 0 OR vendor_id = $3) ORDER BY id`, shopID, orderID, vendor)
+	if err != nil {
+		return o, err
+	}
+	for rows.Next() {
+		var it AdminItem
+		if err := rows.Scan(&it.ID, &it.FulfillmentID, &it.VariantID, &it.ProductName, &it.VariantLabel, &it.SKU, &it.UnitPrice,
+			&it.Quantity, &it.VariableWeight, &it.OrderedWeightG, &it.PackedWeightG, &it.LineTotal, &it.DiscountShare, &it.Status); err != nil {
+			rows.Close()
+			return o, err
+		}
+		if i, ok := idx[it.FulfillmentID]; ok {
+			o.Fulfillments[i].Items = append(o.Fulfillments[i].Items, it)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return o, err
+	}
+	rows, err = d.QueryContext(ctx, `SELECT h.fulfillment_id, h.from_status, h.to_status, h.actor_type, h.actor_id, h.note, h.created_at
+		FROM order_status_history h WHERE h.shop_id = $1 AND h.order_id = $2 AND ($3 = 0 OR h.fulfillment_id IS NULL
+			OR h.fulfillment_id IN (SELECT id FROM order_fulfillments WHERE shop_id = $1 AND order_id = $2 AND vendor_id = $3))
+		ORDER BY h.id`, shopID, orderID, vendor)
+	if err != nil {
+		return o, err
+	}
+	o.History = []HistoryRow{}
+	for rows.Next() {
+		var h HistoryRow
+		if err := rows.Scan(&h.FulfillmentID, &h.From, &h.To, &h.ActorType, &h.ActorID, &h.Note, &h.At); err != nil {
+			rows.Close()
+			return o, err
+		}
+		o.History = append(o.History, h)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil || vendor != 0 {
+		return o, err
+	}
+	rows, err = d.QueryContext(ctx, `SELECT id, staff_id, kind, note, created_at FROM order_notes
+		WHERE shop_id = $1 AND order_id = $2 ORDER BY created_at, id`, shopID, orderID)
+	if err != nil {
+		return o, err
+	}
+	defer rows.Close()
+	o.Notes = []Note{}
+	for rows.Next() {
+		var n Note
+		if err := rows.Scan(&n.ID, &n.StaffID, &n.Kind, &n.Note, &n.CreatedAt); err != nil {
+			return o, err
+		}
+		o.Notes = append(o.Notes, n)
+	}
+	return o, rows.Err()
+}
+
+// FulfillmentRow: GET /api/admin/fulfillments er row (delivery er tottho; payment na).
+type FulfillmentRow struct {
+	ID            int64     `json:"id"`
+	OrderID       int64     `json:"order_id"`
+	OrderNumber   string    `json:"order_number"`
+	VendorID      int64     `json:"vendor_id"`
+	Seq           int       `json:"seq"`
+	Status        string    `json:"status"`
+	Total         int64     `json:"total"`
+	RecipientName string    `json:"recipient_name"`
+	District      string    `json:"district"`
+	Area          string    `json:"area"`
+	PlacedAt      time.Time `json:"placed_at"`
+}
+
+// listFulfillments: vendor 0 = shob, -1 = kichu na; date = order er din (shop timezone).
+func listFulfillments(ctx context.Context, d *sql.DB, shopID int64, status, date string, vendor int64, page, limit int) ([]FulfillmentRow, int64, error) {
+	args := []any{shopID, vendor, status, date}
+	var total int64
+	if err := d.QueryRowContext(ctx, `SELECT count(*) FROM order_fulfillments f JOIN orders o ON o.shop_id = f.shop_id AND o.id = f.order_id
+		WHERE f.shop_id = $1 AND ($2::bigint = 0 OR f.vendor_id = $2) AND ($3::text = '' OR f.status = $3)
+		AND ($4::text = '' OR (o.placed_at >= NULLIF($4, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1)
+			AND o.placed_at < (NULLIF($4, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1)))`,
+		args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := d.QueryContext(ctx, `SELECT f.id, f.order_id, o.order_number, f.vendor_id, f.seq, f.status, f.total, o.recipient_name,
+		o.ship_district, o.ship_area, o.placed_at
+		FROM order_fulfillments f JOIN orders o ON o.shop_id = f.shop_id AND o.id = f.order_id
+		WHERE f.shop_id = $1 AND ($2::bigint = 0 OR f.vendor_id = $2) AND ($3::text = '' OR f.status = $3)
+		AND ($4::text = '' OR (o.placed_at >= NULLIF($4, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1)
+			AND o.placed_at < (NULLIF($4, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1)))
+		ORDER BY o.placed_at DESC, f.id DESC LIMIT $5 OFFSET $6`, append(args, limit, (page-1)*limit)...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var out []FulfillmentRow
+	for rows.Next() {
+		var x FulfillmentRow
+		if err := rows.Scan(&x.ID, &x.OrderID, &x.OrderNumber, &x.VendorID, &x.Seq, &x.Status, &x.Total, &x.RecipientName,
+			&x.District, &x.Area, &x.PlacedAt); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, x)
+	}
+	return out, total, rows.Err()
+}

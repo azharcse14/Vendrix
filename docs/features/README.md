@@ -13,7 +13,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | chalu |
 | Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche |
 | Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche |
-| Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant) |
+| Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant, order admin) |
 | Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator, website ar checkout/order er lekha) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
 | API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4, 7.5 | M2, M4, M5, M6 | cholche (catalog, settings, account, cart, wishlist, checkout, order) |
@@ -23,7 +23,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora SMS provider ar M10 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5, M6 | chalu (OTP SMS, cleanup, `cart.cleanup`, order SMS, `alert.new_order`, auto-cancel; SMS provider ar alert email M12 e) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
-| Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec; DB e cancel ar confirm, packing/shipment M7 e) |
+| Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec; DB e cancel ar confirm, admin order list/detail/transition/note M7a; packing/shipment M7a er porer step) |
 | Checkout: quote, order, risk/OTP, COD confirm, order page, tracking | [checkout.md](checkout.md) | 7.5, 8.6, 8.7, 8.10, 8.19 | M6 | cholche (quote, order create, checkout OTP, COD confirm, job, order view/track, `/api/me/orders`; online payment M10, admin M7 e) |
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4, M6 | chalu (OTP send/verify, checkout OTP, customer session, guest order jog, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |

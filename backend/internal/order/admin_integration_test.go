@@ -51,7 +51,9 @@ func (f *checkoutFx) admJSON(st httpx.Staff, method, path string, body any, stat
 	f.t.Helper()
 	rec := f.adm(st, method, path, body)
 	var out map[string]any
-	if rec.Code != status || json.Unmarshal(rec.Body.Bytes(), &out) != nil {
+	dec := json.NewDecoder(rec.Body)
+	dec.UseNumber() // taka ar id int64 (Rule 2: order package e float na)
+	if rec.Code != status || dec.Decode(&out) != nil {
 		f.t.Fatalf("%s %s: chai %d, pelam %d %s", method, path, status, rec.Code, rec.Body.String())
 	}
 	return out
@@ -62,17 +64,19 @@ func (f *checkoutFx) number(oid int64) string {
 }
 
 // listNumbers: GET list er order_number (kram e) ar total.
-func (f *checkoutFx) listNumbers(st httpx.Staff, query string) ([]string, float64) {
+func (f *checkoutFx) listNumbers(st httpx.Staff, query string) ([]string, json.Number) {
 	f.t.Helper()
 	m := f.admJSON(st, "GET", "/api/admin/orders"+query, nil, http.StatusOK)
 	var out []string
 	for _, it := range m["items"].([]any) {
 		out = append(out, it.(map[string]any)["order_number"].(string))
 	}
-	return out, m["total"].(float64)
+	return out, m["total"].(json.Number)
 }
 
 func s(n int64) string { return strconv.FormatInt(n, 10) }
+
+func num(n int64) json.Number { return json.Number(s(n)) }
 
 // TestAdminOrderListIntegration (7.7, 11.7 item 13 vii, ix): filter status = display_status, tab "confirm er
 // opekkhay" (COD pending), "deadline kache", risk=1, q = order number ba phone (customer/recipient), from/to shop
@@ -91,7 +95,7 @@ func TestAdminOrderListIntegration(t *testing.T) {
 	o2, _ := f.seedOrder("cod", "unpaid", "confirmed", one(f.vnd, rice, "open"))
 	o3, _ := f.seedOrder("sslcommerz", "unpaid", "pending", one(f.vnd, rice, "open"))
 	o4, _ := f.seedOrder("cod", "unpaid", "confirmed", one(f.vnd, rice, "packed"))
-	o5, _ := f.seedOrder("cod", "paid", "confirmed", one(f.vnd, rice, "delivered"))
+	o5, _ := f.seedOrder("cod", "unpaid", "confirmed", one(f.vnd, rice, "delivered"))
 	o6, f6 := f.seedOrder("cod", "unpaid", "confirmed", one(vx, rx, "open"), seedF{vendor: vy, status: "open", items: [][2]int64{{ry, 2}}})
 	for _, x := range []struct {
 		id       int64
@@ -144,7 +148,7 @@ func TestAdminOrderListIntegration(t *testing.T) {
 			t.Errorf("%s %q: %v, chai %v", c.st.Role, c.query, got, c.want)
 		}
 	}
-	if _, total := f.listNumbers(owner, "?limit=2&page=2"); total != 6 {
+	if _, total := f.listNumbers(owner, "?limit=2&page=2"); total != "6" {
 		t.Errorf("total %v", total)
 	}
 	for _, q := range []string{"?limit=101", "?status=nai", "?tab=nai", "?from=11-01-2026", "?to=2026-13-01", "?risk=2", "?vendor_id=x"} {
@@ -155,7 +159,7 @@ func TestAdminOrderListIntegration(t *testing.T) {
 	m := f.admJSON(staff, "GET", "/api/admin/orders?q="+f.number(o2), nil, http.StatusOK)
 	row := m["items"].([]any)[0].(map[string]any)
 	if row["customer_phone"] != "+8801811000002" || row["payment_method"] != "cod" || row["payment_status"] != "unpaid" ||
-		row["total"] != float64(10000) || row["display_status"] != "confirmed" || row["id"] != float64(o2) {
+		row["total"] != num(10000) || row["display_status"] != "confirmed" || row["id"] != num(o2) {
 		t.Errorf("shop staff row: %v", row)
 	}
 
@@ -177,7 +181,7 @@ func TestAdminOrderListIntegration(t *testing.T) {
 			t.Errorf("vendor row e %s: %v", k, row)
 		}
 	}
-	if row["total"] != float64(20000) || row["recipient_phone"] == nil {
+	if row["total"] != num(20000) || row["recipient_phone"] == nil {
 		t.Errorf("vendor row total/recipient: %v", row)
 	}
 
@@ -187,7 +191,7 @@ func TestAdminOrderListIntegration(t *testing.T) {
 		t.Errorf("fulfillments packed: %v", fl)
 	}
 	fl = f.admJSON(vo, "GET", "/api/admin/fulfillments", nil, http.StatusOK)
-	if items := fl["items"].([]any); len(items) != 1 || items[0].(map[string]any)["id"] != float64(f6[1]) {
+	if items := fl["items"].([]any); len(items) != 1 || items[0].(map[string]any)["id"] != num(f6[1]) {
 		t.Errorf("vendor fulfillments: %v", fl)
 	}
 	fl = f.admJSON(owner, "GET", "/api/admin/fulfillments?date=2026-01-10", nil, http.StatusOK)
@@ -239,7 +243,7 @@ func TestAdminOrderTransitionIntegration(t *testing.T) {
 	// note
 	nu := "/api/admin/orders/" + s(online) + "/notes"
 	note := f.admJSON(staff, "POST", nu, map[string]string{"kind": "call", "note": " customer phone dhoreni "}, http.StatusCreated)
-	if note["kind"] != "call" || note["note"] != "customer phone dhoreni" || note["staff_id"] != float64(staff.ID) {
+	if note["kind"] != "call" || note["note"] != "customer phone dhoreni" || note["staff_id"] != num(staff.ID) {
 		t.Errorf("note: %v", note)
 	}
 	f.admJSON(owner, "POST", nu, map[string]string{"note": "abar"}, http.StatusCreated)
@@ -356,14 +360,14 @@ func TestAdminVendorIsolationIntegration(t *testing.T) {
 		t.Errorf("Y er fulfillment bodleche: %s", s)
 	}
 	fl := f.admJSON(vs, "GET", "/api/admin/fulfillments", nil, http.StatusOK)
-	if items := fl["items"].([]any); len(items) != 1 || items[0].(map[string]any)["id"] != float64(fm[0]) {
+	if items := fl["items"].([]any); len(items) != 1 || items[0].(map[string]any)["id"] != num(fm[0]) {
 		t.Errorf("vendor fulfillments: %v", fl)
 	}
 
 	d := f.admJSON(vs, "GET", "/api/admin/orders/"+s(om), nil, http.StatusOK)
 	fs := d["fulfillments"].([]any)
-	if len(fs) != 1 || fs[0].(map[string]any)["id"] != float64(fm[0]) || len(fs[0].(map[string]any)["items"].([]any)) != 1 ||
-		d["total"] != float64(10000) {
+	if len(fs) != 1 || fs[0].(map[string]any)["id"] != num(fm[0]) || len(fs[0].(map[string]any)["items"].([]any)) != 1 ||
+		d["total"] != num(10000) {
 		t.Errorf("mixed detail: %v", d)
 	}
 	for _, k := range []string{"customer_phone", "customer_name", "payment_method", "payment_status", "subtotal", "notes", "risk_flags"} {
@@ -372,7 +376,7 @@ func TestAdminVendorIsolationIntegration(t *testing.T) {
 		}
 	}
 	for _, h := range d["history"].([]any) {
-		if fid, ok := h.(map[string]any)["fulfillment_id"].(float64); ok && int64(fid) != fm[0] {
+		if fid := h.(map[string]any)["fulfillment_id"]; fid != nil && fid != num(fm[0]) {
 			t.Errorf("onno vendor er history: %v", h)
 		}
 	}
@@ -393,7 +397,7 @@ func TestAdminShopIsolationIntegration(t *testing.T) {
 	wantErr(t, "note", f.adm(ob, "POST", "/api/admin/orders/"+s(oid)+"/notes", map[string]string{"note": "x"}), http.StatusNotFound, "not_found")
 	wantErr(t, "fulfillment", f.adm(ob, "POST", "/api/admin/fulfillments/"+s(fs[0])+"/transition", map[string]string{"to": "cancelled"}),
 		http.StatusNotFound, "not_found")
-	if got, total := f.listNumbers(ob, ""); got != nil || total != 0 {
+	if got, total := f.listNumbers(ob, ""); got != nil || total != "0" {
 		t.Errorf("b er list: %v", got)
 	}
 	if got, _ := f.listNumbers(ob, "?q="+f.number(oid)); got != nil {

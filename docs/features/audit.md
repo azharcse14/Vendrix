@@ -4,7 +4,7 @@ Design: 12 (Operation 3), 6.1, 6.7 · Milestone: M1 · Code: `backend/internal/a
 
 ## Ki kore
 
-Protiti admin kaj (category, product, variant bodol; pore order, settings) `audit_logs` e ek row rakhe: ke, kon shop e, ki, ager ar porer obostha, IP. Owner pore dekhte pare ke ki bodleche.
+Protiti admin kaj (category, product, variant bodol; order transition, note, fulfillment transition ([order-status.md](order-status.md)); pore settings) `audit_logs` e ek row rakhe: ke, kon shop e, ki, ager ar porer obostha, IP. Owner pore dekhte pare ke ki bodleche.
 
 ## Kivabe kaj kore
 

@@ -88,6 +88,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	oh := order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret, OTPIP: otpIP})
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
+	oh.AdminRoutes(mux, staff)
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
