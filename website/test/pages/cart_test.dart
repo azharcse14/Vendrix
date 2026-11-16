@@ -38,24 +38,26 @@ void main() {
     int qty, {
     bool weight = false,
     bool inStock = true,
+    int max = 10,
+    String? image,
   }) => {
     'variant_id': id,
     'product_slug': slug,
     'name': name,
     'variant_label': label,
-    'image': null,
+    'image': image,
     'unit_price': price,
     'compare_at_price': null,
     'variable_weight': weight,
     'quantity': qty,
-    'max_quantity': 10,
+    'max_quantity': max,
     'in_stock': inStock,
     'line_total': inStock ? price * qty : 0,
   };
   final cart = {
     'items': [
-      item(8, 'red-rice', 'লাল চাল', '৫ কেজি', 85000, 2),
-      item(9, 'rui', 'রুই মাছ', '', 50000, 1, weight: true),
+      item(8, 'red-rice', 'লাল চাল', '৫ কেজি', 85000, 2, image: 'p/rice.jpg'),
+      item(9, 'rui', 'রুই মাছ', '', 50000, 1, weight: true, max: 1),
       item(7, 'red-rice', 'লাল চাল', '১ কেজি', 18000, 1, inStock: false),
     ],
     'count': 3,
@@ -129,17 +131,9 @@ void main() {
       expect(doc.querySelector('meta[name="robots"]')!.attributes['content'], 'noindex');
       expect(doc.querySelector('a[href="/p/red-rice"]'), isNotNull);
 
-      // Qty: JS chhara POST → BFF PATCH (10.9); shima API er max_quantity.
+      // Qty: JS chhara POST → BFF PATCH (10.9); stepper er test niche (MU U7).
       final qty = doc.querySelector('form[action="/_/cart/items/8"]')!;
       expect(qty.attributes['method'], 'post');
-      final input = qty.querySelector('input[name="quantity"]')!;
-      expect(input.attributes['type'], 'number');
-      expect(input.attributes['value'], '2');
-      expect(input.attributes['min'], '1');
-      expect(input.attributes['max'], '10');
-      expect(input.classes, contains('text-base'));
-      expect(qty.querySelector('button[type="submit"]')!.text, t.t('cart.update'));
-      expect(input.parent!.localName, 'label'); // 10.7
       final del = doc.querySelector('form[action="/_/cart/items/8/delete"]')!;
       expect(del.attributes['method'], 'post');
       expect(del.querySelector('button[type="submit"]')!.text, t.t('cart.remove'));
@@ -155,6 +149,52 @@ void main() {
       expect(text, contains(t.t('product.out_of_stock')));
       // M6 e checkout link (10.12 item 4 er "M6 porjonto lukano" shesh; checkout_test e).
       expect(doc.querySelector('a[href="/checkout"]'), isNotNull);
+    });
+
+    // MU U7 (10.5 v1.38, plan 5 "Cart line"): number input + update er bodole JS chhara − / + stepper.
+    test('stepper: duita submit button name=quantity, value qty−1 / qty+1, POST BFF path', () async {
+      final (_, _, doc) = await page('/cart', cookie: '__Host-cart=$key');
+      expect(doc.querySelector('input[name="quantity"]'), isNull);
+      final form = doc.querySelector('form[action="/_/cart/items/8"]')!;
+      expect(form.attributes['method'], 'post');
+      final steps = form.querySelectorAll('button[type="submit"][name="quantity"]');
+      expect(steps.map((b) => b.attributes['value']), ['1', '3']);
+      expect(steps.map((b) => b.attributes['aria-label']), [t.t('cart.decrease'), t.t('cart.increase')]);
+      expect(steps.any((b) => b.attributes.containsKey('disabled')), isFalse);
+      expect(form.text, contains('২')); // ekhon er qty dekha
+    });
+
+    test('stepper er shima: qty 1 e − disabled, max_quantity te + disabled (8.4)', () async {
+      final (_, _, doc) = await page('/cart', cookie: '__Host-cart=$key');
+      final steps = doc.querySelectorAll('form[action="/_/cart/items/9"] button[name="quantity"]');
+      expect(steps.map((b) => b.attributes['value']), ['0', '2']);
+      expect(steps.every((b) => b.attributes.containsKey('disabled')), isTrue);
+    });
+
+    test('line e thumbnail (alt khali, naam pashe) ba placeholder', () async {
+      final (_, _, doc) = await page('/cart', cookie: '__Host-cart=$key');
+      dom.Element line(int id) =>
+          doc.querySelectorAll('li').firstWhere((li) => li.querySelector('form[action="/_/cart/items/$id"]') != null);
+      final img = line(8).querySelector('img')!;
+      expect(img.attributes['alt'], '');
+      expect(img.attributes['src'], contains('p/rice.jpg'));
+      expect(line(9).querySelector('img'), isNull);
+      expect(line(9).querySelector('[aria-hidden="true"] svg'), isNotNull);
+    });
+
+    test('summary: subtotal ar checkout link ek section e', () async {
+      final (_, _, doc) = await page('/cart', cookie: '__Host-cart=$key');
+      final summary = doc.querySelector('section[aria-label="${t.t('cart.subtotal')}"]')!;
+      expect(summary.text, contains('৳২,২০০'));
+      expect(summary.querySelector('a[href="/checkout"]')!.text, t.t('cart.checkout'));
+    });
+
+    test('empty state: icon, lekha, category te link', () async {
+      final (_, _, doc) = await page('/cart');
+      final text = doc.querySelectorAll('p').firstWhere((p) => p.text == t.t('cart.empty'));
+      final box = text.parent!;
+      expect(box.querySelector('svg'), isNotNull);
+      expect(box.querySelector('a[href="/#categories"]')!.text, t.t('category.browse'));
     });
 
     test('login (__Host-sid): Bearer, X-Cart-Key na', () async {
