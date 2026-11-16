@@ -45,7 +45,8 @@ class Home extends AsyncStatelessComponent {
       if (s.banners.isEmpty)
         div(classes: 'space-y-3 rounded-lg bg-primary-soft px-6 py-10 text-center', [
           h1(classes: 'text-3xl', [.text(s.name.of(site.locale))]),
-          if (tagline.isNotEmpty) p(classes: 'text-muted', [.text(tagline)]),
+          // muted shudhu background/surface e 4.5 (9.3), soft e na; base p 70ch, tai mx-auto.
+          if (tagline.isNotEmpty) p(classes: 'mx-auto', [.text(tagline)]),
           if (shown.isNotEmpty) a(href: '#categories', classes: 'btn btn-primary', [.text(site.t('category.browse'))]),
         ])
       else
