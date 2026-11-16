@@ -54,7 +54,7 @@ api.tomarshop.com {
 admin.tomarshop.com {
   import origin_tls
   header {
-    Content-Security-Policy "frame-ancestors 'none'"
+    Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://api.tomarshop.com; img-src 'self' data: blob: https://img.tomarshop.com; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'"   # v1.41: CanvasKit wasm
     X-Content-Type-Options nosniff
   }
   @app path / /index.html /flutter_bootstrap.js /main.dart.js
@@ -64,6 +64,8 @@ admin.tomarshop.com {
   file_server
 }
 ```
+
+v1.41 (M7, 11.7 item 8, 10): admin CSP e `'wasm-unsafe-eval'` (CanvasKit wasm compile; `unsafe-eval` na), CanvasKit ar font nijer server theke (`--no-web-resources-cdn`); `img-src` e chobir domain (R2 public URL), M12 e asol domain diye milao. Print link er token query string e, tai shop domain er access log e `/print*` ar `/api/print*` er query string bad (Caddy `log` e `uri` er query filter, ba ei path e log na); M7a te local Caddy te, M12 e production e.
 
 Cloudflare proxy on, SSL mode "Full (strict)", Caddy te Cloudflare origin certificate. Server er firewall e 80/443 shudhu Cloudflare er IP range theke (ba Authenticated Origin Pulls), na hole Cloudflare er WAF ar DDoS shurokkha edano jay. Cloudflare er range Caddy-i dekhe (`trusted_proxies`, `client_ip_headers`); Jaspr ar Go API shudhu loopback theke asha `X-Real-IP` mane (3.2).
 
@@ -118,6 +120,7 @@ Jaspr er jonno ekoi rokom `shop-web.service` (ekoi `RestartSec`, `StartLimitInte
 | `TURNSTILE_SECRET` | Cloudflare Turnstile. v1.19: local e Cloudflare er test secret (`1x0000000000000000000000000000000AA` shob shomoy pass; fail test e `2x0000000000000000000000000000000AA`), `env.example` e. v1.20: `APP_ENV` local chhara Cloudflare er test secret (`1x`/`2x`/`3x0000000000000000000000000000000AA`) dile config error, API start hoy na (`local-only` er moto; test secret production e Turnstile bondho kore dito). v1.22: test secret e siteverify er `hostname` check bad (10.11) |
 | `TURNSTILE_SITE_KEY` | v1.19, website (Jaspr): platform er Turnstile widget er site key (10.11); local e test key `1x00000000000000000000AA` |
 | `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | File storage (platform er, Rule 15) |
+| `STORAGE`, `UPLOAD_DIR` | v1.41: `r2` (default) ba `local`; `local` shudhu `APP_ENV=local` e (onno env e config error), `UPLOAD_DIR` default `backend/.data/uploads` (gitignore; 11.7 item 9) |
 | `CF_IP_RANGES` | Cloudflare er IP range (space diye), shudhu Caddy er `trusted_proxies` e (13.3). Go API ar Jaspr eta dekhe na, shudhu loopback theke asha `X-Real-IP` mane (3.2) |
 | `JASPR_INTERNAL_SECRET` | Jaspr → API er `X-Internal-Auth` (API ar website duitatei) |
 | `CONFIRM_SECRET` | v1.4: COD confirm token er HMAC (32 byte random, 8.10). v1.7: rotate korleo ager pathano link kaj kore (hash diye lookup); bhange pending order er SMS resend, tai rotation e pending COD order er `confirm_token_hash` abar likho (8.10 step 5) |

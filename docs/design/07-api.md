@@ -44,7 +44,7 @@ Error er format shob jaygay ekoi:
 | 405 | Path ache, method na | v1.26: `method_not_allowed` (`Allow` header shoho) |
 | 404 | Pawa jayni | `not_found`, `shop_not_found` (v1.10: `closed` shop o) |
 | 423 | Shop bondho | `shop_suspended` |
-| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken`, v1.28: `cart_full` (cart e 50 ta alada variant), v1.29: `wishlist_full` (wishlist e 200), v1.37: `weight_over_limit` (COD pack e +10% er beshi, `details: [{item_id, ordered_weight_g, max_weight_g}]`, 8.11), `out_of_stock` e cart er `details {variant_id, max_quantity}` (8.4) |
+| 409 | Obostha mile na | `out_of_stock`, `coupon_invalid`, `coupon_limit_reached`, `otp_required`, `invalid_transition`, `area_not_served`, `below_min_order`, `vendor_unavailable`, `price_changed`, `payment_required`, v1.10: `slug_taken`, `category_not_empty`, v1.11: `sku_taken`, v1.28: `cart_full` (cart e 50 ta alada variant), v1.29: `wishlist_full` (wishlist e 200), v1.37: `weight_over_limit` (COD pack e +10% er beshi, `details: [{item_id, ordered_weight_g, max_weight_g}]`, 8.11), `out_of_stock` e cart er `details {variant_id, max_quantity}` (8.4), v1.41: `coupon_exists`, `zone_exists` (admin duplicate), `out_of_stock` e pack er `details {item_id, variant_id, available}` ar adjust er `{available}` (11.7) |
 | 422 | Ekoi `Idempotency-Key` e alada body | `idempotency_key_reused` |
 | 429 | Beshi request | `rate_limited` (`Retry-After` header shoho) |
 | 500 | Server er bhul | `internal` (details log e, client e na) |
@@ -154,7 +154,7 @@ v1.31 spashto niyom (M5 er code, review e lekha):
 
 ### 7.7 Admin API (`/api/admin`, staff login lagbe)
 
-v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff context na thakle shob shomoy `401 unauthenticated`). Product ar category er `slug` admin dey (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 80; PATCH e bodlano jay, redirect na; duplicate `409 slug_taken`). `DELETE /categories/{id}` shudhu khali hole (product ba child thakle `409 category_not_empty`; lukate `is_active = false`). Product create e `vendor_id` optional: shop staff na dile house vendor, vendor staff er session er vendor, onno vendor `404` (Rule 13). Variant create/PATCH e stock na (shuru 0; stock 8.12 er batch/adjust e, M7). v1.11: `sku` ek vendor e unique; duplicate `409 sku_taken`. v1.19: M4 e Login bhag ar `shop-api staff reset-2fa` CLI (8.3); `/staff` M7 e.
+v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff context na thakle shob shomoy `401 unauthenticated`). Product ar category er `slug` admin dey (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 80; PATCH e bodlano jay, redirect na; duplicate `409 slug_taken`). `DELETE /categories/{id}` shudhu khali hole (product ba child thakle `409 category_not_empty`; lukate `is_active = false`). Product create e `vendor_id` optional: shop staff na dile house vendor, vendor staff er session er vendor, onno vendor `404` (Rule 13). Variant create/PATCH e stock na (shuru 0; stock 8.12 er batch/adjust e, M7). v1.11: `sku` ek vendor e unique; duplicate `409 sku_taken`. v1.19: M4 e Login bhag ar `shop-api staff reset-2fa` CLI (8.3); `/staff` M7 e. v1.41: M7 er admin API er niyom (role, body, error, audit) 11.7 e; M7a e backend, M7b e Flutter (15).
 
 | Bhag | Endpoint |
 |---|---|
@@ -163,20 +163,20 @@ v1.10: staff login M4 e; tar age admin route thake kintu fail-closed (staff cont
 | Product | `GET, POST /products`; `GET, PATCH /products/{id}`; `POST /products/{id}/variants`; `PATCH /variants/{id}`; `POST /products/{id}/images` (multipart); `PATCH /products/{id}/images/order`; `DELETE /images/{id}` |
 | Category | `GET /categories` (v1.37: `vendor_owner` o); `POST /categories`, `PATCH, DELETE /categories/{id}` owner/admin |
 | Vendor | `GET, POST /vendors`; `GET, PATCH /vendors/{id}` (shop er owner/admin; single store e shudhu house vendor er profile) |
-| Inventory | `GET /variants/{id}/batches`; `POST /batches`; `POST /inventory/adjust {variant_id, change, reason, note}`; `GET /inventory/movements?variant_id=`; `GET /inventory/alerts` |
+| Inventory | v1.41: `GET /inventory/variants?q=&low=&page=` (shob inventory role, vendor scope; 11.7 item 1); `GET /variants/{id}/batches`; `POST /batches` (stock barano shudhu eta); `POST /inventory/adjust {variant_id, change, reason, note, batch_id?}` (v1.41: shudhu komano, 11.7 item 2); `GET /inventory/movements?variant_id=` (v1.41: `staff`/`vendor_staff` e `cost_price` na); v1.41: `GET /inventory/alerts` bad (dashboard er query) |
 | Order | `GET /orders?status=&q=&from=&to=&vendor_id=&page=` (`status` = `display_status`); `GET /orders/{id}` (fulfillment shoho); `POST /orders/{id}/transition {to, note}` (order: confirm, cancel); `PATCH /orders/{id}/items` (bad ba quantity kom; 8.11; v1.5: kono vendor er shob item bad ba refund hole owner/admin); `POST /orders/{id}/notes {kind, note}` |
 | Fulfillment | `GET /fulfillments?status=&vendor_id=&date=`; `POST /fulfillments/{id}/pack {items: [{item_id, packed_weight_g}], customer_ok_note?}` (v1.37: COD e +10% er beshi `409 weight_over_limit`, note thakle chole, 8.11); `POST /fulfillments/{id}/transition {to, note}` (ship, deliver, return, cancel, v1.37: `open` (undo pack, shudhu COD, note badhyotamulok, 8.8); v1.7: `staff` role e cancel na, ar je return e refund hoy sheta na, 11.2) |
-| Packing | `GET /packing/pick-list?date=`; `POST /print-links {kind, order_ids}` → website er `/print/{kind}?token=` (10 minute) |
+| Packing | `GET /packing/pick-list?date=`; `POST /print-links {kind, order_ids}` (v1.41: `pick_list` e `{kind, date}`) → website er `/print/{kind}?token=` (10 minute); v1.41: website SSR er data `GET /api/print?token=` (public, token e shop; 11.7 item 8) |
 | Delivery | `POST /fulfillments/{id}/shipments`; `PATCH /shipments/{id}`; `GET, POST /delivery-zones`; `PATCH /delivery-zones/{id}` |
 | Taka | `POST /orders/{id}/refunds`; `PATCH /refunds/{id}`; `GET /cod-settlements/unsettled`; `GET, POST /cod-settlements`; `GET /payments?unsettled=true`; `PATCH /payments/{id}/settlement` |
 | Coupon | `GET, POST /coupons`; `PATCH /coupons/{id}` |
 | Review | `GET /reviews`; `PATCH /reviews/{id} {is_hidden}` |
-| Customer | `GET /customers?q=`; `GET /customers/{id}`; `GET, POST /blocked-phones`; `DELETE /blocked-phones/{phone}` |
+| Customer | `GET /customers?q=`; `GET /customers/{id}`; `GET, POST /blocked-phones`; v1.41: `DELETE /blocked-phones` body `{phone}` (phone URL/log e na; age `/{phone}`) |
 | Settings | `GET /settings` (draft + published + version); `PUT /settings/draft`; `POST /settings/preview-token`; `POST /settings/publish`; `GET /settings/history`; `POST /settings/rollback {version}` |
 | Credential | `PUT /credentials/{provider}` (shudhu owner, write-only, kokhono ferot dey na); `GET /credentials` (shudhu kon gulo set ache). M8 er age CLI (3.8) |
 | Translation | `GET /translations?locale=`; `PUT /translations/{locale}/{key}`; `DELETE /translations/{locale}/{key}` (default e ferot) |
 | Upload | `POST /uploads` (logo, banner, certificate; JPEG/PNG/PDF, SVG na; 2.2) → `{storage_key, url}` |
-| Staff | `GET, POST /staff`; `PATCH /staff/{id}` (deactivate ba role bodlale shob session revoke); `POST /staff/{id}/reset-2fa` (owner; vendor_owner nijer vendor er staff). Owner nijer TOTP harale recovery code, na hole CLI |
+| Staff | `GET, POST /staff`; `PATCH /staff/{id}` (deactivate ba role bodlale shob session revoke); `POST /staff/{id}/reset-2fa` (owner; vendor_owner nijer vendor er staff); v1.41: `reset-2fa` er bodole `POST /staff/{id}/reset` (owner): notun temporary password, `must_change_password`, 2FA muche, session revoke (11.7 item 11). Owner nijer TOTP harale recovery code, na hole CLI |
 | Log ar support | `GET /audit-logs`; `GET, PATCH /complaints`; `GET, PATCH /privacy-requests` |
 | Report | `GET /reports/sales?from=&to=&vendor_id=`; `GET /exports/orders.csv` |
 

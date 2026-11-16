@@ -59,6 +59,6 @@ Standard library jekhane jothesto na, shekhane ei shomadhan:
 |---|---|
 | `packages/shared` | `http`, `intl` (ar kichu na, pure Dart). v1.12: dev e shudhu `test`, `lints`; library tai `pubspec.lock` commit na; CI te `dart-lang/setup-dart` (Flutter 3.47.9 er Dart 3.13.7; action baki action er moto version tag e) |
 | `website` (Jaspr) | `jaspr`, `jaspr_router` (dorkar hole), Tailwind integration, `shared` |
-| `admin`, `app` (Flutter) | `flutter_bloc`, `bloc`, `go_router`, `get_it`, `shared` |
+| `admin`, `app` (Flutter) | `flutter_bloc`, `bloc`, `go_router`, `get_it`, `shared`. v1.41 (admin): `http` (`BrowserClient`), SDK `flutter_localizations`; `bloc_test`/`mocktail` na (11.7 item 10) |
 
 AI coding agent diye Jaspr code likhle project e `jaspr install-skills` chalao (Claude Code hole `--agent claude-code`). Eta agent ke Jaspr er latest syntax shekhay, karon Jaspr 1.0 hoyni ar purono syntax prai bhul hoy. Jaspr update korle command ta abar chalao.

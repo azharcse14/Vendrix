@@ -80,6 +80,7 @@ Ei niyom gulo shob code e, shob shomoy mante hobe. AI agent ke eta bishesh kore 
 | 18 | v1.7 review er fix: payment validation e response er `tran_id`, VALID na hole kichu bodlay na (8.9); `CONFIRM_SECRET` rotation er dabi thik (8.10); checkout OTP order er transaction e consume (8.6); risk e `expected_total` (8.6); `pricing.ErrCouponNotApplicable` (8.5); `staff` role e refund wala fulfillment transition na (11.2); migration checksum ar `DEPLOYED` (6.1, 13.6); `001` er role check fail-closed; review er 2 ta open decision 16.1 e |
 | 19 | v1.8: Vendrix repo; Go module `vendrix/backend`; feature doc (`docs/features/`) ar tracking (`docs/STATUS.md`) (4.7); Claude Code er puro kram: hook, skill, agent, rule; Dart er jora: path dependency, website alada (4.6); M0 er shuru code, CI ar infra file |
 | 20 | v1.38: website UI pass alada milestone MU (M6 er por, M7 er age): token er upor choto component class (Tailwind `@layer components`), derived semantic token, font weight kom, Lucide inline icon; logic/API/`@client` bodlay na (15, 9.3, 9.6, 10.5) |
+| 21 | v1.41: M7 plan approve (Q1–Q13 (a) + advisor er bodol), niyom 11.7 e; M7 duita milestone: M7a admin backend ar print, M7b Flutter admin (M7a er por, launch er screen age) (15, 11.7) |
 
 ### 1.6 Tin ta mode: single store, marketplace, multi-tenant
 
