@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.41, 16 November 2026
+Version 1.42, 16 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -94,3 +94,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.39 | 16 November 2026 | 9.6, 10.5, 16.1 (MU U10 Lighthouse, Claude decide korche, user bodlate paren): prothom view font budget ≤ 4 file, ≈ 155 KB (age ≤ 3 file, ≈ 140 KB); latin subset er `unicode-range` e space thakay Bangla page eo ase, Perf/LCP target mile |
 | 1.40 | 16 November 2026 | 16.1 (M7 plan draft, docs only): staff stock entry er row e M7 Q1 er option; notun row M7 Q2–Q13 (batch/adjust, expire job, pick list, shipment, return, edit, print link, chobi storage, Flutter setup, staff/audit, customer/block, choto niyom), recommendation shoho, user er uttor baki; design er niyom bodlay nai |
 | 1.41 | 16 November 2026 | 11.7 (notun), 2.3, 7.1, 7.7, 8.8, 8.11, 8.12, 8.16, 8.17, 13.3, 13.5, 15, 16.1, 1.5: user M7 plan approve (Q1–Q13 (a)) advisor er bodol shoho: `cost_price` staff e na, adjust shudhu komano ar lock er kram, expire job self-heal ar restock e expire batch, COD cash rider er hate, return refund cap, print token shokto (`hmac.Equal`, `kind`, scope, active staff, log e query na), upload semaphore + `MaxBytesReader`, admin CSP `wasm-unsafe-eval`, `POST /staff/{id}/reset`, `DELETE /blocked-phones` body, `/inventory/alerts` bad; M7 duita milestone e: M7a (backend ar print) ar M7b (Flutter admin), karon ek milestone onek boro (22 step) ar backend age proman hole Flutter er API thir |
+| 1.42 | 16 November 2026 | 7.1, 8.11, 8.16 (M7a step 5b, Claude er choto decision): `weight_over_limit` er `details` object `{items: [...]}` (7.1 er error format e `details` object; array hole client er parser alada lagto); pack er `reprice` refund e `fulfillment_id`; `sms.total_changed` er `{total}` format (en GSM-7 e `Tk`) |
