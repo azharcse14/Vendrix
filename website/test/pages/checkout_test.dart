@@ -222,8 +222,8 @@ void main() {
       final keys = ['checkout.contact', 'checkout.shipping', 'checkout.payment', 'checkout.otp_title'];
       expect(heads, hasLength(4));
       for (var i = 0; i < 4; i++) {
-        expect(heads[i].text, startsWith('১২৩৪'[i]), reason: keys[i]);
-        expect(heads[i].text, endsWith(t.t(keys[i])), reason: keys[i]);
+        expect(heads[i].text.trim(), startsWith('১২৩৪'[i]), reason: keys[i]);
+        expect(heads[i].text.trim(), endsWith(t.t(keys[i])), reason: keys[i]);
       }
       dom.Element sec(int i) => heads[i].parent!;
       for (final n in ['customer.name', 'customer.phone', 'customer.email', 'recipient.phone']) {

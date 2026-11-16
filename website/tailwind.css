@@ -18,6 +18,8 @@
 @layer base {
   :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   input[type="radio"], input[type="checkbox"] { accent-color: var(--color-primary); }
+  /* `.notice`/`.input` er display `hidden` attribute ke harale JS er lukano kaj kore na. */
+  [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
