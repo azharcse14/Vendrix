@@ -194,10 +194,64 @@ void main() {
       expect(doc.querySelector('.fixed [data-variant="8"]')!.text, contains('৫ কেজি'));
       // Plain text: escape, khali line → <p>, newline → <br>.
       expect(doc.querySelector('script:not([src]):not([type="application/ld+json"])'), isNull);
-      final paras = doc.querySelectorAll('section p');
+      // 10.5 v1.38: description `<details>` e (JS chhara khole), summary e l10n lekha.
+      expect(doc.querySelector('details > summary')!.text, 'বিবরণ');
+      final paras = doc.querySelectorAll('details p');
       expect(paras.map((e) => e.text), ['প্রথম <script>x</script>দ্বিতীয়', 'তৃতীয়']);
       expect(paras.first.querySelectorAll('br'), hasLength(1));
       expect(doc.querySelector('nav.fixed'), isNull);
+    });
+
+    testServer('heading order: h1 tarpor shudhu h2 (10.7 v1.38)', (t) async {
+      t.pumpComponent(site({}));
+      final doc = (await t.request('/p/red-rice')).document!;
+      final hs = doc.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6');
+      expect(hs.first.localName, 'h1');
+      expect(hs.where((h) => h.localName == 'h1'), hasLength(1));
+      expect(hs.skip(1).map((h) => h.localName).toSet(), {'h2'});
+    });
+
+    testServer('price block: discount badge, stock shesh lekha (10.5 v1.38 item 2)', (t) async {
+      t.pumpComponent(site({}));
+      var doc = (await t.request('/p/honey')).document!;
+      expect(doc.querySelector('[data-variant="9"]')!.text, contains('২০% ছাড়'));
+      doc = (await t.request('/p/red-rice')).document!;
+      expect(doc.querySelector('[data-variant="7"]')!.text, contains('স্টকে নেই'));
+      expect(doc.querySelector('[data-variant="8"]')!.text, isNot(contains('ছাড়')));
+    });
+
+    testServer('trust: COD shudhu cod thakle, certificate shudhu feature + product e thakle (10.5 v1.38 item 3)', (
+      t,
+    ) async {
+      requests.clear();
+      t.pumpComponent(
+        site({
+          'features': ['certification'],
+          'checkout': {
+            'payment_methods': ['cod'],
+          },
+        }),
+      );
+      var doc = (await t.request('/p/honey')).document!;
+      expect(doc.querySelector('#product-trust')!.text, contains('ক্যাশ অন ডেলিভারি'));
+      expect(doc.body!.text, contains('সনদ: BD Organic'));
+      // Delivery din: product page e zone er notun API call na, tai na.
+      expect(requests.where((u) => u.path.contains('delivery-zones')), isEmpty);
+      // Product e certificate nai → badge na.
+      doc = (await t.request('/p/red-rice')).document!;
+      expect(doc.body!.text, isNot(contains('সনদ')));
+
+      // Feature nai (certificate thakleo) ar COD nai → kichui na.
+      t.pumpComponent(
+        site({
+          'checkout': {
+            'payment_methods': ['sslcommerz'],
+          },
+        }),
+      );
+      doc = (await t.request('/p/honey')).document!;
+      expect(doc.querySelector('#product-trust'), isNull);
+      expect(doc.body!.text, isNot(contains('BD Organic')));
     });
 
     testServer('ochena product → 404', (t) async {

@@ -89,6 +89,35 @@ final fakeApi = MockClient((r) async {
           for (final k in ['a', 'b']) {'storage_key': 'shops/1/$k.jpg', 'alt': '', 'width': 800, 'height': 600},
         ],
       };
+    case '/api/products/honey':
+      // Ek variant, 20% chhar, certificate (6.x `attributes`).
+      body = {
+        'id': 2,
+        'slug': 'honey',
+        'name': 'মধু',
+        'description': '',
+        'unit': 'piece',
+        'variable_weight': false,
+        'category': 'lal',
+        'attributes': {
+          'certification': {'name': 'BD Organic', 'doc_key': 'certs/a.pdf'},
+        },
+        'seo': <String, dynamic>{},
+        'rating': 0,
+        'review_count': 0,
+        'variants': [
+          {
+            'id': 9,
+            'sku': 'H9',
+            'options': {'size': '৫০০ গ্রাম'},
+            'price': 40000,
+            'compare_at_price': 50000,
+            'nominal_weight_g': null,
+            'in_stock': true,
+          },
+        ],
+        'images': <Object>[],
+      };
     default:
       return http.Response(
         jsonEncode({
