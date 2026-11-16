@@ -121,12 +121,15 @@ stateDiagram-v2
   [*] --> open
   open --> packed
   open --> cancelled
+  packed --> open
   packed --> shipped
   packed --> cancelled
   shipped --> delivered
   shipped --> returned
   delivered --> returned
 ```
+
+v1.37 (16.1, Claude decide, user bodlate paren): `packed → open` (undo pack) shudhu COD, active shipment chhara, `note` badhyotamulok. Prepaid M10 e abar dekha.
 
 Code: [`backend/internal/order/order.go`](../../backend/internal/order/order.go), test [`order_test.go`](../../backend/internal/order/order_test.go) (golden table shoho).
 
@@ -141,6 +144,7 @@ Single store e "Packed", "Shipped" button order page ei thake; backend oi order 
 | Order `pending → confirmed` | `confirmed_at`. COD: confirm link (customer, 8.10 er `confirm_token`) ba phone call (staff). Online: shudhu `payment_status = 'paid'` er por, validation (system) ba staff (gateway e nije dekhe). DB CHECK o atkay |
 | Order `→ cancelled` | `CancelCascade` er open/packed fulfillment gulo `cancelled` (niche er side effect shoho; refund oikhane-i, order level e alada refund row **na**), coupon redemption muche `used_count = GREATEST(used_count - 1, 0)` (v1.7: admin `used_count` komale `CHECK` e puro cancel atke jeto), SMS |
 | Fulfillment `open → packed` | Shob item pack, ojon-variable item er asol ojon ar `pricing.Reprice`, FIFO batch allocation (8.11), `packed_at` |
+| Fulfillment `packed → open` (v1.37, undo pack) | Ek tx e `TransitionFulfillment`: lock order → fulfillment → variant (sorted) → batch (id kram e). Protiti `order_item_batches` row er quantity `quantity_remaining` e ferot, row muche (`variant.stock` bodlay na: checkout e newa, 8.12 er rater check thik thake). Taka: clear er age `LineFromItem` diye `Original`, `packed_weight_g = NULL`, `Reprice(Edit = false)` order er ojon e, line/fulfillment/order total save (lagbe, na hole porer edit er `Original` check fail). `packed_at = NULL`, note shoho history, `display_status` abar hishab; SMS na. Guard: COD na → `409 invalid_transition`; returned na emon shipment thakle `409 invalid_transition`; khali note → `400 validation_failed`. Ke: owner, admin, staff, ar nijer fulfillment e vendor_owner/vendor_staff (pack er moto). M7 code: `order.go` er transition table e `Packed` e `Open: {Staff, Vendor}`. M7 test: golden row; duita FIFO batch e pack tarpor undo → batch hubohu ferot, `order_item_batches` khali, `packed_weight_g` NULL, total pack er ager shoman, history te note; abar pack e FIFO + rater check green; prepaid → `409`; active shipment → `409`; `shipped → open` → `409`; khali note → `400`; onno vendor er fulfillment → `404` |
 | Fulfillment `packed → shipped` | Shipment row lagbe (COD hole `cod_amount` = fulfillment er `total`). `shipped_at`, tracking shoho SMS |
 | Fulfillment `shipped → delivered` | `delivered_at`, review link SMS. COD order er shob active fulfillment delivered hole `payment_status = 'paid'` (courier er taka pore COD settlement e mile) |
 | Fulfillment `→ cancelled` | Oi fulfillment er stock ferot (`inventory_movements` `cancel`), pack hoye thakle batch ferot (`order_item_batches` theke), prepaid hole oi fulfillment er **bortoman** `total` refund (`refunds.kind = 'cancel'`, `fulfillment_id`; DB te ekbar-i, `refunds_cancel_once`); v1.5: total 0 hole refund row hoy na (edit e `Reprice` already ferot diyeche, 8.11). Refund er age order row lock, tarpor mot refund (failed bad) ≤ paid check. Shob fulfillment cancelled hole order o `cancelled` (system, `AllCancelled`). v1.7: shop er `staff` role fulfillment cancel korte pare na, order cancel er moto (11.2): `403 forbidden` |

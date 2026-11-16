@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.36, 16 November 2026
+Version 1.37, 16 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -89,3 +89,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.34 | 16 November 2026 | 8.19 item 13, 8.8 (signature `shopID`/`By`, batch lock er kram), 7.5 (quote), 7.8, 16.1 (M6 review fix, Claude decide korche security/design reviewer er recommendation e, user bodlate paren): checkout OTP login er IP limit e ek gona; quote e guest er history/coupon per-phone na, quote 30/minute; IPv6 `/64` order limit ar `many_orders` e; customer cancel/confirm er `actor_id`, vendor tx e, cart e shudhu order er variant muche, cancelled order e SMS na; 8.6 er step er asol kram |
 | 1.35 | 16 November 2026 | 7.2, 8.19 item 2, 10.6 (M6 step 16 design review, Claude decide): `GET /api/delivery-zones` e area `days` ar district `district_wide_days`; checkout e order er age delivery er shomoy (10.6, 12.2 Digital Commerce Guideline). Din er niyom (8.15) shudhu server e |
 | 1.36 | 16 November 2026 | 10.3, 10.12 item 9 (M6 step 14 Safari proman e dhora bug, Claude decide, user bodlate paren): `/cart` ar `/checkout` cookie chhara-o `private, no-store`; ager `public, max-age=60` e guest khali `/cart` dekhe add korle browser cache theke khali cart dekhto |
+| 1.37 | 16 November 2026 | 8.11 item 3, 6, 8.8 (diagram, side effect), 7.1, 7.7, 11.2, 16.1 (M7 er age tin decision, Claude decide korche advisor agent er recommendation e, user bodlate paren): COD pack e line er ojon +10% er beshi hole `409 weight_over_limit`, `customer_ok_note` dile pack (consent, pricing na; (c) na karon packing e delivery charge bodlay na); COD `packed → open` pack undo (active shipment chhara, note badhyotamulok, batch ferot, `Reprice` e ager taka); `vendor_owner` `GET /admin/categories` porte pare (manage na). 16.1 e notun proshno: shop `staff` stock entry te variant kivabe khoje (M7 plan) |
