@@ -36,13 +36,7 @@ class Home extends AsyncStatelessComponent {
           ];
     final announcement = s.announcement.of(site.locale);
     final tagline = s.tagline.of(site.locale);
-    final returnDays = s.returnWindowDays;
-    // Trust (10.5 v1.38 item 3): shudhu settings e ja shotto. Delivery din home e na (zone er notun API call
-    // lagto); certification na (settings e shop er certificate nai, shudhu product e).
-    final trust = [
-      if (s.paymentMethods.contains('cod')) (Icons.cash, site.t('home.trust.cod')),
-      if (returnDays != null) (Icons.check, site.t('home.trust.return', {'days': site.number(returnDays)})),
-    ];
+    final trust = shopTrust(site);
     return div(classes: 'space-y-8 px-4 py-4', [
       const SeoHead(),
       if (announcement.isNotEmpty)
@@ -154,4 +148,15 @@ ProductCard _card(Product p) {
     p.reviewCount,
     p.images.isEmpty ? null : p.images.first.storageKey,
   );
+}
+
+/// Trust (10.5 v1.38 item 3, home ar product): shudhu settings e ja shotto. Delivery din na (zone er notun API call
+/// lagto); certification ekhane na (settings e shop er certificate nai, shudhu product e).
+List<(Icons, String)> shopTrust(Site site) {
+  final s = site.settings;
+  final returnDays = s.returnWindowDays;
+  return [
+    if (s.paymentMethods.contains('cod')) (Icons.cash, site.t('home.trust.cod')),
+    if (returnDays != null) (Icons.check, site.t('home.trust.return', {'days': site.number(returnDays)})),
+  ];
 }

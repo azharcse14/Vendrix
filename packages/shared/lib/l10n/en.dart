@@ -76,6 +76,7 @@ const en = {
   'product.out_of_stock': 'Out of stock',
   'product.per_kg': '/ kg',
   'product.discount': '{percent}% off',
+  'product.certified': 'Certified: {name}',
   'product.no_image': 'No image',
   'product.choose': 'Choose an option',
   'product.images': 'Product images',

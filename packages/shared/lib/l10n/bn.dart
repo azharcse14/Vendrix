@@ -75,6 +75,7 @@ const bn = {
   'product.out_of_stock': 'স্টকে নেই',
   'product.per_kg': '/ কেজি',
   'product.discount': '{percent}% ছাড়',
+  'product.certified': 'সনদ: {name}',
   'product.no_image': 'ছবি নেই',
   'product.choose': 'ধরন বেছে নিন',
   'product.images': 'পণ্যের ছবি',

@@ -4,16 +4,19 @@ import 'package:shared/shared.dart';
 
 import '../components/add_to_cart.dart';
 import '../components/gallery.dart';
+import '../components/icon.dart';
 import '../components/plain_text.dart';
 import '../components/site.dart';
 import '../components/variant_picker.dart';
 import '../components/wishlist_button.dart';
 import 'cart.dart';
+import 'home.dart' show shopTrust;
 import 'status.dart';
 import '../seo/json_ld.dart';
 import '../seo/meta.dart';
 
-/// Product (`/p/{slug}`, 10.1, 10.5): gallery, naam, rating, variant ar dam (API theke, Rule 1), description.
+/// Product (`/p/{slug}`, 10.1, 10.5): gallery, naam, rating, certificate badge, variant chip ar dam (API theke, Rule 1),
+/// trust (shudhu shotto, 10.5 v1.38 item 3), description `<details>` e (JS chhara).
 /// Cart e add (10.12 item 4): JS chhara `form#cart-add` (`variant_id` radio/hidden, `quantity`) `POST /_/cart/items`,
 /// mobile e bottom nav er bodole niche sticky bar (dam + variant + button), [AddToCart] JS e. Heart: guest e
 /// shuru te off (`wl` JS e, page public cache), login e `GET /api/wishlist` theke (page already `private`).
@@ -48,6 +51,8 @@ class ProductPage extends AsyncStatelessComponent {
     final seo = product.seo;
     final url = '${site.origin}${site.href('/p/${Uri.encodeComponent(product.slug)}')}';
     final images = [for (final im in product.images) ?site.images.url(im.storageKey, 1280)];
+    final cert = _certificate(site, product);
+    final trust = shopTrust(site);
     return div(classes: 'px-4 py-4', [
       SeoHead(
         title: seo['title'] is String && (seo['title'] as String).isNotEmpty ? seo['title'] as String : product.name,
@@ -73,16 +78,33 @@ class ProductPage extends AsyncStatelessComponent {
                 }),
               ),
             ]),
+          if (cert != null)
+            p([
+              span(classes: 'badge badge-accent', [
+                const Icon(Icons.certified, classes: 'size-4 shrink-0'),
+                .text(site.t('product.certified', {'name': cert})),
+              ]),
+            ]),
           if (selected == null)
             p(classes: 'text-lg text-muted', [.text(site.t('product.out_of_stock'))])
           else
             _cartForm(site, product, selected),
           wishlistToggle(site, product.id, saved: saved),
           WishlistButton(loggedIn: api?.token != null),
+          if (trust.isNotEmpty)
+            ul(id: 'product-trust', classes: 'space-y-2 text-sm', [
+              for (final (icon, text) in trust)
+                li(classes: 'flex items-center gap-2', [
+                  Icon(icon, classes: 'size-5 shrink-0 text-primary'),
+                  .text(text),
+                ]),
+            ]),
           if (product.description.trim().isNotEmpty)
-            section([
-              h2(classes: 'mb-2 text-lg', [.text(site.t('product.description'))]),
-              ...plainText(product.description),
+            details(classes: 'card', [
+              summary(classes: 'cursor-pointer', [
+                h2(classes: 'inline text-lg', [.text(site.t('product.description'))]),
+              ]),
+              div(classes: 'mt-2 space-y-2', plainText(product.description)),
             ]),
         ]),
       ]),
@@ -113,7 +135,7 @@ class ProductPage extends AsyncStatelessComponent {
             type: InputType.number,
             name: 'quantity',
             value: '1',
-            classes: 'min-h-11 w-20 rounded border border-line bg-page px-3 text-base',
+            classes: 'input w-20 text-base', // text-base: 16px, iOS zoom na (test dekhe)
             attributes: {'min': '1', 'max': '50', 'inputmode': 'numeric', 'required': ''},
           ),
           button(
@@ -148,13 +170,13 @@ class ProductPage extends AsyncStatelessComponent {
       div(
         classes:
             'fixed inset-x-0 bottom-0 z-20 flex min-h-[calc(3.5rem+env(safe-area-inset-bottom))] items-center gap-3 '
-            'border-t border-line bg-surface px-4 pb-[env(safe-area-inset-bottom)] '
-            'md:static md:z-auto md:min-h-0 md:border-0 md:bg-transparent md:p-0',
+            'border-t border-line bg-surface px-4 pb-[env(safe-area-inset-bottom)] shadow-1 '
+            'md:static md:z-auto md:min-h-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none',
         [
           div(classes: 'flex-1 md:hidden', [
             VariantPrices(variants, selected, perKg: product.variableWeight, withLabel: true),
           ]),
-          button(type: ButtonType.submit, classes: 'min-h-11 rounded bg-primary px-6 text-on-primary', [
+          button(type: ButtonType.submit, classes: 'btn btn-primary px-6', [
             .text(site.t('cart.add')),
           ]),
         ],
@@ -162,6 +184,18 @@ class ProductPage extends AsyncStatelessComponent {
       AddToCart(digits: [for (var i = 0; i < 10; i++) site.number(i)].join()),
     ]);
   }
+}
+
+/// Certificate er naam (6.x `attributes.certification.name`, lekha ba `{bn,en}`), shudhu `features` e `certification`
+/// thakle (10.5 v1.38 item 3); na hole null (faka dabi na).
+String? _certificate(Site site, Product product) {
+  if (!site.settings.features.contains('certification')) return null;
+  final name = switch (product.attributes['certification']) {
+    {'name': final String n} => n,
+    {'name': final Map<String, dynamic> m} => LocalizedText.fromJson(m).of(site.locale),
+    _ => '',
+  };
+  return name.trim().isEmpty ? null : name.trim();
 }
 
 // Add e ashte pare emon code; lekha server e, client shudhu dekhay.
