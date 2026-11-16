@@ -132,6 +132,28 @@ void main() {
       expect(doc.querySelector('input[name="phone"]')!.attributes['value'] ?? '', isEmpty);
     });
 
+    test(
+      'result: heading h1 → h2 (number) → h3, timeline ol protiti itihash e li, shesh step current (10.5 v1.38)',
+      () async {
+        final (_, _, doc) = await send('POST', '/track', body: 'number=VX-100001&phone=01712345678');
+        final heads = doc.querySelectorAll('main h1, main h2, main h3');
+        expect(heads.map((e) => e.localName), ['h1', 'h2', 'h3']);
+        expect(heads[1].text.trim(), 'VX-100001');
+        expect(heads[2].text.trim(), t.t('track.history'));
+        final result = doc.querySelector('#track-result')!;
+        // Status lekha nijer element e (rong only na).
+        expect(
+          result.querySelectorAll('*').any((e) => e.children.isEmpty && e.text.trim() == t.t('order.status.confirmed')),
+          isTrue,
+        );
+        final steps = result.querySelectorAll('ol > li');
+        expect(steps, hasLength(2));
+        expect(steps[0].text, contains(t.t('order.status.pending')));
+        expect(steps[1].text, contains(t.t('order.status.confirmed')));
+        expect(steps.map((e) => e.attributes['aria-current']), [null, 'step']);
+      },
+    );
+
     test('English: /en/track POST e Accept-Language en, lekha English', () async {
       final (res, _, doc) = await send('POST', '/en/track', body: 'number=VX-100001&phone=01712345678');
       expect(res.statusCode, 200);

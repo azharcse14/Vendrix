@@ -50,6 +50,7 @@ void main() {
   };
   var status = 'pending';
   var canCancel = true;
+  var orders = <Map<String, dynamic>>[];
   late List<http.Request> seen;
   final api = MockClient((r) async {
     seen.add(r);
@@ -71,18 +72,10 @@ void main() {
       '/api/confirm/$tok' => summary(status),
       '/api/me' => {'phone': '01712345678', 'name': null, 'email': null, 'locale': 'bn'},
       '/api/me/orders' => {
-        'items': [
-          {
-            'order_number': 'VX-100002',
-            'public_token': 'TOKEN2TOKEN2TOKEN2TOKEN2TO',
-            'display_status': 'confirmed',
-            'total': 50000,
-            'placed_at': '2026-11-15T04:00:00Z',
-          },
-        ],
+        'items': orders,
         'page': int.parse(r.url.queryParameters['page'] ?? '1'),
         'limit': 20,
-        'total': 21,
+        'total': orders.isEmpty ? 0 : 21,
       },
       _ => null,
     };
@@ -117,7 +110,22 @@ void main() {
   setUp(() {
     status = 'pending';
     canCancel = true;
+    orders = [
+      {
+        'order_number': 'VX-100002',
+        'public_token': 'TOKEN2TOKEN2TOKEN2TOKEN2TO',
+        'display_status': 'confirmed',
+        'total': 50000,
+        'placed_at': '2026-11-15T04:00:00Z',
+      },
+    ];
   });
+
+  // Status lekha nijer element e (badge; rong only na, 10.5 v1.38).
+  bool ownText(dom.Element root, String text) =>
+      root.querySelectorAll('*').any((e) => e.children.isEmpty && e.text.trim() == text);
+  List<String> headings(dom.Document doc) =>
+      doc.querySelectorAll('main h1, main h2, main h3').map((e) => e.localName!).toList();
 
   void tokenHeaders(Response res, String html, dom.Document doc, String path) {
     expect(res.headers['referrer-policy'], 'no-referrer', reason: path);
@@ -155,6 +163,17 @@ void main() {
       expect(cancel.querySelector('button[type="submit"]')!.text, t.t('order.cancel'));
     });
 
+    test('heading order h1 → h2, status badge lekha, cancel reason <details> e (10.5 v1.38)', () async {
+      final (_, _, doc) = await page('/order/$tok');
+      expect(headings(doc), ['h1', 'h2']);
+      expect(ownText(doc.querySelector('main')!, t.t('order.status.pending')), isTrue);
+      final cancel = doc.querySelector('form[action="/_/orders/$tok/cancel"]')!;
+      expect(cancel.querySelector('details summary')!.text.trim(), t.t('order.cancel_reason'));
+      expect(cancel.querySelector('details input[name="reason"]'), isNotNull);
+      // Submit details er baire: reason na khulei cancel hoy.
+      expect(cancel.querySelector('details button'), isNull);
+    });
+
     test('English: /en/order e cancel form ?lang=en (no-referrer e Referer nai, 10.13 item 7)', () async {
       final (_, _, doc) = await page('/en/order/$tok');
       expect(doc.querySelector('form[action="/_/orders/$tok/cancel?lang=en"]'), isNotNull);
@@ -190,11 +209,16 @@ void main() {
       tokenHeaders(res, html, doc, '/order/$tok/done');
       final text = doc.body!.text;
       expect(doc.querySelector('h1')!.text, t.t('order.done.title'));
-      expect(text, contains(t.t('order.done.number', {'number': 'VX-100001'})));
+      expect(text, contains(t.t('track.number')));
+      // Number nijer element e boro kore (10.5 v1.38, plan 5).
+      expect(ownText(doc.querySelector('main')!, 'VX-100001'), isTrue);
+      expect(headings(doc), ['h1']);
       expect(text, contains(t.t('order.done.confirm_sms')));
       expect(text, contains(t.t('order.done.signup')));
       expect(doc.querySelector('main form'), isNull); // Layout er search form chhara
-      expect(doc.querySelector('main a[href="/order/$tok"]')!.text, t.t('order.done.view'));
+      expect(doc.querySelector('main a[href="/order/$tok"]')!.text.trim(), t.t('order.done.view'));
+      // Porer kaj: kenakata chaliye jawa (home).
+      expect(doc.querySelector('main a[href="/"]')!.text.trim(), t.t('page.home_link'));
     });
 
     test('confirmed: confirm SMS er kotha na, shudhu SMS update', () async {
@@ -224,6 +248,7 @@ void main() {
       final (_, _, doc) = await page('/confirm/$tok');
       expect(doc.body!.text, contains(t.t('confirm.done')));
       expect(doc.querySelector('form[action^="/_/confirm/"]'), isNull);
+      expect(ownText(doc.querySelector('main')!, t.t('order.status.confirmed')), isTrue);
     });
 
     test('ochena token 404', () async {
@@ -250,6 +275,19 @@ void main() {
       expect(doc.body!.text, contains('৳৫০০'));
       expect(doc.querySelector('a[href="/account/orders?page=2"]'), isNotNull);
       expect(doc.querySelector('meta[name="robots"]')!.attributes['content'], 'noindex');
+      // Card: number link, status badge lekha, tarikh, total ek li te.
+      final card = doc.querySelector('main li')!;
+      expect(card.querySelector('a[href="/order/TOKEN2TOKEN2TOKEN2TOKEN2TO"]'), isNotNull);
+      expect(ownText(card, t.t('order.status.confirmed')), isTrue);
+      expect(card.text, contains('৳৫০০'));
+    });
+
+    test('khali: empty state lekha ar home link, list na', () async {
+      orders = [];
+      final (_, _, doc) = await page('/account/orders', cookie: '__Host-sid=GOOD');
+      expect(doc.querySelector('main')!.text, contains(t.t('account.orders.empty')));
+      expect(doc.querySelector('main a[href="/"]')!.text.trim(), t.t('page.home_link'));
+      expect(doc.querySelector('main ul'), isNull);
     });
 
     test('?page=2 API te jay; session expire e 303', () async {

@@ -258,4 +258,25 @@ void main() {
       );
     });
   });
+
+  group('Status badge (10.5 v1.38, 8.8)', () {
+    test('order.status.* er protiti key er tone ache, beshi na', () {
+      final keys = defaultMessages['bn']!.keys
+          .where((k) => k.startsWith('order.status.'))
+          .map((k) => k.substring('order.status.'.length))
+          .toSet();
+      expect(keys, isNotEmpty);
+      expect(orderStatusTones.keys.toSet(), keys);
+    });
+    test(
+      'shesh obostha: delivered success, cancelled danger, pending warning; ochena muted',
+      () {
+        expect(orderStatusTone('delivered'), BadgeTone.success);
+        expect(orderStatusTone('cancelled'), BadgeTone.danger);
+        expect(orderStatusTone('pending'), BadgeTone.warning);
+        expect(orderStatusTone('confirmed'), orderStatusTone('open'));
+        expect(orderStatusTone('ochena'), BadgeTone.muted);
+      },
+    );
+  });
 }
