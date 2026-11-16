@@ -107,6 +107,11 @@ void main() {
       final hero = h1.parent!;
       expect(hero.text, contains('কৃষকের কাছ থেকে সরাসরি'));
       expect(hero.querySelector('a[href="#categories"]')!.text, 'সব ক্যাটাগরি দেখুন');
+      // U10 Safari/Lighthouse: muted shudhu background/surface e 4.5 (9.3), primary-soft e 3.9 chhilo;
+      // base `p` er 70ch max-width e text-center tagline boro screen e bame shore jeto.
+      final tagline = hero.querySelector('p')!;
+      expect(tagline.classes, isNot(contains('text-muted')));
+      expect(tagline.classes, contains('mx-auto'));
     });
 
     testServer('banner thakle hero na: h1 sr-only, banner LCP', (t) async {
