@@ -39,6 +39,7 @@ Ei kram e poro:
 | `batch_expiry` on: `batch_id` ba FIFO (expire batch bad), baki purono stock; off: shudhu `variant.stock` (6.4, 11.7 item 2) | `Adjust`, `Allocate` | `TestInventoryAdjustIntegration` |
 | Lock: variant tarpor batch `id` kram; checkout ar wastage ekshathe stock ≥ 0, deadlock na (11.7 item 2) | `lockVariant`, `Allocate` | `TestCheckoutWastageRaceIntegration` |
 | `inventory.expire`: shudhu `batch_expiry` on shop, shop er timezone e 00:10 dine ekbar; `expiry_date < aj` er shob batch (miss kora din o) 0, `variant.stock - LEAST(qty, stock)`, movement `expired`; idempotent (8.12, 8.17, 11.7 item 3) | `ScheduleExpire`, `ExpireJob`, `expireVariant` | `TestExpireBatchesIntegration` |
+| Restock (cancel) e expire batch er ongsho batch/stock e ferot na, movement `cancel` + `expired` (11.7 item 3; [order-status](order-status.md)) | `order.restock` | `TestRestockExpiredBatchIntegration` |
 | Route role (11.2) | `Routes` | `TestAdminRouteRoles` |
 
 ## Data

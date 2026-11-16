@@ -212,8 +212,9 @@ func cancelFulfillments(ctx context.Context, tx *sql.Tx, shopID int64, o *locked
 }
 
 // restock (8.12): active item er qty variant e ferot (removed item er stock edit e ferot hoye geche), batch e
-// order_item_batches theke; movement cancel (batch er ongsho batch_id shoho). Variant, tarpor batch id er kram e
-// lock (8.8; UPDATE ... FROM er nijer kram e deadlock hote parto).
+// order_item_batches theke; movement cancel (batch er ongsho batch_id shoho). Batch already expire (shop er aj er
+// age) hole oi ongsho batch e na ar variant theke abar bad, movement expired (11.7 item 3; inventory.expire er moto).
+// Variant, tarpor batch id er kram e lock (8.8; UPDATE ... FROM er nijer kram e deadlock hote parto).
 func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error {
 	for _, q := range []string{
 		`SELECT 1 FROM product_variants WHERE shop_id = $1 AND id IN (SELECT variant_id FROM order_items
@@ -229,11 +230,23 @@ func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error 
 			FROM (SELECT ob.batch_id, sum(ob.quantity) q FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
 				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active' GROUP BY ob.batch_id) x
-			WHERE b.shop_id = $1 AND b.id = x.batch_id`,
+			WHERE b.shop_id = $1 AND b.id = x.batch_id AND NOT COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)`,
+		`UPDATE product_variants v SET stock = v.stock - x.q
+			FROM (SELECT ob.variant_id, sum(ob.quantity) q FROM order_items i
+				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
+				JOIN inventory_batches b ON b.shop_id = ob.shop_id AND b.id = ob.batch_id
+				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active' AND COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)
+				GROUP BY ob.variant_id) x
+			WHERE v.shop_id = $1 AND v.id = x.variant_id`,
 		`INSERT INTO inventory_movements (shop_id, variant_id, batch_id, change, reason, order_id)
 			SELECT $1, i.variant_id, ob.batch_id, ob.quantity, 'cancel', i.order_id FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
 				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active'
+			UNION ALL
+			SELECT $1, i.variant_id, ob.batch_id, -ob.quantity, 'expired', i.order_id FROM order_items i
+				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
+				JOIN inventory_batches b ON b.shop_id = ob.shop_id AND b.id = ob.batch_id
+				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active' AND COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)
 			UNION ALL
 			SELECT $1, i.variant_id, NULL, i.quantity - COALESCE(sum(ob.quantity), 0), 'cancel', i.order_id FROM order_items i
 				LEFT JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
