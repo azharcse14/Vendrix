@@ -65,7 +65,7 @@ Error er format shob jaygay ekoi:
 | GET | `/api/products/{slug}` | Product, variant, chobi, rating, attributes |
 | GET | `/api/products/{slug}/reviews` | Review list (lukano na) |
 | GET | `/api/vendors/{slug}` | Vendor er profile ar product (shudhu marketplace mode e; single e `404`) |
-| GET | `/api/delivery-zones` | Checkout er district/area list. v1.32: `[{district, areas: [{area, name}], district_wide: bool}]`, shudhu `is_active`; `district_wide` = district e `area NULL` zone ache (form e "Onno area" + free text, 8.19 item 2) |
+| GET | `/api/delivery-zones` | Checkout er district/area list. v1.32: `[{district, areas: [{area, name}], district_wide: bool}]`, shudhu `is_active`; `district_wide` = district e `area NULL` zone ache (form e "Onno area" + free text, 8.19 item 2). v1.35: area e `days`, district e `district_wide_days` (`district_wide` na hole `null`): delivery er din (8.15 er niyom server e, client jane na), checkout e order er age dekhano (10.6) |
 | POST | `/api/delivery/quote` | `{district, area, subtotal}` → charge, deadline, same-day possible kina. v1.32: M6 e na (checkout quote-i jothesto); Phase 2 te product page er delivery estimate |
 | POST | `/api/complaints` | Complaint form (Turnstile + rate limit) |
 

@@ -124,7 +124,7 @@ Mobile niyom:
 
 Field: naam, phone, email (optional; SSLCommerz e na dile shop er email jay), "onno kauke pathacchi" (on korle recipient er naam ar phone), district, area (dropdown, zone er list theke), puro thikana, note, coupon, payment method, privacy/terms consent checkbox. Lukano honeypot `website`. Turnstile widget.
 
-Flow: form → (jhuki thakle) OTP box → order → `/order/{token}/done`. Done page e order number, SMS er kotha (COD confirmation lagle "SMS e pathano link e confirm korun"; done page e confirm button nai, 8.10), ar choto kore "Porer bar druto order korte account khulun (shudhu OTP)". Live hishab (`POST /api/checkout/quote`, BFF diye) area ba coupon bodlale; quote er total `expected_total` hishebe order e jay. OTP box theke submit e notun Turnstile lage na (8.6). Order er age delivery er shomoy dekhao (perishable hole aro kom).
+Flow: form → (jhuki thakle) OTP box → order → `/order/{token}/done`. Done page e order number, SMS er kotha (COD confirmation lagle "SMS e pathano link e confirm korun"; done page e confirm button nai, 8.10), ar choto kore "Porer bar druto order korte account khulun (shudhu OTP)". Live hishab (`POST /api/checkout/quote`, BFF diye) area ba coupon bodlale; quote er total `expected_total` hishebe order e jay. OTP box theke submit e notun Turnstile lage na (8.6). Order er age delivery er shomoy dekhao (perishable hole aro kom). v1.35: din zone list (`days`, `district_wide_days`, 7.2) theke; SSR protiti area option e lekha dey, client bachai onujayi dekhay.
 
 v1.32 (M6, user 15 November 2026): field er limit, login customer er readonly phone ar prefill, area dropdown ar "Onno area": 8.19 item 2, 4, 10; form `@client` ar JS chhara path nai: 10.13. Perishable er kom shomoy Phase 2 (16.1); M6 e 5/10 din.
 
