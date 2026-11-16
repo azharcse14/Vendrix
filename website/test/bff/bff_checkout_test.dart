@@ -58,7 +58,6 @@ void main() {
       ('/_/checkout', '/api/orders'),
       ('/_/orders/$token/cancel', '/api/orders/$token/cancel'),
       ('/_/confirm/$token', '/api/confirm/$token'),
-      ('/_/track', '/api/orders/track'),
     ]) {
       test('POST $path → $api: body hubohu, no-store', () async {
         const body = '{"district":"Dhaka","area":"Mirpur"}';
@@ -116,7 +115,7 @@ void main() {
         429,
         headers: {'retry-after': '60'},
       );
-      final res = await send('POST', '/_/track', body: '{}');
+      final res = await send('POST', '/_/checkout', body: '{}');
       expect(res.statusCode, 429);
       expect(res.headers['retry-after'], '60');
     });
@@ -139,11 +138,39 @@ void main() {
         // Page SSR e Go theke ney (10.9 e GET route nai).
         ('GET', '/_/me/orders'),
         ('GET', '/_/delivery-zones'),
+        // `/track` nijer page e SSR POST (10.13 item 6).
+        ('POST', '/_/track'),
       ]) {
         final res = await send(m, p);
         expect(res.statusCode, 404, reason: '$m $p');
         expect(seen, isEmpty, reason: '$m $p');
       }
     });
+
+    // Token page `no-referrer` (10.13 item 7): Referer nai, Origin `null`; `303` token er page e, bhasha `?lang=`.
+    for (final (path, page) in [
+      ('/_/orders/$token/cancel', '/order/$token'),
+      ('/_/confirm/$token', '/confirm/$token'),
+    ]) {
+      test('JS chhara form $path: Referer chhara 303 $page, error e ?error=', () async {
+        Future<Response> form(String q) => send(
+          'POST',
+          '$path$q',
+          origin: 'null',
+          headers: {'content-type': 'application/x-www-form-urlencoded', 'sec-fetch-site': 'same-origin'},
+          body: 'reason=',
+        );
+        var res = await form('');
+        expect(res.statusCode, 303);
+        expect(res.headers['location'], page);
+        expect(seen.single.headers['Accept-Language'], 'bn');
+        res = await form('?lang=en');
+        expect(res.headers['location'], '/en$page');
+        expect(seen.single.headers['Accept-Language'], 'en');
+        apiResponse = http.Response('{"error":{"code":"invalid_transition","message":""}}', 409);
+        res = await form('');
+        expect(res.headers['location'], '$page?error=invalid_transition');
+      });
+    }
   });
 }

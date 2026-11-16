@@ -63,6 +63,11 @@ void main() {
         expect(await run(p, response: res), 'private, no-store', reason: p);
       }
       expect(await run('/orders-guide'), 'public, max-age=60');
+      // `/track` (10.13 item 6): uttor e order er status; GET ar POST duitai.
+      for (final p in ['/track', '/en/track']) {
+        expect(await run(p), 'private, no-store', reason: p);
+      }
+      expect(await run('/tracking'), 'public, max-age=60');
     });
 
     test('page nije dile (503 error page) thake', () async {

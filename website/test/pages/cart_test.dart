@@ -153,8 +153,8 @@ void main() {
       expect(t.t('cart.approx'), matches(RegExp(r'^\(.+\)$')));
       expect(text, isNot(contains('((')));
       expect(text, contains(t.t('product.out_of_stock')));
-      // Checkout M6 e (10.12 item 4).
-      expect(doc.querySelector('a[href*="checkout"], form[action*="checkout"]'), isNull);
+      // M6 e checkout link (10.12 item 4 er "M6 porjonto lukano" shesh; checkout_test e).
+      expect(doc.querySelector('a[href="/checkout"]'), isNotNull);
     });
 
     test('login (__Host-sid): Bearer, X-Cart-Key na', () async {
