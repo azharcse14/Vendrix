@@ -104,7 +104,7 @@ func Adjust(ctx context.Context, d *sql.DB, st httpx.Staff, in AdjustInput) (int
 		if stock < qty {
 			return &OutOfStockError{stock}
 		}
-		on, err := batchExpiry(ctx, tx, st.ShopID)
+		on, err := BatchExpiry(ctx, tx, st.ShopID)
 		if err != nil {
 			return err
 		}

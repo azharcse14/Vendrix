@@ -42,8 +42,8 @@ func lockVariant(ctx context.Context, tx *sql.Tx, shopID, variantID int64, vendo
 	return stock, err
 }
 
-// batchExpiry (9.2): shop er published features e batch_expiry.
-func batchExpiry(ctx context.Context, q querier, shopID int64) (bool, error) {
+// BatchExpiry (9.2): shop er published features e batch_expiry.
+func BatchExpiry(ctx context.Context, q querier, shopID int64) (bool, error) {
 	var on bool
 	err := q.QueryRowContext(ctx, `SELECT COALESCE(published->'features' ? 'batch_expiry', false) FROM shop_settings
 		WHERE shop_id = $1`, shopID).Scan(&on)

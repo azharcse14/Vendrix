@@ -151,7 +151,7 @@ func TestPackBatchShortIntegration(t *testing.T) {
 	}
 	rec := f.adm(f.staffAs("staff", 0), "POST", packPath(fids[0]), noItems())
 	e := wantErr(t, "batch kom", rec, http.StatusConflict, "out_of_stock")
-	want := map[string]any{"item_id": float64(fishItem), "variant_id": float64(fish), "available": float64(1)}
+	want := map[string]any{"item_id": fishItem, "variant_id": fish, "available": 1}
 	if b, _ := json.Marshal(e.Details); string(b) != mustJSON(want) {
 		t.Errorf("details %s, chai %s", b, mustJSON(want))
 	}

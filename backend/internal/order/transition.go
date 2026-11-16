@@ -37,7 +37,7 @@ var (
 	ErrNotFound          = errors.New("order: nai")                                    // 404 not_found
 	ErrInvalidTransition = errors.New("order: ei bodol hoy na")                        // 409 invalid_transition
 	ErrPaymentRequired   = errors.New("order: online order, taka ase ni")              // 409 payment_required
-	ErrNotImplemented    = errors.New("order: packed/shipped/delivered/returned M7 e") // 8.19 item 8
+	ErrNotImplemented    = errors.New("order: shipped/delivered/returned/undo M7a te") // 8.19 item 8
 	errRefundOverPaid    = errors.New("order: refund paid er beshi")                   // bug, ROLLBACK
 )
 
@@ -138,9 +138,15 @@ func transitionOrder(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, t
 	return nil
 }
 
-// TransitionFulfillment (8.8): M6 e shudhu → cancelled er side effect; baki allowed bodol ErrNotImplemented
-// (8.19 item 8). Shob fulfillment cancelled hole order o cancelled (System), na hole display_status abar.
+// TransitionFulfillment (8.8): → cancelled ar → packed (ojon chhara: shudhu fixed item er fulfillment; ojon shoho
+// Pack) er side effect; baki allowed bodol ErrNotImplemented (M7a er porer step). Shob fulfillment cancelled hole
+// order o cancelled (System), na hole display_status abar.
 func TransitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string) error {
+	return transitionFulfillment(ctx, tx, shopID, fulfillmentID, to, by, note, nil)
+}
+
+// transitionFulfillment: weights = pack er ojon-variable item → packed_weight_g.
+func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string, weights map[int64]int) error {
 	var orderID, vendorID int64
 	err := tx.QueryRowContext(ctx, `SELECT order_id, vendor_id FROM order_fulfillments WHERE shop_id = $1 AND id = $2`,
 		shopID, fulfillmentID).Scan(&orderID, &vendorID)
@@ -164,14 +170,31 @@ func TransitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentI
 	if !CanTransitionFulfillment(o.fs[i].status, to, by.Actor) {
 		return ErrInvalidTransition
 	}
-	if to != FCancelled {
+	switch to {
+	case FCancelled:
+		if err := cancelFulfillments(ctx, tx, shopID, o, []int{i}, by, note); err != nil {
+			return err
+		}
+		if AllCancelled(o.statuses()) {
+			return transitionOrder(ctx, tx, shopID, o, Cancelled, By{Actor: System}, note)
+		}
+	case Packed:
+		if o.status != Confirmed {
+			return ErrInvalidTransition
+		}
+		if err := pack(ctx, tx, shopID, fulfillmentID, weights); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE order_fulfillments SET status = 'packed', packed_at = now()
+			WHERE shop_id = $1 AND id = $2`, shopID, fulfillmentID); err != nil {
+			return err
+		}
+		if err := history(ctx, tx, shopID, o.id, fulfillmentID, string(o.fs[i].status), string(Packed), by, note); err != nil {
+			return err
+		}
+		o.fs[i].status = Packed
+	default:
 		return ErrNotImplemented
-	}
-	if err := cancelFulfillments(ctx, tx, shopID, o, []int{i}, by, note); err != nil {
-		return err
-	}
-	if AllCancelled(o.statuses()) {
-		return transitionOrder(ctx, tx, shopID, o, Cancelled, By{Actor: System}, note)
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE orders SET display_status = $3 WHERE shop_id = $1 AND id = $2`,
 		shopID, o.id, Summary(o.status, o.statuses()))

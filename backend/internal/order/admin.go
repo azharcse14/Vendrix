@@ -31,6 +31,7 @@ func (h *Handlers) AdminRoutes(mux *http.ServeMux, staff httpx.Middleware) {
 	mux.Handle("POST /api/admin/orders/{id}/notes", admin(h.AdminNote, shop))
 	mux.Handle("GET /api/admin/fulfillments", admin(h.AdminFulfillments, all))
 	mux.Handle("POST /api/admin/fulfillments/{id}/transition", admin(h.AdminTransitionFulfillment, all))
+	mux.Handle("POST /api/admin/fulfillments/{id}/pack", admin(h.AdminPack, all))
 }
 
 // scope (Rule 13, 11.7 item 13 i): shop staff 0 (shob vendor); vendor role e nijer vendor, vendor_id chhara -1
@@ -179,7 +180,7 @@ func (h *Handlers) AdminTransitionOrder(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": in.To, "display_status": display})
 }
 
-// AdminTransitionFulfillment: POST /api/admin/fulfillments/{id}/transition {to, note} (packed er path /pack, M7a step 5).
+// AdminTransitionFulfillment: POST /api/admin/fulfillments/{id}/transition {to, note} (packed er path /pack).
 func (h *Handlers) AdminTransitionFulfillment(w http.ResponseWriter, r *http.Request) {
 	in, ok := decodeTransition(w, r, []string{string(Open), string(Shipped), string(Delivered), string(Returned), string(FCancelled)})
 	if !ok {

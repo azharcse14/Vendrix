@@ -26,7 +26,7 @@ func ScheduleExpire(ctx context.Context, d *sql.DB) error {
 // tarpor batch id kram (pack/restock er moto, deadlock na). Abar chalale kichu pay na (idempotent).
 func ExpireJob(d *sql.DB) jobs.Handler {
 	return func(ctx context.Context, j jobs.Job) error {
-		if on, err := batchExpiry(ctx, d, j.ShopID); err != nil || !on {
+		if on, err := BatchExpiry(ctx, d, j.ShopID); err != nil || !on {
 			return err
 		}
 		today, err := shopToday(ctx, d, j.ShopID)
