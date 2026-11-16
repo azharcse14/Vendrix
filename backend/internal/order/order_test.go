@@ -202,6 +202,7 @@ func TestFulfillmentTransitionGolden(t *testing.T) {
 	golden := map[[2]FStatus][]Actor{
 		{Open, Packed}:        {Staff, Vendor},
 		{Open, FCancelled}:    {Staff, Vendor},
+		{Packed, Open}:        {Staff, Vendor}, // v1.37 pack undo (8.8)
 		{Packed, Shipped}:     {Staff, Vendor},
 		{Packed, FCancelled}:  {Staff},
 		{Shipped, Delivered}:  {Staff, System},
