@@ -52,5 +52,13 @@ void main() {
       expect(k2, isNot(k1));
       expect(keys.keyFor({'note': 'y', 'expected_total': 200}), isNot(k2));
     });
+
+    test('otpCodeOk: shudhu 6 ASCII digit (8.2); khali code e submit hole Go Turnstile chay (turnstile_failed)', () {
+      expect(otpCodeOk('123456'), isTrue);
+      expect(otpCodeOk('012345'), isTrue);
+      for (final c in ['', '12345', '1234567', '12 456', 'abcdef', '১২৩৪৫৬']) {
+        expect(otpCodeOk(c), isFalse, reason: c);
+      }
+    });
   });
 }

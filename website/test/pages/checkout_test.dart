@@ -203,6 +203,8 @@ void main() {
       // Bhul er lekha server e (client shudhu dekhay).
       expect(doc.querySelector('[data-error="price_changed"]')!.text, t.t('error.price_changed'));
       expect(doc.querySelector('[data-error="area_not_served"]')!.text, t.t('error.area_not_served'));
+      // OTP box khola, code khali ba 6 digit na: client ei lekha dekhay, submit kore na.
+      expect(form.querySelector('[data-error="otp_required"]')!.text, t.t('error.otp_required'));
       expect(doc.querySelector('#checkout-error')!.attributes['role'], 'alert');
       // OTP er lekha `{phone}` client bosay.
       expect(doc.querySelector('[data-otp-text]')!.text, t.t('checkout.otp_sent', {'phone': '{phone}'}));
