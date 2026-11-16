@@ -24,6 +24,7 @@ proshno, kon milestone er age lagbe shoho; uttor pele 16.1 ba design e likhe ekh
 
 ## User er kache proshno
 
+- **M7 er por (MU)**: website UI upgrade plan [docs/plans/ui-upgrade-plan.md](plans/ui-upgrade-plan.md) approve, ar 8 ta decision (brand rong, font, trust strip lekha, logo, icon set, discount badge, chobi, milestone er jayga); protitir recommendation plan e. Approve hole `design-change` e 15 e MU row, tarpor `docs/milestones/MU.md`.
 - **M12 er age**: client JS er `?v=<git sha>` (10.10 item 10): Jaspr nijei script tag dey, hook nai; recommendation deploy e Cloudflare purge (16.1).
 - **Ekhon-i (user er kaj)**: `.claude/settings.json` e `"GOTOOLCHAIN": "go1.27.4"` (hook e shudhu user bodlay); na hole Claude Code er Go command 1.27.3 (GO-2026-6859) e chole.
 - **M10 er age**: SSLCommerz validation er HTTP call DB lock er bhetore naki baire (16.1).
