@@ -7,6 +7,7 @@ import (
 
 	"vendrix/backend/internal/coupon"
 	"vendrix/backend/internal/db"
+	"vendrix/backend/internal/httpx"
 )
 
 // By: ke bodlay (history er actor_type/actor_id); Vendor e VendorID (shudhu nijer fulfillment).
@@ -14,6 +15,22 @@ type By struct {
 	Actor    Actor
 	ID       int64
 	VendorID int64
+}
+
+// ByStaff (11.7 item 13 i): admin staff → By. Ochena role e Actor khali, tai kono transition pay na
+// (fail-closed); vendor_id chhara vendor role e VendorID 0, kono fulfillment er na.
+func ByStaff(st httpx.Staff) By {
+	switch st.Role {
+	case "owner", "admin", "staff":
+		return By{Actor: Staff, ID: st.ID}
+	case "vendor_owner", "vendor_staff":
+		b := By{Actor: Vendor, ID: st.ID}
+		if st.VendorID != nil {
+			b.VendorID = *st.VendorID
+		}
+		return b
+	}
+	return By{ID: st.ID}
 }
 
 var (

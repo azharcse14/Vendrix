@@ -34,6 +34,7 @@ Ei kram e poro:
 | `order.go` → `CancelCascade`, `AllCancelled`, `Summary` | Cascade ar display |
 | `backend/internal/order/transition.go` → `TransitionOrder`, `TransitionFulfillment` | DB e bodol, lock, history, display |
 | `transition.go` → `lockOrder`, `cancelFulfillments`, `restock`, `refundCancel`, `history` | Side effect |
+| `transition.go` → `ByStaff` | Admin staff → `By` (11.7 item 13 i) |
 | `transition.go` → `CancelByToken`, `linkActor`; `handler.go` → `Cancel`, `transitionError` | Customer cancel route |
 | `backend/internal/order/order_test.go` | Golden table |
 | `backend/internal/order/transition_integration_test.go` | DB er bodol, cancel, display |
@@ -47,6 +48,7 @@ Ei kram e poro:
 | Shob fulfillment cancel → order cancel (8.8) | `AllCancelled` | `TestLastFulfillmentCancelFlow` |
 | Order cancel → open ar packed fulfillment cancel (8.8) | `CancelCascade` | `TestCancelCascade` |
 | Shob bodol golden table e (14.2 test 7) | table | `TestOrderTransitionGolden`, `TestFulfillmentTransitionGolden` |
+| Admin staff → `By`: owner/admin/staff → `Staff`, vendor_owner/vendor_staff → `Vendor` + session er `vendor_id`; ochena role e Actor khali (kono transition na) (11.7 item 13 i) | `ByStaff` | `TestByStaff` |
 | `display_status` (14.2 test 16) | `Summary` | `TestSummary` |
 | DB e na-allowed bodol `invalid_transition`, online unpaid confirm `payment_required`, `confirmed_at`/history, M6 e packed `ErrNotImplemented`, onno shop/vendor `ErrNotFound`, route er `404`/`409`/`400` (8.8; 14.2 test 7) | `TransitionOrder`, `TransitionFulfillment`, `Cancel` | `TestTransitionIntegration` |
 | Cancel e stock (`cancel` movement), packed e batch, coupon (`used_count`, redemption) ferot, `cancel_reason`; prepaid e protiti fulfillment e ekta refund (0 total e na), order level e na; removed item er stock abar na (8.8, 8.12, 8.13; 14.2 test 8) | `cancelFulfillments`, `restock`, `refundCancel`, `coupon.Release` | `TestCancelRestoresIntegration` |
@@ -69,7 +71,7 @@ Ei kram e poro:
 ## Bodlanor age mone rakho
 
 - Notun status ba actor: age design 8.8, tarpor golden table (test), tarpor code.
-- Role (owner, admin, staff) er niyom ekhane na, handler e (11.2); `Staff` actor shob shop role.
+- Role (owner, admin, staff) er niyom ekhane na, handler/service e (11.2); `Staff` actor shob shop role. Admin handler `By` nije banabe na, `ByStaff(st)` diye.
 
 ## Proshno-uttor
 

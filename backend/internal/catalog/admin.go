@@ -28,7 +28,8 @@ func (h *Handlers) Routes(mux *http.ServeMux, public, staff httpx.Middleware) {
 		return staff(httpx.RequireRole(roles...)(f))
 	}
 	cat := []string{"owner", "admin"}
-	mux.Handle("GET /api/admin/categories", admin(h.AdminCategories, cat...))
+	// v1.37: vendor_owner product form er jonno list dekhe, manage na
+	mux.Handle("GET /api/admin/categories", admin(h.AdminCategories, "owner", "admin", "vendor_owner"))
 	mux.Handle("POST /api/admin/categories", admin(h.CreateCategory, cat...))
 	mux.Handle("PATCH /api/admin/categories/{id}", admin(h.UpdateCategory, cat...))
 	mux.Handle("DELETE /api/admin/categories/{id}", admin(h.DeleteCategory, cat...))

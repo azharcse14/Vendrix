@@ -39,6 +39,7 @@ Ei kram e poro:
 | `serve` e secret lagbe: `OTP_SECRET`, `RECOVERY_SECRET`, `CONFIRM_SECRET` (COD confirm link, 8.10) (32+ okkhor), `TURNSTILE_SECRET`, `TOTP_KEY` (base64 32 byte); error e secret na (13.5) | `config.Load`, `base64Key` | `TestLoadServe`, `TestLoadRejects` |
 | Turnstile er Cloudflare test secret (`1x`/`2x`/`3x...AA`) local chhara na (13.5 v1.20) | `config.Load` (`turnstileTestSecrets`) | `TestLoadRejects`, `TestRejectExampleSecrets` |
 | Router build e panic na (12.2 Server 7); admin route staff chhara `401`, public route shop chhara `404` (v1.10) | `newHandler` | `TestRouterBuild` |
+| Protiti `/api/admin/*` route × 5 role (11.2): table er role e onumoti, baki `403 forbidden`, cookie chhara `401`, `setup_pending` e `403 setup_required` (setup route chhara); table ar source er route mile (11.7 item 13 i) | `newHandler`, `lookupStaffSession`, catalog `Routes` | `TestAdminRouteRoles` |
 | Onno site er browser er POST atkano (12.2 Server 3) | `newHandler` (CrossOriginProtection) | `TestCrossOrigin` |
 | Timeout ar graceful shutdown (4.2, 2.2) | `newServer`, `serve` | `TestServeShutdown` |
 | Env chhara kono command chole na | `run` | `TestRun` |
@@ -57,7 +58,7 @@ Nai (`healthz` shudhu ping kore).
 ## Bodlanor age mone rakho
 
 - Notun env: `Config` e field, `Load` e check, `backend/env.example`, design 13.5 er table, `config_test.go` e test.
-- Notun route: `newHandler` e method shoho pattern; `TestRouterBuild` conflict nijei dhore.
+- Notun route: `newHandler` e method shoho pattern; `TestRouterBuild` conflict nijei dhore. Notun `/api/admin/*` route e `main_test.go` er `adminRoutes` e row (role set 11.2 theke), na hole `TestAdminRouteRoles` fail.
 - Middleware er kram bodlale log, recover, CORS er test abar dekho.
 
 ## Proshno-uttor
