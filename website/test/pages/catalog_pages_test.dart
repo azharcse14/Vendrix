@@ -1,3 +1,4 @@
+import 'package:html/dom.dart' as dom;
 import 'package:jaspr/server.dart';
 import 'package:jaspr_test/server_test.dart';
 import 'package:website/main.server.options.dart';
@@ -140,4 +141,78 @@ void main() {
       expect((await t.request('/policy/privacy')).statusCode, 404); // fake API e nai → not_found
     });
   });
+
+  group('Layout landmark (10.5, 10.7 v1.38)', () {
+    testServer('protiti page e header/main/footer ekbar, ekta h1', (t) async {
+      t.pumpComponent(site({}));
+      for (final path in ['/', '/c/lal', '/p/red-rice', '/search?q=লাল', '/policy/terms', '/cart']) {
+        final doc = (await t.request(path)).document!;
+        for (final tag in ['header', 'main', 'footer', 'h1']) {
+          expect(doc.querySelectorAll(tag), hasLength(1), reason: '$path $tag');
+        }
+      }
+    });
+
+    // (href, header er bhetore kina) protiti `aria-current="page"` link er.
+    List<(String?, bool)> current(dom.Document doc) => [
+      for (final a in doc.querySelectorAll('a[aria-current="page"]')) (a.attributes['href'], _inHeader(a)),
+    ];
+
+    testServer('aria-current="page": header ar bottom nav e ekhon er page er link', (t) async {
+      t.pumpComponent(site({}));
+      expect(current((await t.request('/cart')).document!), [('/cart', true), ('/cart', false)]);
+      expect(current((await t.request('/')).document!), [('/', false)]);
+      expect(current((await t.request('/c/lal')).document!), isEmpty);
+    });
+
+    testServer('logo na thakle naam + leaf icon; thakle chobi (alt = naam)', (t) async {
+      final name = {
+        'name': {'bn': 'সবুজ বাজার'},
+      };
+      t.pumpComponent(site({'branding': name}));
+      var brand = (await t.request('/c/lal')).document!.querySelector('header a[href="/"]')!;
+      expect(brand.text.trim(), 'সবুজ বাজার');
+      expect(brand.querySelector('svg[aria-hidden="true"]'), isNotNull);
+      expect(brand.querySelector('img'), isNull);
+
+      t.pumpComponent(
+        site({
+          'branding': {...name, 'logo_key': 'shops/1/logo.png'},
+        }),
+      );
+      brand = (await t.request('/c/lal')).document!.querySelector('header a[href="/"]')!;
+      expect(brand.querySelector('img')!.attributes['alt'], 'সবুজ বাজার');
+      expect(brand.querySelector('svg'), isNull);
+    });
+
+    testServer('footer: naam, phone tel: link, email, policy, DBID/BFSA', (t) async {
+      t.pumpComponent(
+        site({
+          'branding': {
+            'name': {'bn': 'সবুজ বাজার'},
+            'phone': '+8801711000000',
+            'email': 'hi@shop.test',
+            'dbid_number': '123',
+            'bfsa_number': '456',
+          },
+        }),
+      );
+      final footer = (await t.request('/')).document!.querySelector('footer')!;
+      expect(footer.text, contains('সবুজ বাজার'));
+      expect(footer.querySelector('a[href="tel:+8801711000000"]')!.text, contains('+8801711000000'));
+      expect(footer.querySelector('a[href="mailto:hi@shop.test"]'), isNotNull);
+      for (final k in ['terms', 'return', 'refund', 'delivery', 'privacy']) {
+        expect(footer.querySelector('nav a[href="/policy/$k"]'), isNotNull, reason: k);
+      }
+      expect(footer.text, contains('DBID: 123'));
+      expect(footer.text, contains('BFSA নিবন্ধন: 456'));
+    });
+  });
+}
+
+bool _inHeader(dom.Element e) {
+  for (var p = e.parent; p != null; p = p.parent) {
+    if (p.localName == 'header') return true;
+  }
+  return false;
 }
