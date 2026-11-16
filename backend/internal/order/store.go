@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"vendrix/backend/internal/coupon"
 	"vendrix/backend/internal/pricing"
@@ -74,6 +75,19 @@ func findByKey(ctx context.Context, q querier, shopID int64, key string) (prior,
 	}
 	p.found = err == nil
 	return p, err
+}
+
+// orderLimit (7.8, 8.19 item 9): shesh 60 minute e ekoi customer_phone er 5 ba ekoi ip er 10 ta order thakle
+// limit; retry = oi shima-r purono order window theke ber howa porjonto. ip "" = shudhu phone.
+func orderLimit(ctx context.Context, q querier, shopID int64, phone, ip string) (time.Duration, bool, error) {
+	var secs sql.NullInt64
+	err := q.QueryRowContext(ctx, `SELECT ceil(max(extract(epoch FROM placed_at + interval '60 minutes' - now())))::bigint FROM (
+		(SELECT placed_at FROM orders WHERE shop_id = $1 AND customer_phone = $2 AND placed_at > now() - interval '60 minutes'
+		 ORDER BY placed_at DESC OFFSET 4 LIMIT 1)
+		UNION ALL
+		(SELECT placed_at FROM orders WHERE shop_id = $1 AND ip = NULLIF($3, '') AND placed_at > now() - interval '60 minutes'
+		 ORDER BY placed_at DESC OFFSET 9 LIMIT 1)) x`, shopID, phone, ip).Scan(&secs)
+	return time.Duration(secs.Int64) * time.Second, secs.Valid, err
 }
 
 // lockKey (6.4): ekoi key er duita checkout ek shathe na.

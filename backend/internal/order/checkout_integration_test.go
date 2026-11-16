@@ -889,9 +889,10 @@ func TestCheckoutTurnstileIntegration(t *testing.T) {
 		b["turnstile_token"] = tok
 		return b
 	}
-	for name, tok := range map[string]string{"bhul": "nope", "khali": "", "onno site": "b:x"} {
+	for name, tok := range map[string]string{"bhul": "nope", "khali": ""} {
 		wantErr(t, name, f.place(idemKey(), ck, body(tok)), http.StatusBadRequest, "turnstile_failed")
 	}
+	wantErr(t, "onno site", f.place(idemKey(), ck, body("b:x")), http.StatusBadRequest, "turnstile_failed")
 	if form, _ := f.sv.last.Load().(url.Values); form.Get("response") != "b:x" || form.Get("secret") != tsSecret {
 		t.Errorf("siteverify form %v", form)
 	}
@@ -1051,7 +1052,11 @@ func TestCheckoutRiskIntegration(t *testing.T) {
 		wantErr(t, "price_changed", f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 1)), http.StatusConflict, "price_changed")
 	}
 	decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000)), http.StatusCreated)
-	wantRetry(t, "phone 6 tomo", f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000)))
+	rec := f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody(ph, 56000))
+	wantRetry(t, "phone 6 tomo", rec)
+	if s, _ := strconv.Atoi(rec.Header().Get("Retry-After")); s > 3600 {
+		t.Errorf("order limit Retry-After %d > 1 ghonta", s)
+	}
 	decodePlaced(t, f.place(first, firstCart, orderBody(ph, 56000)), http.StatusOK)
 	// ek IP te ghontay 10
 	for i := f.count(`SELECT count(*) FROM orders WHERE ip = '192.0.2.1'`); i < 10; i++ {
@@ -1063,11 +1068,11 @@ func TestCheckoutRiskIntegration(t *testing.T) {
 	}
 }
 
-// wantRetry: 429 rate_limited + Retry-After 1..3600.
+// wantRetry: 429 rate_limited + Retry-After 1..86400 (SMS cap shop er rat 12 ta porjonto, baki ghontay).
 func wantRetry(t *testing.T, name string, rec *httptest.ResponseRecorder) {
 	t.Helper()
 	wantErr(t, name, rec, http.StatusTooManyRequests, "rate_limited")
-	if s, err := strconv.Atoi(rec.Header().Get("Retry-After")); err != nil || s < 1 || s > 3600 {
+	if s, err := strconv.Atoi(rec.Header().Get("Retry-After")); err != nil || s < 1 || s > 86400 {
 		t.Errorf("%s: Retry-After %q", name, rec.Header().Get("Retry-After"))
 	}
 }

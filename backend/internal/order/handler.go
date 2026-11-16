@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/mail"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -158,7 +160,7 @@ func (h *Handlers) Place(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		hashed
 		OTPCode        *string `json:"otp_code"`
-		TurnstileToken string  `json:"turnstile_token"` // ponytail: Turnstile verify M6 step 6 e
+		TurnstileToken string  `json:"turnstile_token"`
 		Website        string  `json:"website"`
 	}
 	if err := httpx.DecodeJSON(w, r, &in); err != nil {
@@ -189,10 +191,11 @@ func (h *Handlers) Place(w http.ResponseWriter, r *http.Request) {
 	if in.OTPCode != nil {
 		p.OTPCode = *in.OTPCode
 	}
-	p.Key, p.Hash, p.Locale, p.IP = key, sum[:], httpx.Locale(r), httpx.IP(r.Context())
 	s, _ := httpx.ShopFrom(r.Context())
-	out, err := PlaceOrder(r.Context(), h.db, s.ID, cart.OwnerFrom(r), p)
-	h.placeResult(w, r, out, err)
+	p.Key, p.Hash, p.Locale, p.IP = key, sum[:], httpx.Locale(r), httpx.IP(r.Context())
+	p.TurnstileToken, p.Host, p.Timezone = in.TurnstileToken, s.Domain, s.Timezone
+	out, err := PlaceOrder(r.Context(), h.db, h.guard, s.ID, cart.OwnerFrom(r), p)
+	h.placeResult(w, r, out, err, p.Customer.Phone)
 }
 
 // placeInput (8.19 item 10): format check; bhul field er naam ferot.
@@ -241,8 +244,9 @@ func placeInput(in hashed) (PlaceInput, string) {
 	return p, ""
 }
 
-func (h *Handlers) placeResult(w http.ResponseWriter, r *http.Request, out Placed, err error) {
+func (h *Handlers) placeResult(w http.ResponseWriter, r *http.Request, out Placed, err error, customerPhone string) {
 	var fe FieldError
+	var le LimitError
 	var oos OutOfStockError
 	var pc PriceChangedError
 	conflict := func(code string, details map[string]any) {
@@ -266,6 +270,13 @@ func (h *Handlers) placeResult(w http.ResponseWriter, r *http.Request, out Place
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "cart_empty"})
 	case errors.Is(err, ErrOTPInvalid):
 		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "otp_invalid"})
+	case errors.Is(err, ErrOTPAttempts):
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "otp_too_many_attempts"})
+	case errors.Is(err, ErrTurnstile):
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "turnstile_failed"})
+	case errors.As(err, &le):
+		w.Header().Set("Retry-After", strconv.Itoa(max(int(math.Ceil(le.Retry.Seconds())), 1)))
+		httpx.WriteError(w, r, http.StatusTooManyRequests, httpx.ErrorBody{Code: "rate_limited"})
 	case errors.Is(err, shipping.ErrAreaNotServed):
 		conflict("area_not_served", nil)
 	case errors.As(err, &oos):
@@ -280,9 +291,17 @@ func (h *Handlers) placeResult(w http.ResponseWriter, r *http.Request, out Place
 		conflict("price_changed", map[string]any{"total": pc.Total, "subtotal": pc.Subtotal, "discount": pc.Discount,
 			"delivery_charge": pc.DeliveryCharge})
 	case errors.Is(err, ErrOTPRequired):
-		conflict("otp_required", nil)
+		conflict("otp_required", map[string]any{"phone_masked": maskPhone(customerPhone)})
 	default:
 		h.log.ErrorContext(r.Context(), "place order", "request_id", httpx.RequestIDFrom(r.Context()), "err", err)
 		httpx.WriteError(w, r, http.StatusInternalServerError, httpx.ErrorBody{Code: "internal"})
 	}
+}
+
+// maskPhone (8.19 item 4, 6): +88017****5678; customer dekhe kon number e code gelo.
+func maskPhone(p string) string {
+	if len(p) < 10 {
+		return "****"
+	}
+	return p[:6] + "****" + p[len(p)-4:]
 }

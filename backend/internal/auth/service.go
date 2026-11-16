@@ -57,6 +57,11 @@ func sendOTP(ctx context.Context, d *sql.DB, secret string, ts Turnstile, in sen
 	if !ok {
 		return errTurnstile
 	}
+	return issueOTP(ctx, d, secret, in)
+}
+
+// issueOTP (8.2 step 1-4, Turnstile er por): login ar checkout dui purpose e ekoi limit, cap, lock.
+func issueOTP(ctx context.Context, d *sql.DB, secret string, in sendInput) error {
 	key, err := otpSMSKey(secret)
 	if err != nil {
 		return err
@@ -188,29 +193,9 @@ type CartMerge func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, 
 // e consume, user upsert, guest order jog, cart merge, session. Bhul code e 24 ghontar bhul 10 hole lock (429) ar alert.
 // Merge ei transaction e, tai verify fail hole merge na; notice (item_dropped) response er cart_notices e (7.3).
 func verifyOTP(ctx context.Context, d *sql.DB, secret string, merge CartMerge, in verifyInput) (string, User, any, error) {
-	const purpose = "login"
-	if err := phoneLocked(ctx, d, secret, in); err != nil {
-		return "", User{}, nil, err
-	}
-	id, err := latestOTP(ctx, d, in.ShopID, in.Phone, purpose)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", User{}, nil, errOTPInvalid
-	}
+	id, err := checkCode(ctx, d, secret, in, "login")
 	if err != nil {
 		return "", User{}, nil, err
-	}
-	hash, ok, err := countAttempt(ctx, d, in.ShopID, id)
-	if err != nil {
-		return "", User{}, nil, err
-	}
-	if !ok {
-		if used, err := attemptsUsed(ctx, d, in.ShopID, id); err != nil || used {
-			return "", User{}, nil, cmpErr(err, errOTPAttempts)
-		}
-		return "", User{}, nil, errOTPInvalid // ei majhe expire ba onno request e use
-	}
-	if !CheckOTP(secret, in.Phone, purpose, in.Code, hash) {
-		return "", User{}, nil, cmpErr(phoneLocked(ctx, d, secret, in), errOTPInvalid)
 	}
 	token, th := newSessionToken()
 	var u User
@@ -233,6 +218,67 @@ func verifyOTP(ctx context.Context, d *sql.DB, secret string, merge CartMerge, i
 		return insertSession(ctx, tx, in.ShopID, userID, th, in.IP, in.UserAgent, customerSessionTTL)
 	})
 	return token, u, notices, err
+}
+
+// checkCode (8.2 verify step 1-3, consume chhara): lock → shesh OTP → attempt (nijer commit e) → hmac.Equal.
+// Thik hole OTP er id; consume caller er transaction e.
+func checkCode(ctx context.Context, d *sql.DB, secret string, in verifyInput, purpose string) (int64, error) {
+	if err := phoneLocked(ctx, d, secret, in); err != nil {
+		return 0, err
+	}
+	id, err := latestOTP(ctx, d, in.ShopID, in.Phone, purpose)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, errOTPInvalid
+	}
+	if err != nil {
+		return 0, err
+	}
+	hash, ok, err := countAttempt(ctx, d, in.ShopID, id)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		if used, err := attemptsUsed(ctx, d, in.ShopID, id); err != nil || used {
+			return 0, cmpErr(err, errOTPAttempts)
+		}
+		return 0, errOTPInvalid // ei majhe expire ba onno request e use
+	}
+	if !CheckOTP(secret, in.Phone, purpose, in.Code, hash) {
+		return 0, cmpErr(phoneLocked(ctx, d, secret, in), errOTPInvalid)
+	}
+	return id, nil
+}
+
+// Checkout OTP (8.6 step 3, 8, 9; 8.19 item 4): purpose checkout, login er ekoi send limit (shob purpose
+// mile), SMS cap, phone lock ar attempt. Error: ErrOTPInvalid, ErrOTPAttempts, ErrPhoneBlocked, RetryAfter.
+var (
+	ErrOTPInvalid   = errOTPInvalid
+	ErrOTPAttempts  = errOTPAttempts
+	ErrPhoneBlocked = errPhoneBlocked
+)
+
+// RetryAfter: 429 rate_limited er error hole koto por; ok false = limit na.
+func RetryAfter(err error) (time.Duration, bool) {
+	var l limitError
+	if errors.As(err, &l) {
+		return l.retry, true
+	}
+	return 0, false
+}
+
+// SendCheckoutOTP: Turnstile caller (order) step 3 e dekheche; tarpor login er moto issueOTP.
+func SendCheckoutOTP(ctx context.Context, d *sql.DB, secret string, shopID int64, timezone, phone string) error {
+	return issueOTP(ctx, d, secret, sendInput{ShopID: shopID, Timezone: timezone, Phone: phone, Purpose: "checkout"})
+}
+
+// VerifyCheckoutOTP: code thik hole OTP er id (consume na; ConsumeOTP order er transaction e, 8.6 step 9).
+func VerifyCheckoutOTP(ctx context.Context, d *sql.DB, secret string, shopID int64, timezone, phone, code string) (int64, error) {
+	return checkCode(ctx, d, secret, verifyInput{ShopID: shopID, Timezone: timezone, Phone: phone, Code: code}, "checkout")
+}
+
+// ConsumeOTP (8.6 step 9): conditional; false = onno request e already use (400 otp_invalid).
+func ConsumeOTP(ctx context.Context, tx *sql.Tx, shopID, id int64) (bool, error) {
+	return consumeOTP(ctx, tx, shopID, id)
 }
 
 // phoneLocked (7.8, Q3): 24 ghontay 10 bhul hole limitError, ar alert.security (din e ekbar, lockAlert).

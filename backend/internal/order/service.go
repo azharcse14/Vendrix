@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"time"
 
+	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/cart"
 	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/coupon"
@@ -130,8 +132,15 @@ var (
 	ErrVendorClosed  = errors.New("order: vendor active na")                    // 409 vendor_unavailable
 	ErrOTPRequired   = errors.New("order: OTP lagbe")                           // 409 otp_required
 	ErrOTPInvalid    = errors.New("order: OTP bhul")                            // 400 otp_invalid
+	ErrOTPAttempts   = errors.New("order: OTP e 5 bar cheshta")                 // 400 otp_too_many_attempts
+	ErrTurnstile     = errors.New("order: Turnstile fail")                      // 400 turnstile_failed
 	errKeyTaken      = errors.New("order: ekoi key er order insert e conflict") // lock er por hoy na
 )
+
+// LimitError: 429 rate_limited + Retry-After (order er rate limit ba OTP send limit/SMS cap).
+type LimitError struct{ Retry time.Duration }
+
+func (e LimitError) Error() string { return "order: rate limit" }
 
 // OutOfStockError: 409 out_of_stock + details {variant_id} (8.19 item 12 v).
 type OutOfStockError struct{ VariantID int64 }
@@ -153,7 +162,8 @@ type PlaceInput struct {
 	Customer, Recipient                                   Person
 	District, Area, Line, Note, CouponCode, PaymentMethod string
 	ExpectedTotal                                         int64
-	OTPCode                                               string
+	OTPCode, TurnstileToken                               string
+	Host, Timezone                                        string // Turnstile er hostname (shop domain), OTP lock alert er din
 	Key                                                   string
 	Hash                                                  []byte // idempotency_hash (8.19 item 12 ii)
 	Locale, IP                                            string
@@ -176,16 +186,47 @@ func (p prior) again(hash []byte) (Placed, error) {
 	return p.resp, nil
 }
 
-// PlaceOrder (8.6 step 1–2, 4–17; step 3/8 er Turnstile ar OTP M6 step 6 e). Bhul hole kichu save na.
-func PlaceOrder(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in PlaceInput) (Placed, error) {
+// authErr: auth er OTP error order er error e (handler ek jaygay map kore).
+func authErr(err error) error {
+	if retry, ok := auth.RetryAfter(err); ok {
+		return LimitError{retry}
+	}
+	switch {
+	case errors.Is(err, auth.ErrOTPInvalid):
+		return ErrOTPInvalid
+	case errors.Is(err, auth.ErrOTPAttempts):
+		return ErrOTPAttempts
+	case errors.Is(err, auth.ErrPhoneBlocked):
+		return ErrPhoneBlocked
+	}
+	return err
+}
+
+// PlaceOrder (8.6 step 1–17). Bhul hole kichu save na.
+func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Owner, in PlaceInput) (Placed, error) {
 	if p, err := findByKey(ctx, d, shopID, in.Key); err != nil || p.found {
 		if err != nil {
 			return Placed{}, err
 		}
 		return p.again(in.Hash)
 	}
-	if in.OTPCode != "" { // ponytail: step 6 e checkout OTP verify; tar age code mane na (fail closed)
-		return Placed{}, ErrOTPInvalid
+	// step 3: otp_code thakle Turnstile na, kintu code shob shomoy verify (OTP lagbe kina dekhar age); step 8
+	// er verify ekhanei, jate bhul code e bot Turnstile chhara zone/cart/rate limit porjonto na pouchay
+	var otpID int64
+	if in.OTPCode != "" {
+		id, err := auth.VerifyCheckoutOTP(ctx, d, g.OTPSecret, shopID, in.Timezone, in.Customer.Phone, in.OTPCode)
+		if err != nil {
+			return Placed{}, authErr(err)
+		}
+		otpID = id
+	} else {
+		ok, err := g.Turnstile.Verify(ctx, in.TurnstileToken, in.IP, in.Host)
+		if err != nil {
+			return Placed{}, err
+		}
+		if !ok {
+			return Placed{}, ErrTurnstile
+		}
 	}
 	s, err := loadSettings(ctx, d, shopID)
 	if err != nil {
@@ -203,6 +244,13 @@ func PlaceOrder(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in P
 		if p != in.Customer.Phone {
 			return Placed{}, FieldError("customer.phone")
 		}
+	}
+	// 7.8, 8.19 item 9: shudhu hoya order gona
+	if retry, hit, err := orderLimit(ctx, d, shopID, in.Customer.Phone, in.IP); err != nil || hit {
+		if err != nil {
+			return Placed{}, err
+		}
+		return Placed{}, LimitError{retry}
 	}
 	zone, err := shipping.Lookup(ctx, d, shopID, in.District, in.Area)
 	if err != nil {
@@ -231,10 +279,13 @@ func PlaceOrder(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in P
 		return Placed{}, err
 	}
 	flags := RiskFlags(h, s.Risk, cod, in.ExpectedTotal)
-	if OTPRequired(s.OTPMode, flags, cod, loggedIn) { // ponytail: OTP pathano M6 step 6 e; tar age order na
+	otpVerified := loggedIn || otpID != 0
+	if !otpVerified && OTPRequired(s.OTPMode, flags, cod, loggedIn) { // step 8: OTP customer phone e (8.19 item 4)
+		if err := auth.SendCheckoutOTP(ctx, d, g.OTPSecret, shopID, in.Timezone, in.Customer.Phone); err != nil {
+			return Placed{}, authErr(err)
+		}
 		return Placed{}, ErrOTPRequired
 	}
-	otpVerified := loggedIn
 	status, payStatus := "confirmed", "unpaid"
 	switch {
 	case !cod:
@@ -261,6 +312,15 @@ func PlaceOrder(ctx context.Context, d *sql.DB, shopID int64, o cart.Owner, in P
 		if p.found {
 			out, err = p.again(in.Hash)
 			return err
+		}
+		// ROLLBACK hole OTP abar chole (price_changed er por ekoi code, 14.2 test 40)
+		if otpID != 0 {
+			if ok, err := auth.ConsumeOTP(ctx, tx, shopID, otpID); err != nil || !ok {
+				if err != nil {
+					return err
+				}
+				return ErrOTPInvalid
+			}
 		}
 		// step 10: variant_id er kram e (deadlock na, 8.8)
 		slices.SortFunc(lines, func(a, b cart.CheckoutLine) int { return cmp.Compare(a.VariantID, b.VariantID) })
