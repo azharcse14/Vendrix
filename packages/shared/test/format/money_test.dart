@@ -62,4 +62,22 @@ void main() {
       expect(formatRating(4.666, 'en_IN'), '4.7');
     });
   });
+  group('discountPercent (10.5 v1.38 item 2, Rule 1: shudhu display)', () {
+    test('round((old - new) / old * 100), int diye', () {
+      expect(discountPercent(18000, 20000), 10);
+      expect(discountPercent(20000, 30000), 33); // 33.33
+      expect(discountPercent(17500, 20000), 13); // 12.5 → upore
+      expect(discountPercent(1, 900719925474099), 100);
+    });
+    test('5% er kom hole null; thik 5% e dekhay', () {
+      expect(discountPercent(19000, 20000), 5);
+      expect(discountPercent(19100, 20000), isNull); // 4.5%
+    });
+    test('compare_at nai, soman ba kom hole null', () {
+      expect(discountPercent(18000, null), isNull);
+      expect(discountPercent(18000, 18000), isNull);
+      expect(discountPercent(18000, 10000), isNull);
+      expect(discountPercent(18000, 0), isNull);
+    });
+  });
 }

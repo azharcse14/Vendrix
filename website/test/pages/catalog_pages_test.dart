@@ -41,6 +41,35 @@ void main() {
     });
   });
 
+  group('Product card ar listing (10.5 v1.38, 10.7)', () {
+    testServer('card: naam h2 (h1 er por, h3 na), discount badge (5% er kom na), stock shesh lekha', (t) async {
+      t.pumpComponent(site({}));
+      for (final (path, off, out) in [('/c/lal', '১০% ছাড়', 'স্টকে নেই'), ('/en/c/lal', '10% off', 'Out of stock')]) {
+        final doc = (await t.request(path)).document!;
+        final prefix = path.startsWith('/en') ? '/en' : '';
+        final red = doc.querySelector('a[href="$prefix/p/red-rice"]')!;
+        final chini = doc.querySelector('a[href="$prefix/p/chinigura"]')!;
+        expect(red.querySelector('h2')!.text, 'নাম red-rice', reason: path);
+        expect(doc.querySelectorAll('h3'), isEmpty, reason: path);
+        expect(red.text, contains(off), reason: path);
+        expect(chini.text, isNot(contains('%')), reason: path); // 3%
+        // Rong-er upor nirbhor na: lekha thake (10.7).
+        expect(chini.text, contains(out), reason: path);
+        expect(red.text, isNot(contains(out)), reason: path);
+      }
+    });
+
+    testServer('khali list: icon, lekha, category te link', (t) async {
+      t.pumpComponent(site({}));
+      final doc = (await t.request('/search?q=nothing')).document!;
+      final main = doc.querySelector('main')!;
+      expect(main.text, contains('কিছু পাওয়া যায়নি'));
+      expect(main.querySelector('svg[aria-hidden="true"]'), isNotNull);
+      expect(main.querySelector('a[href="/#categories"]'), isNotNull);
+      expect(main.querySelectorAll('a[href^="/p/"]'), isEmpty);
+    });
+  });
+
   group('Home (10.1)', () {
     testServer('category, featured (na pawa slug bad), banner er bhul link e link na', (t) async {
       t.pumpComponent(
@@ -57,6 +86,8 @@ void main() {
       expect(res.statusCode, 200);
       final doc = res.document!;
       expect(doc.querySelector('#categories a[href="/c/chal"]'), isNotNull);
+      // Chobi chhara category tile e icon (10.5 v1.38 item 5).
+      expect(doc.querySelector('#categories a[href="/c/chal"] svg[aria-hidden="true"]'), isNotNull);
       expect(doc.querySelector('a[href="//evil.com"]'), isNull);
       expect(doc.querySelector('img[srcset*="shops/1/b1.jpg"]'), isNotNull);
     });

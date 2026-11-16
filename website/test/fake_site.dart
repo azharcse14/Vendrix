@@ -10,14 +10,14 @@ import 'package:website/components/site.dart';
 import 'package:website/services/image.dart';
 
 // Fake Go API (7.2 er shape).
-Map<String, dynamic> card(String slug, int price, {bool inStock = true, String? image}) => {
+Map<String, dynamic> card(String slug, int price, {bool inStock = true, String? image, int? compareAt}) => {
   'id': slug.length,
   'slug': slug,
   'name': 'নাম $slug',
   'unit': 'kg',
   'variable_weight': false,
   'price': price,
-  'compare_at_price': null,
+  'compare_at_price': compareAt,
   'in_stock': inStock,
   'rating': 0,
   'review_count': 0,
@@ -46,10 +46,17 @@ final fakeApi = MockClient((r) async {
       ];
     case '/api/products':
       body = {
-        'items': [card('red-rice', 18000, image: 'shops/1/rice.jpg'), card('chinigura', 16000, inStock: false)],
+        // q=nothing: khali list (empty state).
+        'items': r.url.queryParameters['q'] == 'nothing'
+            ? []
+            : [
+                // 10% chhar (badge), 3% (badge na).
+                card('red-rice', 18000, image: 'shops/1/rice.jpg', compareAt: 20000),
+                card('chinigura', 16000, inStock: false, compareAt: 16500),
+              ],
         'page': 1,
         'limit': 24,
-        'total': 30,
+        'total': r.url.queryParameters['q'] == 'nothing' ? 0 : 30,
       };
     case '/api/policies/terms':
       body = {'kind': 'terms', 'body': 'প্রথম <b>লাইন</b>\n\nদ্বিতীয়'};
