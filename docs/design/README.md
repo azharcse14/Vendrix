@@ -1,6 +1,6 @@
 # Vendrix: puro system design ar build plan
 
-Version 1.35, 16 November 2026
+Version 1.36, 16 November 2026
 
 Ei document e ekta Bangladesh-based ecommerce platform er puro design ache: ki banano hobe, kon technology te, database kemon, API kemon, kon niyom mante hobe, ar kon order e banate hobe. Shuru hobe ekta organic food er dokan diye (single store), kintu ekoi code pore fashion, electronics er moto onno business eo chalano jabe. Design emon je pore ekoi code e **marketplace** (ek website e onek seller) ar **multi-tenant** (ek platform e onek alada dokan) chalano jay, kono boro rewrite chhara. Tin ta mode Section 1.6 e.
 
@@ -88,3 +88,4 @@ Niyom er lekha (8.x) ar code e kono parthokko dekhle age doc thik koro, tarpor c
 | 1.33 | 16 November 2026 | 10.1, 10.9, 10.13 item 6, 7, 16.1 (M6 step 13, Claude (advisor agent) decision, user ulte dite pare): `/track` nijer page e SSR POST (BFF `/_/track` nai; uttor URL e rakha jay na tai `303` na); token page er cancel/confirm form er `303` token theke (no-referrer e Referer nai), token page e `X-Robots-Tag: noindex` |
 | 1.34 | 16 November 2026 | 8.19 item 13, 8.8 (signature `shopID`/`By`, batch lock er kram), 7.5 (quote), 7.8, 16.1 (M6 review fix, Claude decide korche security/design reviewer er recommendation e, user bodlate paren): checkout OTP login er IP limit e ek gona; quote e guest er history/coupon per-phone na, quote 30/minute; IPv6 `/64` order limit ar `many_orders` e; customer cancel/confirm er `actor_id`, vendor tx e, cart e shudhu order er variant muche, cancelled order e SMS na; 8.6 er step er asol kram |
 | 1.35 | 16 November 2026 | 7.2, 8.19 item 2, 10.6 (M6 step 16 design review, Claude decide): `GET /api/delivery-zones` e area `days` ar district `district_wide_days`; checkout e order er age delivery er shomoy (10.6, 12.2 Digital Commerce Guideline). Din er niyom (8.15) shudhu server e |
+| 1.36 | 16 November 2026 | 10.3, 10.12 item 9 (M6 step 14 Safari proman e dhora bug, Claude decide, user bodlate paren): `/cart` ar `/checkout` cookie chhara-o `private, no-store`; ager `public, max-age=60` e guest khali `/cart` dekhe add korle browser cache theke khali cart dekhto |
