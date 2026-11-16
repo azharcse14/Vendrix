@@ -107,6 +107,23 @@ theme: { extend: {
 
 Jaspr server protiti page er `<head>` e `:root { --color-primary: #1F5A32; ... }` boshay, published settings theke. Tailwind v3 e `bg-primary/50` er moto opacity modifier `var()` rong e kaj kore na; dorkar hole alada token.
 
+v1.38 (MU, user 16 November 2026, [plan](../plans/ui-upgrade-plan.md)): admin er input bodlay na (5 rong, 2 font, radius); notun derived token shob `deriveTokens`/`cssVariables` (`packages/shared/lib/theme/tokens.dart`) hishab kore, website `:root` e boshay, Tailwind config e shudhu `var()` (Rule 4). Fixed semantic rong (success/danger/warning) er hex shudhu `packages/shared` e; `website/` e hex ba Bangla literal na.
+
+| Token | CSS variable | Hishab (`mix` upore v1.12 er moto) | Kothay |
+|---|---|---|---|
+| primary-soft | `--color-primary-soft` | `mix(background, primary, 10%)`; `primary` lekha er sathe 4.5 na hole % komano | Active nav, selected chip/radio card, info notice |
+| accent-soft | `--color-accent-soft` | `mix(background, accent, 18%)`; `text` er sathe 4.5 | Offer strip, discount badge er halka version |
+| success / danger / warning | `--color-success`, `--color-danger`, `--color-warning` | Fixed shuru `#1E6B3A` / `#B42318` / `#8A5A00`; `background` ar nijer soft er upore 4.5 na hole `text` er dike 1% kore shorano (muted er moto loop) | Status badge, form error, stock |
+| success-soft / danger-soft / warning-soft | `--color-success-soft` ... | `mix(background, X, 12%)` | Badge/notice er pichon |
+| focus | `--color-focus` | `primary`; `background` ar `surface` er upore 3:1 na hole `text` | `:focus-visible` ring (WCAG 2.4.7, 1.4.11) |
+| text-rgb | `--color-text-rgb` | `text` er triplet, jemon `59 42 26` | Shadow `rgb(var(--color-text-rgb) / .08)` (`color-mix` lage na, purono Safari/Chrome) |
+| radius-sm / radius-lg | `--radius-sm`, `--radius-lg` | `round(radius / 2)`; `min(round(radius × 1.5), 24)` | Input, select, badge, chip; hero, sheet |
+| shadow-1 / shadow-2 | `--shadow-1`, `--shadow-2` | `text-rgb` diye duita matro | Card hover ar sticky bar; sheet ar dialog |
+
+Contrast test (`packages/shared/test/theme/`): 3 preset × notun jora (badge lekha/soft pichon 4.5, `primary`/`primary-soft` 4.5, `focus`/`background` 3.0) ar ekta kharap rong (halka primary) e derive nijei thik kore. Admin warning er jora (upore v1.12 er list) bodlay na: notun jora admin er dewa rong na, derive er bhetore auto-fix; tai M8 er Go draft save e notun hishab lage na.
+
+Tailwind (website) e notun naam: `primary-soft`, `accent-soft`, `success`, `success-soft`, `danger`, `danger-soft`, `warning`, `warning-soft`, `focus` (rong); `rounded-sm`, `rounded-lg` (radius); `shadow-1`, `shadow-2`. Spacing Tailwind er 4px scale; motion shudhu CSS `transition` 150ms (`color`, `background`, `box-shadow`, `transform` ≤ 2px), `prefers-reduced-motion: reduce` e off, JS animation na. Brand rong: organic preset (9.4) bodlay na.
+
 ### 9.4 Preset
 
 | Preset | primary | accent | tint | text | background | Heading font | Body font | radius |
@@ -144,7 +161,7 @@ Shudhu ei font gulo allowed (shob Bangla ar Latin duitai shapport kore), ar segu
 | h2 | `clamp(1.5rem, 4vw, 2rem)` | | 1.3 |
 | h1 | `clamp(1.75rem, 6vw, 2.75rem)` | | 1.25 |
 
-Font weight shudhu 400 ar 500 (heading font e 600 thakle sheta). `font-display: swap`. Line er dairgho 70 okkhor er beshi na. Button ar chip e fixed width na, karon English lekha prai Bangla er cheye lomba.
+Font weight shudhu 400 ar 500 (heading font e 600 thakle sheta). `font-display: swap`. v1.38 (MU): body font **shudhu 400**; emphasis (price, total, label er bold) heading font er 500/600 diye (Tiro Bangla shudhu 400). `theme.dart` body family te 400, heading family te 500 ar 600 er `@font-face` dey (duita ekoi family hole ek shathe). Prothom view e ≤ 3 file, ≤ 140 KB (organic: Hind Siliguri bn 400 + Baloo Da 2 bn 500/600; latin subset shudhu Latin lekha thakle, `unicode-range`). `<link rel=preload>` shudhu body bn 400; Lighthouse e LCP bhalo na hole bad. Fallback stack e `"Noto Sans Bengali", "Nirmala UI", sans-serif` (swap e layout kom nore). Simulate (Lantern) LCP 2.5s er beshi thakle body `Noto Sans Bengali` hole `src: local("Noto Sans Bengali"), url(...)` (Android e system font, 0 byte) (16.1, v1.38). Scale (rem): 14 choto (min; Bangla 12px e kar-fola bhange) / 16 body / 18 lead ar price / 20 h3 / upore h2, h1 er `clamp`. Price `font-heading` 500–600 ar `tabular-nums` (Latin digit e; Bangla digit fixed width na, tai price column right-align). Line er dairgho 70 okkhor er beshi na. Button ar chip e fixed width na, karon English lekha prai Bangla er cheye lomba.
 
 ### 9.7 Flutter e theme
 

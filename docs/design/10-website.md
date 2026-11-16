@@ -118,6 +118,17 @@ Mobile niyom:
 
 **Speed er lokkho** (majhari Android phone, slow 4G): LCP 2.5 second er kom, INP 200 ms er kom, CLS 0.1 er kom. Protiti boro bodoler por Lighthouse mobile (Slow 4G + CPU throttling). v1.18: acceptance er number devtools (asol) throttle e (`--throttling-method=devtools`); simulate (Lantern) er number Report e note; font kom korar kaj M12 er age, Lighthouse CI er sathe (16.1). `build/jaspr/web/main.dart.js` er size protibar maapo, hothat barle karon khojo. `@client` kom rakho.
 
+v1.38 (MU): font kom korar kaj M12 theke MU te (9.6); MU er acceptance: Lighthouse mobile (home/category/product) Performance ≥ 95, Accessibility 100, LCP < 2.5s simulate eo; client JS (`main.client.dart.js`) +0 byte (MU te notun `@client` na, icon/state shob SSR ar CSS); `styles.css` minify gzip ≤ 7 KB (≤ 30 KB); prothom view er font ≤ 3 file, ≈ 140 KB; CLS < 0.05.
+
+**UI niyom (v1.38, MU)**: token er upore choto component class set, `website/tailwind.css` er `@layer components` e (notun Dart abstraction na): `.btn` (+ `-primary`, `-secondary`, `-ghost`, `-danger`), `.input` (input/select/textarea ekoi `--radius-sm`; select e `appearance-none` + `currentColor` SVG chevron), `.card`, `.badge` (+ `-success`, `-danger`, `-warning`, `-accent`, `-muted`), `.notice` (+ variant, icon + lekha, `role="status"`/`alert`), `.chip`, `.section-title`; ~12 er beshi na, page e aabar lomba class string review e dhoro. Page test e structure ar lekha assert, class string na.
+
+1. **Icon**: ~12 ta inline SVG, Lucide (ISC license), ekta Dart file (`website/lib/components/icon.dart`) e path string; `stroke="currentColor"`, `aria-hidden="true"`. ISC er shorto: Lucide er copyright notice ar license er lekha `icon.dart` er upore comment e (version shoho). Font icon ba JS na.
+2. **Discount % badge**: `compare_at_price` theke shudhu display (`round((old − new) / old × 100)`, shared format e, test shoho); order/taka hishab na (Rule 1 er hishab na). 5% er kom hole badge na.
+3. **Trust strip** (home, product): shudhu settings theke ja shotto: COD (`payment_methods` e `cod`), delivery din (zone er min din thakle), certification (`features` e `certification` ar certificate thakle, 9.5), return window (`checkout.return_window_days`). Faka dabi na. Lekha l10n key (Claude default bn/en likhbe, shop owner review korbe).
+4. **Logo fallback**: logo PNG (2.2) na thakle heading font e shop er naam + leaf icon.
+5. **Chobi**: asol product/krishok chobi M12 er age shop owner dibe; tar age `tint` pichon + icon placeholder (1:1), UI chobi chhara-o thik dekhay.
+6. Dark mode, animation, carousel, PWA MU te na.
+
 **Test er device**: sosta Android er Chrome, **Facebook/Messenger er in-app browser** (login, OTP, cart, SSLCommerz redirect shob), iPhone Safari, desktop Chrome. Width: 360, 390, 412, 768, 1280. Duita bhashay-i.
 
 ### 10.6 Checkout form
@@ -130,7 +141,7 @@ v1.32 (M6, user 15 November 2026): field er limit, login customer er readonly ph
 
 ### 10.7 Accessibility
 
-Shob chobir `alt` (product naam), protiti input er `<label>`, keyboard diye shob kaj, focus dekha jay, rong-er upor ekmatro nirbhor kore kono tottho na (stock shesh = lekha + rong), contrast 4.5:1.
+Shob chobir `alt` (product naam), protiti input er `<label>`, keyboard diye shob kaj, focus dekha jay, rong-er upor ekmatro nirbhor kore kono tottho na (stock shesh = lekha + rong), contrast 4.5:1. v1.38 (MU): base CSS e `:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px }` (focus/bg 3:1, 9.3), radio/checkbox e `accent-color: var(--color-primary)`; nav e `aria-current="page"`; landmark `header`/`main`/`footer` ekbar, page e ekta `h1`, heading order thik (card er naam `h2`/`p`, `h3` er age `h2`).
 
 ### 10.8 Phase 2: PWA
 
