@@ -27,6 +27,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
 | Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`; website `/cart`, heart) |
 | Delivery zone | [delivery-zone.md](delivery-zone.md) | 7.2, 8.6, 8.19 | M6 | cholche (lookup, `GET /api/delivery-zones`, dev seed; admin M7 e) |
+| Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19 | M6 | cholche (use, peek, release; checkout/quote e jog step 4–5, admin M7 e) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
@@ -48,6 +49,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
 | `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup` | [cart.md](cart.md) |
 | `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones` | [delivery-zone.md](delivery-zone.md) |
+| `backend/internal/coupon` | Coupon: atomic use, phone limit, karon, read-only peek, cancel e ferot | [coupon.md](coupon.md) |
 | `backend/internal/order` | Status er state machine (pure) | [order-status.md](order-status.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
