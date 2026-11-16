@@ -144,6 +144,7 @@ func TestRun(t *testing.T) {
 	}
 	env := map[string]string{"APP_ENV": "local", "DATABASE_URL": "postgres://x@127.0.0.1:1/db?connect_timeout=1",
 		"JASPR_INTERNAL_SECRET": strings.Repeat("s", 32), "OTP_SECRET": strings.Repeat("o", 32), "RECOVERY_SECRET": strings.Repeat("r", 32),
+		"CONFIRM_SECRET":   strings.Repeat("c", 32),
 		"TURNSTILE_SECRET": "1x0000000000000000000000000000000AA", "TOTP_KEY": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="}
 	lookup := func(k string) (string, bool) { v, ok := env[k]; return v, ok }
 	// config thik, tai error database theke (config er error e na)
@@ -368,6 +369,9 @@ func TestSessionRouteKind(t *testing.T) {
 		{"staff token Bearer order e", "POST", "/api/orders", "staff-token", "", 401, "unauthenticated"},
 		{"guest order cancel (body nai)", "POST", "/api/orders/x/cancel", "", "", 400, "validation_failed"},
 		{"staff token Bearer cancel e", "POST", "/api/orders/x/cancel", "staff-token", "", 401, "unauthenticated"},
+		{"guest confirm view (ochena token)", "GET", "/api/confirm/x", "", "", 404, "not_found"},
+		{"guest confirm (ochena token)", "POST", "/api/confirm/x", "", "", 404, "not_found"},
+		{"staff token Bearer confirm e", "POST", "/api/confirm/x", "staff-token", "", 401, "unauthenticated"},
 		{"setup_pending logout", "POST", "/api/admin/auth/logout", "", "setup-token", 204, ""},
 		{"logout er por", "POST", "/api/admin/auth/totp/setup", "", "setup-token", 401, "unauthenticated"},
 	} {

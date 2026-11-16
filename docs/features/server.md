@@ -49,7 +49,7 @@ Nai (`healthz` shudhu ping kore).
 
 ## Bhul hole ki hoy
 
-- Purono `backend/.env` e M4 er secret (`OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET`) nai: `make run` start hoy na; `backend/env.example` theke line gulo copy koro.
+- Purono `backend/.env` e M4 er secret (`OTP_SECRET`, `TURNSTILE_SECRET`, `TOTP_KEY`, `RECOVERY_SECRET`) ba M6 er `CONFIRM_SECRET` nai: `make run` start hoy na; `backend/env.example` theke line gulo copy koro.
 - Env bhul: shob bhul ek error e, process exit 1; systemd `Restart=always` abar cheshta kore, karon log e.
 - Database nai: `serve` start-i hoy na (`database e jete parchi na`); chalu obosthay database gele `/healthz` 503, uptime monitor alert dey (13.8).
 - pgx driver register hoyni (`driver.go` er import nai): `db.ErrNoDriver`.

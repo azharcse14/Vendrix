@@ -28,7 +28,7 @@ const (
 // MinSecretLen: secret er kom-poksha dairgho (okkhor). `openssl rand -base64 32` 44 okkhor dey.
 const MinSecretLen = 32
 
-// Config: M4 porjonto env (13.5). Notun env lagle: ekhane field ar Load e validation, backend/env.example,
+// Config: M6 porjonto env (13.5). Notun env lagle: ekhane field ar Load e validation, backend/env.example,
 // 13.5 er table, config_test.go te test (docs/features/server.md).
 type Config struct {
 	Env                 string   // APP_ENV: local, staging, production
@@ -42,6 +42,7 @@ type Config struct {
 	TurnstileSecret     string   // TURNSTILE_SECRET: Cloudflare siteverify (12.2)
 	TOTPKey             []byte   // TOTP_KEY: base64, 32 byte; staff TOTP secret er AES-GCM (8.3)
 	RecoverySecret      string   // RECOVERY_SECRET: recovery code er HMAC (8.3)
+	ConfirmSecret       string   // CONFIRM_SECRET: COD confirm token er HMAC (8.10)
 }
 
 // turnstileTestSecrets: Cloudflare er dummy secret (pass, fail, spent); shudhu local e (v1.20).
@@ -100,8 +101,9 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 		if len(c.AdminOrigins) == 0 && c.Env != "local" {
 			bad("ADMIN_ORIGINS nai (jemon https://admin.tomarshop.com)")
 		}
-		c.OTPSecret, c.RecoverySecret = get("OTP_SECRET"), get("RECOVERY_SECRET")
-		for name, v := range map[string]string{"OTP_SECRET": c.OTPSecret, "RECOVERY_SECRET": c.RecoverySecret} {
+		c.OTPSecret, c.RecoverySecret, c.ConfirmSecret = get("OTP_SECRET"), get("RECOVERY_SECRET"), get("CONFIRM_SECRET")
+		for name, v := range map[string]string{"OTP_SECRET": c.OTPSecret, "RECOVERY_SECRET": c.RecoverySecret,
+			"CONFIRM_SECRET": c.ConfirmSecret} {
 			if len(v) < MinSecretLen {
 				bad("%s kom-poksha %d okkhor (openssl rand -base64 32)", name, MinSecretLen)
 			}
@@ -138,7 +140,8 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 	}
 	// env.example er secret e "local-only" ache; copy kore deploy korle repo-r public secret byabohar hoto
 	for name, v := range map[string]string{"JASPR_INTERNAL_SECRET": c.JasprInternalSecret, "CREDENTIALS_KEY": string(c.CredentialsKey),
-		"OTP_SECRET": c.OTPSecret, "TOTP_KEY": string(c.TOTPKey), "RECOVERY_SECRET": c.RecoverySecret} {
+		"OTP_SECRET": c.OTPSecret, "TOTP_KEY": string(c.TOTPKey), "RECOVERY_SECRET": c.RecoverySecret,
+		"CONFIRM_SECRET": c.ConfirmSecret} {
 		if c.Env != "local" && strings.Contains(v, "local-only") {
 			bad("%s env.example er local-only value; notun dao (openssl rand -base64 32)", name)
 		}

@@ -376,9 +376,14 @@ func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Ow
 			return err
 		}
 		token := rand.Text()
+		var confirmHash []byte // 8.10: shudhu COD pending (confirm lage); token nije DB te na
+		if cod && status == "pending" {
+			confirmHash = ConfirmHash(ConfirmToken(g.ConfirmSecret, token))
+		}
 		orderID, ok, err := insertOrder(ctx, tx, newOrder{ShopID: shopID, UserID: o.UserID, ZoneID: zone.ID, Number: number,
 			Token: token, Key: in.Key, Hash: in.Hash, In: in, Totals: r.Totals, Coupon: c, PaymentStatus: payStatus,
-			Status: status, Display: Summary(Status(status), nil), Flags: flags, OTPVerified: otpVerified, DeadlineDays: days})
+			Status: status, Display: Summary(Status(status), nil), Flags: flags, OTPVerified: otpVerified, DeadlineDays: days,
+			ConfirmHash: confirmHash})
 		if err != nil {
 			return err
 		}

@@ -45,6 +45,8 @@ func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handl
 	mux.Handle("POST /api/checkout/quote", wrap(http.HandlerFunc(h.Quote)))
 	mux.Handle("POST /api/orders", wrap(http.HandlerFunc(h.Place)))
 	mux.Handle("POST /api/orders/{token}/cancel", wrap(http.HandlerFunc(h.Cancel)))
+	mux.Handle("GET /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.ConfirmView)))
+	mux.Handle("POST /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.Confirm)))
 }
 
 func invalid(w http.ResponseWriter, r *http.Request, field, code string) {
@@ -333,6 +335,33 @@ func (h *Handlers) Cancel(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": string(Cancelled)})
+}
+
+// ConfirmView: GET /api/confirm/{confirm_token} (8.10 item 2); public_token diye hoy na (Rule 11).
+func (h *Handlers) ConfirmView(w http.ResponseWriter, r *http.Request) {
+	s, _ := httpx.ShopFrom(r.Context())
+	v, err := ConfirmView(r.Context(), h.db, s.ID, r.PathValue("confirm_token"))
+	if err != nil {
+		h.transitionError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, v)
+}
+
+// Confirm: POST /api/confirm/{confirm_token}; body lage na. Abar confirm 409 invalid_transition.
+func (h *Handlers) Confirm(w http.ResponseWriter, r *http.Request) {
+	by := By{Actor: Customer}
+	if c, ok := httpx.CustomerFrom(r.Context()); ok {
+		by.ID = c.UserID
+	}
+	s, _ := httpx.ShopFrom(r.Context())
+	if err := ConfirmByToken(r.Context(), h.db, s.ID, r.PathValue("confirm_token"), by); err != nil {
+		h.transitionError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": string(Confirmed)})
 }
 
 // transitionError: TransitionOrder/TransitionFulfillment er error → 7.1.
