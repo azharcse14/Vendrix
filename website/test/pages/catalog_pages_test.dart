@@ -91,6 +91,82 @@ void main() {
       expect(doc.querySelector('a[href="//evil.com"]'), isNull);
       expect(doc.querySelector('img[srcset*="shops/1/b1.jpg"]'), isNotNull);
     });
+    testServer('banner na thakle dekha hero: naam h1, tagline, category CTA (10.5 v1.38, plan 5)', (t) async {
+      t.pumpComponent(
+        site({
+          'branding': {
+            'name': {'bn': 'সবুজ বাজার'},
+            'tagline': {'bn': 'কৃষকের কাছ থেকে সরাসরি'},
+          },
+        }),
+      );
+      final doc = (await t.request('/')).document!;
+      final h1 = doc.querySelector('h1')!;
+      expect(h1.text, 'সবুজ বাজার');
+      expect(h1.classes, isNot(contains('sr-only')));
+      final hero = h1.parent!;
+      expect(hero.text, contains('কৃষকের কাছ থেকে সরাসরি'));
+      expect(hero.querySelector('a[href="#categories"]')!.text, 'সব ক্যাটাগরি দেখুন');
+    });
+
+    testServer('banner thakle hero na: h1 sr-only, banner LCP', (t) async {
+      t.pumpComponent(
+        site({
+          'branding': {
+            'name': {'bn': 'সবুজ বাজার'},
+            'tagline': {'bn': 'কৃষকের কাছ থেকে সরাসরি'},
+          },
+          'homepage': {
+            'banners': [
+              {'image_key': 'shops/1/b1.jpg'},
+            ],
+          },
+        }),
+      );
+      final doc = (await t.request('/')).document!;
+      expect(doc.querySelector('h1')!.classes, contains('sr-only'));
+      expect(doc.body!.text, isNot(contains('কৃষকের কাছ থেকে সরাসরি')));
+      expect(doc.querySelector('img[srcset*="shops/1/b1.jpg"]')!.attributes['fetchpriority'], 'high');
+    });
+
+    testServer('trust strip: shudhu settings e ja shotto (10.5 v1.38 item 3, 16.1 MU Q3)', (t) async {
+      // Kichu na thakle strip-i na.
+      t.pumpComponent(site({}));
+      expect((await t.request('/')).document!.querySelector('#trust'), isNull);
+
+      // COD + return; certification feature ache kintu shop er certificate settings e nai → na.
+      // Delivery din: home e zone API call na, tai na.
+      for (final (locale, cod, ret) in [
+        ('bn', 'ক্যাশ অন ডেলিভারি', '৩ দিনের মধ্যে ফেরত'),
+        ('en', 'Cash on delivery', 'Returns within 3 days'),
+      ]) {
+        t.pumpComponent(
+          site({
+            'features': ['certification'],
+            'checkout': {
+              'payment_methods': ['cod', 'sslcommerz'],
+              'return_window_days': 3,
+            },
+          }, locale: locale),
+        );
+        final trust = (await t.request(locale == 'en' ? '/en' : '/')).document!.querySelector('#trust')!;
+        final items = trust.querySelectorAll('li');
+        expect(items, hasLength(2), reason: locale);
+        expect(items[0].text, contains(cod), reason: locale);
+        expect(items[1].text, contains(ret), reason: locale);
+        expect(items.every((li) => li.querySelector('svg[aria-hidden="true"]') != null), isTrue, reason: locale);
+      }
+
+      // COD na (shudhu online), return na → strip na.
+      t.pumpComponent(
+        site({
+          'checkout': {
+            'payment_methods': ['sslcommerz'],
+          },
+        }),
+      );
+      expect((await t.request('/')).document!.querySelector('#trust'), isNull);
+    });
   });
 
   group('Product page (10.1, 10.5)', () {

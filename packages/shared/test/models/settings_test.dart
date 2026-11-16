@@ -90,5 +90,31 @@ void main() {
       expect(const PublicSettings({}).banners, isEmpty);
       expect(const PublicSettings({}).featuredProductSlugs, isEmpty);
     });
+
+    test(
+      'home hero ar trust (10.5 v1.38): tagline, features, return window; bhul/0 hole null',
+      () {
+        final s = PublicSettings.fromJson({
+          'branding': {
+            'tagline': {'bn': 'কৃষকের কাছ থেকে সরাসরি'},
+          },
+          'features': ['certification', 3],
+          'checkout': {'return_window_days': 3},
+        });
+        expect(s.tagline.of('en'), 'কৃষকের কাছ থেকে সরাসরি');
+        expect(s.features, ['certification']);
+        expect(s.returnWindowDays, 3);
+        const empty = PublicSettings({});
+        expect(empty.tagline.of('bn'), '');
+        expect(empty.features, isEmpty);
+        expect(empty.returnWindowDays, isNull);
+        for (final bad in [0, -1, '3']) {
+          final s = PublicSettings.fromJson({
+            'checkout': {'return_window_days': bad},
+          });
+          expect(s.returnWindowDays, isNull, reason: '$bad');
+        }
+      },
+    );
   });
 }
