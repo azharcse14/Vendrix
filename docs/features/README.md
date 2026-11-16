@@ -18,6 +18,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
 | API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4, 7.5 | M2, M4, M5, M6 | cholche (catalog, settings, account, cart, wishlist, checkout, order) |
 | Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3, M4, M5, M6 | cholche (layout, home, category, product, search, policy, login, account, BFF auth, cart, wishlist, checkout, order, confirm, track, `/account/orders`) |
+| Website er page: home, product, cart, checkout, order, track ... (UI, l10n key) | [website-pages.md](website-pages.md) | 10.1, 10.5–10.7, 10.11–10.13 | M3, M4, M5, M6, MU | cholche |
 | SEO: meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) | 10.4 | M3 | cholche |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora SMS provider ar M10 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5, M6 | chalu (OTP SMS, cleanup, `cart.cleanup`, order SMS, `alert.new_order`, auto-cancel; SMS provider ar alert email M12 e) |
@@ -71,7 +72,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Folder | Ki | Doc |
 |---|---|---|
 | `website/lib/services` | Env, URL theke bhasha, request theke `ApiClient`, BFF, cache, security header | [website.md](website.md) |
-| `website/lib` (`main.*.dart`, `app.dart`, `pages/`, `components/`) | Entry, route, page | [website.md](website.md) |
+| `website/lib` (`main.*.dart`, `app.dart`, `pages/`, `components/`) | Entry, route, layout, page | [website.md](website.md), page: [website-pages.md](website-pages.md) |
 | `website/lib/seo` | Meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) |
 
 `admin` (M7) er map oi milestone e ekhane jog hobe.
