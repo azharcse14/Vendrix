@@ -372,6 +372,12 @@ func TestSessionRouteKind(t *testing.T) {
 		{"guest confirm view (ochena token)", "GET", "/api/confirm/x", "", "", 404, "not_found"},
 		{"guest confirm (ochena token)", "POST", "/api/confirm/x", "", "", 404, "not_found"},
 		{"staff token Bearer confirm e", "POST", "/api/confirm/x", "staff-token", "", 401, "unauthenticated"},
+		{"guest order view (ochena token)", "GET", "/api/orders/x", "", "", 404, "not_found"},
+		{"staff token Bearer order view e", "GET", "/api/orders/x", "staff-token", "", 401, "unauthenticated"},
+		{"guest track (body nai)", "POST", "/api/orders/track", "", "", 400, "validation_failed"},
+		{"guest me/orders", "GET", "/api/me/orders", "", "", 401, "unauthenticated"},
+		{"staff cookie me/orders e", "GET", "/api/me/orders", "", "staff-token", 401, "unauthenticated"},
+		{"customer me/orders", "GET", "/api/me/orders", "cust-token", "", 200, ""},
 		{"setup_pending logout", "POST", "/api/admin/auth/logout", "", "setup-token", 204, ""},
 		{"logout er por", "POST", "/api/admin/auth/totp/setup", "", "setup-token", 401, "unauthenticated"},
 	} {

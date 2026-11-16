@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"vendrix/backend/internal/auth"
@@ -44,13 +45,18 @@ func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {
 func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
 	mux.Handle("POST /api/checkout/quote", wrap(http.HandlerFunc(h.Quote)))
 	mux.Handle("POST /api/orders", wrap(http.HandlerFunc(h.Place)))
+	mux.Handle("GET /api/orders/{token}", wrap(http.HandlerFunc(h.View)))
 	mux.Handle("POST /api/orders/{token}/cancel", wrap(http.HandlerFunc(h.Cancel)))
+	// track: public er upore client IP te minute e 10 (7.8); number + phone guess atkate
+	mux.Handle("POST /api/orders/track", wrap(httpx.RateLimit(10, time.Minute)(http.HandlerFunc(h.Track))))
 	mux.Handle("GET /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.ConfirmView)))
 	mux.Handle("POST /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.Confirm)))
 }
 
-// MeRoutes (7.3): wrap = public + RequireCustomer (Rule 16). Stub: step 10 er code e route.
-func (h *Handlers) MeRoutes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {}
+// MeRoutes (7.3): wrap = public + RequireCustomer (Rule 16).
+func (h *Handlers) MeRoutes(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/me/orders", wrap(http.HandlerFunc(h.MyOrders)))
+}
 
 func invalid(w http.ResponseWriter, r *http.Request, field, code string) {
 	httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed",
@@ -313,6 +319,61 @@ func maskPhone(p string) string {
 	return p[:6] + "****" + p[len(p)-4:]
 }
 
+// View: GET /api/orders/{token} (7.5, Rule 11).
+func (h *Handlers) View(w http.ResponseWriter, r *http.Request) {
+	s, _ := httpx.ShopFrom(r.Context())
+	v, err := ViewByToken(r.Context(), h.db, s.ID, r.PathValue("token"))
+	if err != nil {
+		h.transitionError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, v)
+}
+
+// Track: POST /api/orders/track {number, phone} (7.5; phone body te, URL/log e na).
+func (h *Handlers) Track(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Number string `json:"number"`
+		Phone  string `json:"phone"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		invalid(w, r, "body", "invalid")
+		return
+	}
+	p, err := phone.Normalize(in.Phone)
+	if err != nil {
+		invalid(w, r, "phone", "invalid_phone")
+		return
+	}
+	s, _ := httpx.ShopFrom(r.Context())
+	// order number prefix boro hater; customer chhoto hater e likhleo mile
+	t, err := Track(r.Context(), h.db, s.ID, strings.ToUpper(strings.TrimSpace(in.Number)), p)
+	if err != nil {
+		h.transitionError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, t)
+}
+
+// MyOrders: GET /api/me/orders (7.3, Rule 16: session er user_id).
+func (h *Handlers) MyOrders(w http.ResponseWriter, r *http.Request) {
+	page, limit, ok := httpx.Page(w, r)
+	if !ok {
+		return
+	}
+	s, _ := httpx.ShopFrom(r.Context())
+	c, _ := httpx.CustomerFrom(r.Context())
+	items, total, err := MyOrders(r.Context(), h.db, s.ID, c.UserID, page, limit)
+	if err != nil {
+		h.transitionError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaged(items, page, limit, total))
+}
+
 // Cancel: POST /api/orders/{token}/cancel (7.5, 8.19 item 12 vii): body {reason?} max 200.
 func (h *Handlers) Cancel(w http.ResponseWriter, r *http.Request) {
 	var in struct {
@@ -367,7 +428,7 @@ func (h *Handlers) Confirm(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": string(Confirmed)})
 }
 
-// transitionError: TransitionOrder/TransitionFulfillment er error → 7.1.
+// transitionError: TransitionOrder/TransitionFulfillment ar order khoja (view, track, me/orders) er error → 7.1.
 func (h *Handlers) transitionError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):

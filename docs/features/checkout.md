@@ -4,7 +4,7 @@ Design: 7.5, 8.5, 8.6, 8.7, 8.10, 8.16, 8.17, 8.19 item 2–5, 7, 12 · Mileston
 
 ## Ki kore
 
-Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–18; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. COD confirm link (`GET`/`POST /api/confirm/{confirm_token}`, 8.10). Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e. Order er job (SMS, alert, auto-cancel; step 18). Order view, tracking M6 er porer step e (`docs/milestones/M6.md`).
+Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–18; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. COD confirm link (`GET`/`POST /api/confirm/{confirm_token}`, 8.10). Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e. Order er job (SMS, alert, auto-cancel; step 18). Order page (`GET /api/orders/{token}`), login chhara tracking (`POST /api/orders/track`) ar nijer order list (`GET /api/me/orders`).
 
 ## Kivabe kaj kore
 
@@ -35,6 +35,12 @@ COD confirm (8.10, Rule 11; public + optional login):
 3. `POST /api/confirm/{confirm_token}` (body lage na) → `ConfirmByToken` → `TransitionOrder(→ confirmed, Customer)` (login thakle history `actor_id`); `200 {"status":"confirmed"}`. Abar ba cancelled order e `409 invalid_transition`.
 4. Na mille (public_token, ochena token, onno shop, confirm na laga order) `404 not_found`.
 
+Order view, tracking, me/orders (7.3, 7.5, 8.19 item 6, Rule 11, 16; `view.go`):
+
+1. `GET /api/orders/{token}` (public + optional login) → `ViewByToken`: shudhu `shop_id` + `public_token` (order number, confirm token, ochena `404 not_found`); `summary` (confirm page er ekoi shar-songkhep: phone `maskPhone`, district + area, line na, active item) + `recipient_name`, `recipient_phone_masked`, `subtotal`, `discount`, `delivery_charge`, `delivery_deadline`, `can_cancel` (= `CanTransitionOrder(→ cancelled, Customer)`, cancel route er ekoi niyom). Token response e na. `Cache-Control: no-store`.
+2. `POST /api/orders/track` `{number, phone}` (public er upore client IP te minute e 10, `httpx.RateLimit`; `429` + `Retry-After`) → `phone.Normalize` (bhul `400 validation_failed`), number trim + uppercase → `Track`: ek query te `order_number` ar (`customer_phone` ba `recipient_phone`); na mille `404 not_found` (number ache kina bola na). `{order_number, display_status, placed_at, history: [{status, at}], tracking: null}`: history shudhu order level er `order_status_history` (fulfillment er ghotona M7 e courier er sathe); naam, phone, token na. `no-store`.
+3. `GET /api/me/orders` (public + `RequireCustomer`, `MeRoutes`) → `MyOrders`: `shop_id` + session er `user_id` (Rule 16), `placed_at DESC, id DESC`, `httpx.Page` (7.1), card `{order_number, public_token, display_status, total, placed_at}`. Guest order account e ashe shudhu OTP login e (`auth` `linkGuestOrders`, [auth.md](auth.md)). `no-store`.
+
 Job (8.17; `jobs.go` → `JobHandlers`, `cmd/api` worker e register; shob idempotent):
 
 1. `sms.order_placed`: `loadSMSOrder` (`shop_id` + `order_id`): `public_token`, number, `customer_phone`, `orders.locale`, shop er naam (locale, na thakle bn), primary domain (`shop_domains.is_primary`), shop er `translations` override. `confirm_token_hash` thakle `ConfirmToken(CONFIRM_SECRET, public_token)` (hash na mille error: rotate er por bhul link pathay na) → template `sms.order_confirm` + `https://<domain>/confirm/<token>`; na hole `sms.order_placed` + `https://<domain>/order/<public_token>`. Lekha order row theke, tai retry e ekoi link. `notify.OrderText` diye lekha, `notify.SMS` e pathay (local e log).
@@ -64,7 +70,9 @@ Ei kram e poro:
 | `backend/internal/order/jobs.go` → `enqueuePlaced`, `JobHandlers`, `loadSMSOrder` | Step 18 er job ar handler |
 | `backend/internal/notify/notify.go` → `OrderText` | Order SMS er lekha |
 | `backend/internal/order/jobs_integration_test.go` | Job er test, asol Postgres |
-| `backend/internal/order/confirm.go` → `ConfirmToken`, `ConfirmHash`, `ConfirmView`, `ConfirmSummary`, `ConfirmByToken` | COD confirm token ar route er kaj |
+| `backend/internal/order/confirm.go` → `ConfirmToken`, `ConfirmHash`, `ConfirmView`, `ConfirmSummary`, `summary`, `ConfirmByToken` | COD confirm token ar route er kaj; mask kora shar-songkhep |
+| `backend/internal/order/view.go` → `ViewByToken`, `View`, `Track`, `Tracked`, `MyOrders`, `Card` | Order page, tracking, nijer order list |
+| `backend/internal/order/handler.go` → `View`, `Track`, `MyOrders`, `MeRoutes` | Order view/track/me route, track er rate limit |
 | `backend/internal/order/handler.go` → `ConfirmView`, `Confirm` | Confirm route |
 | `backend/internal/order/store.go` → `loadSettings`, `Settings`, `userPhone` | Checkout settings, login er phone |
 | `backend/internal/order/risk.go` → `RiskFlags`, `OTPRequired`, `ConfirmRequired` | Risk er niyom (pure) |
@@ -74,6 +82,7 @@ Ei kram e poro:
 | `backend/internal/order/quote_integration_test.go` | Quote er HTTP test, asol Postgres |
 | `backend/internal/order/checkout_integration_test.go` | Order create er HTTP test, race, asol Postgres |
 | `backend/internal/order/confirm_test.go`, `confirm_integration_test.go` | Confirm token (unit), confirm route (asol Postgres) |
+| `backend/internal/order/view_integration_test.go` | View, tracking, me/orders, shop isolation, guest → login (asol Postgres) |
 
 ## Niyom ar tar test
 
@@ -102,6 +111,11 @@ Ei kram e poro:
 | Step 18: `sms.order_placed` ar `alert.new_order` payload shudhu `order_id`, idempotent retry e notun job na; confirm lagle `sms.order_confirm` + `/confirm/<ConfirmToken>`, na hole `sms.order_placed` + `/order/<public_token>`; primary domain; `orders.locale`; retry e ekoi lekha; onno shop er job e order na; alert e phone na (8.6 step 18, 8.10 item 1, 8.19 item 7; 14.2 test 31) | `enqueuePlaced`, `JobHandlers`, `loadSMSOrder` | `TestOrderPlacedSMSIntegration` |
 | Order SMS bn ≤ 134 unit, en ≤ 160 (GSM-7); override er kram, `{number}`/`{link}` chhara override bad (8.16, 8.19 item 7) | `notify.OrderText` | `TestOrderSMSTemplateLength` |
 | Auto-cancel `RunAt = placed_at + order er shomoyer setting`, `dedupe_key`; shomoy hole system cancel, stock + coupon ferot, `sms.cancelled`; duibar chalale kichu na; confirmed e kichu na; shomoy na hole chole na (8.10 item 4, 8.19 item 12 viii; 14.2 test 26) | `enqueuePlaced`, `JobHandlers` | `TestAutoCancelUnconfirmedIntegration` |
+| Order page shudhu `public_token` diye (order number/confirm token/ochena `404`); phone mask, thikana district + area, token/line na; `can_cancel` cancel er por false; `no-store` (7.5, 8.19 item 6, Rule 11) | `ViewByToken`, `summary` | `TestOrderViewIntegration` |
+| Tracking: number + customer ba recipient phone (local/+880, number er case jai hok); na mille `404`; bhul phone `400`; history, `tracking: null`, token/phone/naam na; minute e 10 er por `429` + `Retry-After` (7.5, 7.8, 8.19 item 6) | `Track`, `Handlers.Track` | `TestTrackIntegration` |
+| `/api/me/orders` shudhu nijer `user_id` (onno user, ekoi phone er guest order na), notun age, paged, card e 5 ta field, login chhara `401` (7.3, Rule 16, 8.19 item 12 x) | `MyOrders` | `TestMyOrdersIntegration` |
+| Shop a er token, number + phone, confirm token, Bearer shop b te `404`/`401`; shop b er coupon/zone shop a te na (Rule 3; 14.2 test 5) | `ViewByToken`, `Track`, `ConfirmByToken`, `QuoteCart` | `TestOrderShopIsolationIntegration` |
+| Guest checkout → OTP login → `/api/me/orders` e oi order; onno phone er order na (8.2 step 5; 14.2 test 11) | `auth` `linkGuestOrders`, `MyOrders` | `TestCheckoutGuestThenLoginIntegration` |
 | 60 minute, phone ba ip, cancelled o gona, returned customer ba recipient phone, shudhu ei shop (8.19 item 3, Rule 3) | `LoadRiskHistory` | `TestRiskHistoryIntegration` |
 
 ## Data
@@ -134,6 +148,8 @@ Ei kram e poro:
 
 ## Proshno-uttor
 
+- **Tracking e `public_token` ferot dey na keno?** Number + phone jana je keu tahole cancel korte parto (8.19 item 6); order page er link shudhu SMS e jay.
+- **Order page e puro thikana na keno?** SMS link forward hote pare (12.2 Data 5); thikana courier ar admin e.
 - **Quote e `below_min_order` problem keno, `409` na?** Form e total dekhiye "aro kinun" bola jay; order (`POST /api/orders`) e eta `409 below_min_order`. Zone ba cart na thakle total-i hoy na, tai `409 area_not_served`/`400 cart_empty`.
 - **Quote cart normalize kore na keno?** 7.5 "kichu save hoy na"; normalize `GET /api/cart` e. Stock er beshi qty quote e `out_of_stock` problem.
 

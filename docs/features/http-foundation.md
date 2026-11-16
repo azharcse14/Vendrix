@@ -75,7 +75,7 @@ Nai. `IP(ctx)` `sessions.ip`, `audit_logs.ip`, Turnstile er `remoteip` ar rate l
 
 - `statusWriter` er `Unwrap` muchbe na: upload er deadline `http.ResponseController` diye (2.2).
 - Log e notun field dile personal data (phone, thikana, IP, token) na (12.2).
-- Public rate limit process er memory te (fixed window, window bodlale map notun); ek er beshi process hole protitir alada gona. Alada limit (7.8): OTP send route e `RateLimit(10, time.Hour)`, staff login `FailLimit` (shudhu bhul); order er M6 e.
+- Public rate limit process er memory te (fixed window, window bodlale map notun); ek er beshi process hole protitir alada gona. Alada limit (7.8): OTP send route e `RateLimit(10, time.Hour)`, staff login `FailLimit` (shudhu bhul); `POST /api/orders/track` e `RateLimit(10, time.Minute)` ([checkout.md](checkout.md)); `POST /api/orders` er limit DB theke (hoya order gona).
 - Staff context `AdminSession` boshay (test e `WithStaff`); notun admin route e `AdminSession` → `RequireRole` (ba `RequireStaff`), shudhu setup route e `RequireStaff` chhara. Admin handler `StaffFrom` er `ShopID` (ar `VendorID`) diye query filter kore, request body theke na (3.2).
 - Notun error code: `message.go` er `messages` e bn ar en duitai (test dhore); `WriteError` e `r` lage, `Message` faka rakho.
 

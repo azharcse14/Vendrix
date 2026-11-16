@@ -82,7 +82,9 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	ch.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	ch.WishlistRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 	// checkout (7.5): cart er moto owner
-	order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret}).Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
+	oh := order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret})
+	oh.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
+	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {

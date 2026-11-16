@@ -52,16 +52,26 @@ type ConfirmSummary struct {
 
 // ConfirmView: GET /api/confirm/{confirm_token}; na mille ErrNotFound.
 func ConfirmView(ctx context.Context, d *sql.DB, shopID int64, token string) (ConfirmSummary, error) {
-	var s ConfirmSummary
 	var id int64
-	var ph string
-	err := d.QueryRowContext(ctx, `SELECT id, order_number, display_status, placed_at, customer_name, customer_phone,
-		ship_district, ship_area, payment_method, total FROM orders WHERE shop_id = $1 AND confirm_token_hash = $2`,
-		shopID, ConfirmHash(token)).Scan(&id, &s.OrderNumber, &s.DisplayStatus, &s.PlacedAt, &s.CustomerName, &ph,
-		&s.District, &s.Area, &s.PaymentMethod, &s.Total)
+	err := d.QueryRowContext(ctx, `SELECT id FROM orders WHERE shop_id = $1 AND confirm_token_hash = $2`,
+		shopID, ConfirmHash(token)).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return s, ErrNotFound
+		return ConfirmSummary{}, ErrNotFound
 	}
+	if err != nil {
+		return ConfirmSummary{}, err
+	}
+	return summary(ctx, d, shopID, id)
+}
+
+// summary: confirm ar order page er mask kora shar-songkhep (order id caller token diye khuje dey).
+func summary(ctx context.Context, d *sql.DB, shopID, id int64) (ConfirmSummary, error) {
+	var s ConfirmSummary
+	var ph string
+	err := d.QueryRowContext(ctx, `SELECT order_number, display_status, placed_at, customer_name, customer_phone,
+		ship_district, ship_area, payment_method, total FROM orders WHERE shop_id = $1 AND id = $2`,
+		shopID, id).Scan(&s.OrderNumber, &s.DisplayStatus, &s.PlacedAt, &s.CustomerName, &ph,
+		&s.District, &s.Area, &s.PaymentMethod, &s.Total)
 	if err != nil {
 		return s, err
 	}
