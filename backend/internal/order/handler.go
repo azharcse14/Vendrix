@@ -31,8 +31,9 @@ type Handlers struct {
 
 // Guard: 8.6 step 3 er Turnstile ar step 8 er checkout OTP (auth er login er ekoi niyom).
 type Guard struct {
-	Turnstile auth.Turnstile
-	OTPSecret string
+	Turnstile     auth.Turnstile
+	OTPSecret     string
+	ConfirmSecret string // COD confirm token er HMAC (8.10)
 }
 
 func NewHandlers(d *sql.DB, log *slog.Logger, g Guard) *Handlers {

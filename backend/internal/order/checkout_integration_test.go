@@ -42,8 +42,9 @@ type checkoutFx struct {
 }
 
 const (
-	otpSecret = "test-otp-secret-0123456789abcdef"
-	tsSecret  = "ts-secret"
+	otpSecret     = "test-otp-secret-0123456789abcdef"
+	confirmSecret = "test-confirm-secret-0123456789ab"
+	tsSecret      = "ts-secret"
 )
 
 // siteverify: Cloudflare er moto fake; token "tok" ba "tok:<x>" → success, hostname a.com; "b:<x>" → success
@@ -120,7 +121,7 @@ func newCheckout(t *testing.T) *checkoutFx {
 	mux := http.NewServeMux()
 	var svURL string
 	f.sv, svURL = newSiteverify(t)
-	order.NewHandlers(f.d, log, order.Guard{Turnstile: auth.Turnstile{URL: svURL, Secret: tsSecret}, OTPSecret: otpSecret}).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
+	order.NewHandlers(f.d, log, order.Guard{Turnstile: auth.Turnstile{URL: svURL, Secret: tsSecret}, OTPSecret: otpSecret, ConfirmSecret: confirmSecret}).Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
 	f.srv = httpx.JSONErrors(mux)
 	return f
 }
