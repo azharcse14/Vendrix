@@ -43,19 +43,19 @@ void main() {
 
   group('Product card ar listing (10.5 v1.38, 10.7)', () {
     testServer('card: naam h2 (h1 er por, h3 na), discount badge (5% er kom na), stock shesh lekha', (t) async {
-      t.pumpComponent(site({}));
-      for (final (path, off, out) in [('/c/lal', '১০% ছাড়', 'স্টকে নেই'), ('/en/c/lal', '10% off', 'Out of stock')]) {
-        final doc = (await t.request(path)).document!;
-        final prefix = path.startsWith('/en') ? '/en' : '';
+      for (final (locale, off, out) in [('bn', '১০% ছাড়', 'স্টকে নেই'), ('en', '10% off', 'Out of stock')]) {
+        t.pumpComponent(site({}, locale: locale));
+        final doc = (await t.request('/c/lal')).document!;
+        final prefix = locale == 'en' ? '/en' : '';
         final red = doc.querySelector('a[href="$prefix/p/red-rice"]')!;
         final chini = doc.querySelector('a[href="$prefix/p/chinigura"]')!;
-        expect(red.querySelector('h2')!.text, 'নাম red-rice', reason: path);
-        expect(doc.querySelectorAll('h3'), isEmpty, reason: path);
-        expect(red.text, contains(off), reason: path);
-        expect(chini.text, isNot(contains('%')), reason: path); // 3%
+        expect(red.querySelector('h2')!.text, 'নাম red-rice', reason: locale);
+        expect(doc.querySelectorAll('h3'), isEmpty, reason: locale);
+        expect(red.text, contains(off), reason: locale);
+        expect(chini.text, isNot(contains('%')), reason: locale); // 3%
         // Rong-er upor nirbhor na: lekha thake (10.7).
-        expect(chini.text, contains(out), reason: path);
-        expect(red.text, isNot(contains(out)), reason: path);
+        expect(chini.text, contains(out), reason: locale);
+        expect(red.text, isNot(contains(out)), reason: locale);
       }
     });
 

@@ -47,3 +47,12 @@ String formatTakaDigits(int poisha, String digits) {
   ]);
   return '${poisha < 0 ? '-' : ''}৳$local';
 }
+
+/// Card er discount % (10.5 v1.38 item 2): `round((old − new) / old × 100)`, shudhu int (Rule 1: shudhu display,
+/// taka hishab na). `compareAt` nai ba dam er cheye beshi na hole, ba 5% er kom hole `null` (badge na).
+int? discountPercent(int price, int? compareAt) {
+  if (compareAt == null || compareAt <= price) return null;
+  final off = compareAt - price;
+  if (off * 100 < compareAt * 5) return null;
+  return (off * 200 + compareAt) ~/ (compareAt * 2);
+}

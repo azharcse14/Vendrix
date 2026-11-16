@@ -1,10 +1,11 @@
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
+import 'icon.dart';
 import 'site.dart';
 
 /// Chobi (10.5 niyom 7): `srcset` + `sizes`, `width`/`height` (CLS na), LCP chobi te `fetchpriority="high"`, baki
-/// `loading="lazy"`. Key na thakle ba bhul hole `tint` placeholder (10.10 item 3).
+/// `loading="lazy"`. Key na thakle ba bhul hole `tint` placeholder + leaf icon (10.10 item 3, 10.5 v1.38 item 5).
 class ResponsiveImage extends StatelessComponent {
   /// `storage_key`.
   final String? storageKey;
@@ -39,9 +40,9 @@ class ResponsiveImage extends StatelessComponent {
     final src = key == null ? null : images.url(key, 640);
     if (key == null || src == null) {
       return div(
-        classes: 'aspect-square w-full bg-tint',
+        classes: 'flex aspect-square w-full items-center justify-center bg-tint text-primary',
         attributes: {'role': 'img', 'aria-label': alt},
-        [],
+        [const Icon(Icons.leaf, classes: 'h-1/4 w-1/4 opacity-40')],
       );
     }
     return img(

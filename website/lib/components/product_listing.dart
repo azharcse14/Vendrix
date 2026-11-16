@@ -4,6 +4,7 @@ import 'package:shared/shared.dart';
 
 import '../services/list_query.dart';
 import 'filter_sheet.dart';
+import 'icon.dart';
 import 'product_card.dart';
 import 'site.dart';
 import '../seo/meta.dart';
@@ -63,7 +64,7 @@ class ProductListing extends StatelessComponent {
 
     Component pageLink(int n, String rel, String key) => a(
       href: pageHref(n),
-      classes: 'flex min-h-11 items-center px-4 underline',
+      classes: 'btn btn-secondary',
       attributes: {'rel': rel},
       [.text(site.t(key))],
     );
@@ -80,7 +81,12 @@ class ProductListing extends StatelessComponent {
           // Mobile e sticky (10.5).
           div(classes: 'sticky top-0 z-10 -mx-4 mb-3 bg-page px-4 py-2 lg:hidden', [FilterSheet(form)]),
           if (list.items.isEmpty)
-            p(classes: 'py-12 text-center text-muted', [.text(emptyText)])
+            // Empty state (plan 4): icon, lekha, category te link.
+            div(classes: 'flex flex-col items-center gap-3 py-12 text-center', [
+              const Icon(Icons.search, classes: 'size-10 text-muted'),
+              p(classes: 'text-muted', [.text(emptyText)]),
+              a(href: site.href('/#categories'), classes: 'btn btn-secondary', [.text(site.t('category.browse'))]),
+            ])
           else
             div(classes: 'grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4', [
               for (final (i, item) in list.items.indexed) ProductCardView(item, lcp: q.page == 1 && i < 2),

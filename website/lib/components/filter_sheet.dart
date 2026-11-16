@@ -36,18 +36,18 @@ class FilterForm extends StatelessComponent {
   Component build(BuildContext context) {
     final site = Site.of(context);
     String l(String key) => site.t('category.$key');
-    const field = 'min-h-11 w-full rounded border border-line bg-page px-3 text-base';
     // Page e duita form (sidebar, sheet), tai id na; input label er bhetore.
     return form(action: action, method: FormMethod.get, classes: 'space-y-4', [
       if (q != null) input(type: InputType.hidden, name: 'q', value: q),
       label(classes: 'block space-y-1', [
         span(classes: 'text-sm', [.text(l('sort'))]),
-        select(name: 'sort', classes: field, [
+        select(name: 'sort', classes: 'input', [
           for (final s in const ['newest', 'price_asc', 'price_desc', 'popular'])
             option(value: s, selected: s == (sort ?? 'newest'), [.text(l('sort.$s'))]),
         ]),
       ]),
-      label(classes: 'flex min-h-11 items-center gap-2', [
+      // Chip: tick dile active (`.chip:has(:checked)`).
+      label(classes: 'chip', [
         input(type: InputType.checkbox, name: 'in_stock', value: '1', checked: inStock, classes: 'h-5 w-5'),
         .text(l('in_stock')),
       ]),
@@ -59,18 +59,18 @@ class FilterForm extends StatelessComponent {
               type: InputType.number,
               name: name,
               value: value?.toString(),
-              classes: field,
+              classes: 'input',
               attributes: {'min': '0', 'inputmode': 'numeric'},
             ),
           ]),
       ]),
       div(classes: 'flex gap-2', [
-        button(type: ButtonType.submit, classes: 'min-h-11 flex-1 rounded bg-primary px-4 text-on-primary', [
+        button(type: ButtonType.submit, classes: 'btn btn-primary flex-1', [
           .text(l('apply')),
         ]),
         a(
           href: q == null ? action : '$action?${Uri(queryParameters: {'q': q}).query}',
-          classes: 'flex min-h-11 items-center px-4 underline',
+          classes: 'btn btn-ghost',
           [.text(l('clear'))],
         ),
       ]),
@@ -93,7 +93,7 @@ class FilterSheet extends StatelessComponent {
     return div([
       button(
         type: ButtonType.button,
-        classes: 'min-h-11 rounded border border-line bg-surface px-4',
+        classes: 'btn btn-secondary',
         attributes: {'data-dialog-open': 'filters'},
         [.text(site.t('category.filter'))],
       ),

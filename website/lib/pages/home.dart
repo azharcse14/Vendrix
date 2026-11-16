@@ -4,6 +4,7 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
 
+import '../components/icon.dart';
 import '../components/product_card.dart';
 import '../components/responsive_image.dart';
 import '../components/site.dart';
@@ -43,14 +44,28 @@ class Home extends AsyncStatelessComponent {
       if (shown.isNotEmpty)
         section(id: 'categories', [
           h2(classes: 'mb-3', [.text(site.t('home.categories'))]),
-          // Mobile e side-scroll, boro screen e wrap (10.5).
-          ul(classes: 'flex gap-2 overflow-x-auto pb-2 md:flex-wrap md:overflow-visible', [
+          // Tile (plan 4): mobile e side-scroll, boro screen e grid 6; chobi na thakle primary-soft + icon.
+          ul(classes: 'flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible', [
             for (final c in shown)
-              li([
+              li(classes: 'w-24 shrink-0 md:w-auto', [
                 a(
                   href: site.href('/c/${Uri.encodeComponent(c.slug)}'),
-                  classes: 'flex min-h-11 items-center whitespace-nowrap rounded border border-line bg-surface px-4',
-                  [.text(c.name)],
+                  classes: 'block space-y-2 text-center text-sm',
+                  [
+                    if (c.imageKey case final key?)
+                      div(classes: 'aspect-square overflow-hidden rounded [&>*]:h-full', [
+                        // Naam niche lekha, tai chobi alt khali.
+                        ResponsiveImage(key, alt: '', sizes: '(min-width: 768px) 16vw, 6rem'),
+                      ])
+                    else
+                      div(
+                        classes: 'flex aspect-square items-center justify-center rounded bg-primary-soft text-primary',
+                        [
+                          const Icon(Icons.leaf, classes: 'h-1/3 w-1/3'),
+                        ],
+                      ),
+                    span(classes: 'line-clamp-2', [.text(c.name)]),
+                  ],
                 ),
               ]),
           ]),

@@ -102,11 +102,11 @@ final fakeApi = MockClient((r) async {
 });
 
 /// Fake shop (`https://shop.test`), settings [settings].
-Component site(Map<String, dynamic> settings) => Site(
+Component site(Map<String, dynamic> settings, {String locale = 'bn'}) => Site(
   origin: 'https://shop.test',
-  locale: 'bn',
+  locale: locale,
   settings: PublicSettings(settings),
-  translator: const Translator('bn'),
+  translator: Translator(locale),
   catalog: CatalogRepository(ApiClient(Uri.parse('http://api.test'), fakeApi)),
   images: ImageUrls(Uri.parse('https://img.test'), resize: true),
   child: const App(),
