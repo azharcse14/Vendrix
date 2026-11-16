@@ -56,7 +56,7 @@ const _maxBody = 1 << 20;
 
 String _cartApi(Match m) => '/api/cart/items/${m[1]}';
 
-/// Asol route (10.9): M4 e auth ar account, M5 e cart ar wishlist.
+/// Asol route (10.9): M4 e auth ar account, M5 e cart ar wishlist, M6 e checkout ar order (10.13).
 final bffRoutes = <BffRoute>[
   BffRoute({'POST'}, RegExp(r'^/_/auth/otp/send$'), (_) => '/api/auth/otp/send'),
   BffRoute({'POST'}, RegExp(r'^/_/auth/otp/verify$'), (_) => '/api/auth/otp/verify', session: _login),
@@ -92,6 +92,13 @@ final bffRoutes = <BffRoute>[
   ),
   // Shudhu login e (guest er `wl` cookie JS nijei lekhe, 10.12 item 3).
   BffRoute({'POST', 'DELETE'}, RegExp(r'^/_/wishlist/(\d+)$'), (m) => '/api/wishlist/${m[1]}'),
+  BffRoute({'POST'}, RegExp(r'^/_/checkout/quote$'), (_) => '/api/checkout/quote'),
+  // `Idempotency-Key` header forward hoy (niche, shob route e).
+  BffRoute({'POST'}, RegExp(r'^/_/checkout$'), (_) => '/api/orders'),
+  // Token e shudhu token er okkhor: `.`/`%` diye Go er onno path e jawa jay na.
+  BffRoute({'POST'}, RegExp(r'^/_/orders/([A-Za-z0-9_-]+)/cancel$'), (m) => '/api/orders/${m[1]}/cancel'),
+  BffRoute({'POST'}, RegExp(r'^/_/confirm/([A-Za-z0-9_-]+)$'), (m) => '/api/confirm/${m[1]}'),
+  BffRoute({'POST'}, RegExp(r'^/_/track$'), (_) => '/api/orders/track'),
 ];
 
 // Go er `rand.Text()` base32; onno okkhor (`;`, space) cookie header bhangte pare.
