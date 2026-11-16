@@ -213,18 +213,33 @@ void main() {
         ],
       );
     });
-    test('DeliveryZone: district, area, district_wide', () {
+    test('DeliveryZone: district, area, din, district_wide (7.2 v1.35)', () {
       final z = DeliveryZone.fromJson({
         'district': 'ঢাকা',
         'areas': [
-          {'area': 'dhanmondi', 'name': 'ধানমন্ডি'},
+          {'area': 'dhanmondi', 'name': 'ধানমন্ডি', 'days': 5},
         ],
         'district_wide': true,
+        'district_wide_days': 10,
       });
       expect(
-        [z.district, z.areas.single.area, z.areas.single.name, z.districtWide],
-        ['ঢাকা', 'dhanmondi', 'ধানমন্ডি', true],
+        [
+          z.district,
+          z.areas.single.area,
+          z.areas.single.name,
+          z.areas.single.days,
+          z.districtWide,
+          z.districtWideDays,
+        ],
+        ['ঢাকা', 'dhanmondi', 'ধানমন্ডি', 5, true, 10],
       );
+      final n = DeliveryZone.fromJson({
+        'district': 'খুলনা',
+        'areas': <Object>[],
+        'district_wide': false,
+        'district_wide_days': null,
+      });
+      expect(n.districtWideDays, isNull);
     });
     test('shape bhul hole FormatException', () {
       expect(

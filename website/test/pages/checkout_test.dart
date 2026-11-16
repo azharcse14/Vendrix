@@ -51,17 +51,19 @@ void main() {
     {
       'district': 'Dhaka',
       'areas': [
-        {'area': 'Mirpur', 'name': 'মিরপুর'},
-        {'area': 'Dhanmondi', 'name': 'ধানমন্ডি'},
+        {'area': 'Mirpur', 'name': 'মিরপুর', 'days': 5},
+        {'area': 'Dhanmondi', 'name': 'ধানমন্ডি', 'days': 5},
       ],
       'district_wide': true,
+      'district_wide_days': 10,
     },
     {
       'district': 'Chattogram',
       'areas': [
-        {'area': 'Agrabad', 'name': 'আগ্রাবাদ'},
+        {'area': 'Agrabad', 'name': 'আগ্রাবাদ', 'days': 10},
       ],
       'district_wide': false,
+      'district_wide_days': null,
     },
   ];
 
@@ -158,6 +160,15 @@ void main() {
       expect(ctg.attributes.containsKey('hidden'), isTrue);
       expect(ctg.attributes.containsKey('disabled'), isTrue);
       expect(field('area_other').attributes['maxlength'], '100');
+      // Delivery er shomoy order er age (10.6, 12.2): protiti option e server er lekha (din API theke, niyom
+      // server e), shuru te prothom area er ta; client bachai onujayi bodlay.
+      String days(String d) => t.t('checkout.delivery_time', {'days': d});
+      expect(dhaka.querySelector('option[value="Mirpur"]')!.attributes['data-delivery'], days('৫'));
+      expect(dhaka.querySelector('option[value=""]')!.attributes['data-delivery'], days('১০'));
+      expect(ctg.querySelector('option[value="Agrabad"]')!.attributes['data-delivery'], days('১০'));
+      final time = form.querySelector('#checkout-delivery-time')!;
+      expect(time.text, days('৫'));
+      expect(time.attributes['aria-live'], 'polite');
 
       // Recipient (off thakle lukano), payment (settings theke), consent, honeypot.
       expect(form.querySelector('input[name="other_recipient"]')!.attributes['type'], 'checkbox');

@@ -126,8 +126,16 @@ func TestZoneLookupIntegration(t *testing.T) {
 	}
 }
 
-// TestDeliveryZonesIntegration (7.2 v1.32): GET /api/delivery-zones →
-// [{district, areas: [{area, name}], district_wide}], shudhu active, oi shop er, naam Accept-Language e.
+// TestDeadlineDays (8.15): same city 5 din, na hole 10; order er delivery_deadline ar zone list ekoi function.
+func TestDeadlineDays(t *testing.T) {
+	if shipping.DeadlineDays(true) != 5 || shipping.DeadlineDays(false) != 10 {
+		t.Errorf("%d %d", shipping.DeadlineDays(true), shipping.DeadlineDays(false))
+	}
+}
+
+// TestDeliveryZonesIntegration (7.2 v1.35): GET /api/delivery-zones →
+// [{district, areas: [{area, name, days}], district_wide, district_wide_days}], shudhu active, oi shop er,
+// naam Accept-Language e; din 8.15 theke (Dhaka same city 5, baki 10), district-wide na hole null.
 func TestDeliveryZonesIntegration(t *testing.T) {
 	d, _ := zoneFixture(t)
 	log := slog.New(slog.DiscardHandler)
@@ -154,18 +162,18 @@ func TestDeliveryZonesIntegration(t *testing.T) {
 
 	// Sylhet nai (shudhu bondho zone); Mirpur nai (bondho); district ar area naam er kram e; en na thakle bn
 	w, got := get("a.com", "en")
-	want := `[{"areas":[{"area":"Agrabad","name":"আগ্রাবাদ"}],"district":"Chattogram","district_wide":false},` +
-		`{"areas":[{"area":"Banani","name":"Banani"},{"area":"Dhanmondi","name":"Dhanmondi"}],"district":"Dhaka","district_wide":true}]`
+	want := `[{"areas":[{"area":"Agrabad","days":10,"name":"আগ্রাবাদ"}],"district":"Chattogram","district_wide":false,"district_wide_days":null},` +
+		`{"areas":[{"area":"Banani","days":5,"name":"Banani"},{"area":"Dhanmondi","days":5,"name":"Dhanmondi"}],"district":"Dhaka","district_wide":true,"district_wide_days":5}]`
 	if w.Code != http.StatusOK || got != want {
 		t.Errorf("a en: %d %s\nchai %s", w.Code, got, want)
 	}
-	if _, got := get("a.com", ""); got != `[{"areas":[{"area":"Agrabad","name":"আগ্রাবাদ"}],"district":"Chattogram","district_wide":false},`+
-		`{"areas":[{"area":"Banani","name":"বনানী"},{"area":"Dhanmondi","name":"ধানমন্ডি"}],"district":"Dhaka","district_wide":true}]` {
+	if _, got := get("a.com", ""); got != `[{"areas":[{"area":"Agrabad","days":10,"name":"আগ্রাবাদ"}],"district":"Chattogram","district_wide":false,"district_wide_days":null},`+
+		`{"areas":[{"area":"Banani","days":5,"name":"বনানী"},{"area":"Dhanmondi","days":5,"name":"ধানমন্ডি"}],"district":"Dhaka","district_wide":true,"district_wide_days":5}]` {
 		t.Errorf("a bn: %s", got)
 	}
 	// shudhu district-wide zone: areas khali array (null na)
-	if _, got := get("b.com", "en"); got != `[{"areas":[{"area":"Gulshan","name":"Gulshan"}],"district":"Dhaka","district_wide":false},`+
-		`{"areas":[],"district":"Khulna","district_wide":true}]` {
+	if _, got := get("b.com", "en"); got != `[{"areas":[{"area":"Gulshan","days":5,"name":"Gulshan"}],"district":"Dhaka","district_wide":false,"district_wide_days":null},`+
+		`{"areas":[],"district":"Khulna","district_wide":true,"district_wide_days":10}]` {
 		t.Errorf("b: %s", got)
 	}
 	if w, _ := get("nai.com", ""); w.Code != http.StatusNotFound {
