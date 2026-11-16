@@ -61,6 +61,7 @@
 | MU Q6 discount % card e | Dekhabo kina | Decided (v1.38, 16 November 2026): user approve (plan er recommendation): Hya, `compare_at_price` theke shudhu display, 5% er kom hole na (10.5) |
 | MU Q7 photography | Asol chobi kobe | Decided (v1.38, 16 November 2026): user approve (plan er recommendation): UI tint + icon placeholder diye; asol chobi M12 er age shop owner dibe (10.5) |
 | MU Q8 milestone er jayga | MU alada (M7 er por) ba M12 e | Decided (v1.38, 16 November 2026): user approve (plan er recommendation): Alada MU; user M6 er por, M7 er age shuru korte bollen (15) |
+| MU U10 prothom view font (9.6, 10.5) | Lighthouse (16 November 2026) e bn page e 4 font file ≈ 153.8 KB transfer (Hind bn 400 71.2 KB + Baloo bn 500 48.6 KB + Hind latin 400 14.5 KB + Baloo latin 500 19.3 KB): latin subset er `unicode-range` e U+0020 (space), Latin digit ar punctuation, tai Bangla lekhar space-o latin file ane; budget "≤ 3 file, ≈ 140 KB" mile na. (a) budget bodlano: 4 file ≈ 155 KB mene neya, (b) latin subset er `@font-face` bad (Latin lekha fallback stack e; English page e brand font na), (c) bengali file e Basic Latin jog kore abar subset (notun font file) | Ekhono na (MU U10). Recommendation: (a): Performance 97–100, LCP < 2.5s, CLS ≤ 0.005 already mile; MU Report er age user |
 
 ### 16.2 Assumption
 
