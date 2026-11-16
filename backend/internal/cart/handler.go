@@ -28,8 +28,8 @@ func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handl
 	mux.Handle("DELETE /api/cart/items/{variant_id}", wrap(http.HandlerFunc(h.Delete)))
 }
 
-// owner (8.4 item 2): login thakle account cart, key ignore; na hole X-Cart-Key (bhul format = nai).
-func owner(r *http.Request) Owner {
+// OwnerFrom (8.4 item 2; checkout quote o): login thakle account cart, key ignore; na hole X-Cart-Key (bhul format = nai).
+func OwnerFrom(r *http.Request) Owner {
 	if c, ok := httpx.CustomerFrom(r.Context()); ok {
 		return Owner{UserID: c.UserID}
 	}
@@ -92,12 +92,12 @@ func variantPath(w http.ResponseWriter, r *http.Request) (int64, bool) {
 }
 
 // Get: GET /api/cart.
-func (h *Handlers) Get(w http.ResponseWriter, r *http.Request) { h.reply(w, r, owner(r), "") }
+func (h *Handlers) Get(w http.ResponseWriter, r *http.Request) { h.reply(w, r, OwnerFrom(r), "") }
 
 // Count: GET /api/cart/count (7.4 v1.31): badge er jonno; normalize na, tai notice gile fele na (notice shudhu
 // GET /api/cart e).
 func (h *Handlers) Count(w http.ResponseWriter, r *http.Request) {
-	n, err := countLines(r.Context(), h.db, shopID(r), owner(r))
+	n, err := countLines(r.Context(), h.db, shopID(r), OwnerFrom(r))
 	if err != nil {
 		h.fail(w, r, err)
 		return
@@ -120,7 +120,7 @@ func (h *Handlers) Add(w http.ResponseWriter, r *http.Request) {
 		invalid(w, r, "variant_id")
 		return
 	}
-	o := owner(r)
+	o := OwnerFrom(r)
 	key, err := Add(r.Context(), h.db, shopID(r), o, in.VariantID, in.Quantity)
 	if err != nil {
 		h.fail(w, r, err)
@@ -142,7 +142,7 @@ func (h *Handlers) Patch(w http.ResponseWriter, r *http.Request) {
 		invalid(w, r, "body")
 		return
 	}
-	o := owner(r)
+	o := OwnerFrom(r)
 	if err := SetQuantity(r.Context(), h.db, shopID(r), o, id, in.Quantity); err != nil {
 		h.fail(w, r, err)
 		return
@@ -156,7 +156,7 @@ func (h *Handlers) Delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	o := owner(r)
+	o := OwnerFrom(r)
 	if err := Remove(r.Context(), h.db, shopID(r), o, id); err != nil {
 		h.fail(w, r, err)
 		return

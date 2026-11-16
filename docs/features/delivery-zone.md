@@ -38,7 +38,7 @@ Ei kram e poro:
 
 ## Bhul hole ki hoy
 
-- District/area e active zone nai: `ErrAreaNotServed` → quote/checkout e `409 area_not_served` (M6 step 4–5).
+- District/area e active zone nai: `ErrAreaNotServed` → quote (`order.QuoteCart`) ar checkout (M6 step 5) e `409 area_not_served`.
 - Ochena shop: middleware `404 shop_not_found`.
 
 ## Bodlanor age mone rakho

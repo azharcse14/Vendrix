@@ -380,3 +380,34 @@ func deleteWish(ctx context.Context, q querier, shopID, userID, productID int64)
 		shopID, userID, productID)
 	return err
 }
+
+type checkoutRow struct {
+	itemRow
+	Active, VendorActive bool
+}
+
+// checkoutRows: cart er line, active ar vendor er obostha shoho; shudhu SELECT (quote kichu bodlay na).
+func checkoutRows(ctx context.Context, q querier, shopID, cartID int64) ([]checkoutRow, error) {
+	rows, err := q.QueryContext(ctx, `SELECT ci.variant_id, v.vendor_id, ci.quantity, v.price, p.variable_weight,
+		  v.nominal_weight_g, v.stock, v.is_active AND p.is_active, vd.status = 'active'
+		FROM cart_items ci
+		JOIN product_variants v ON v.shop_id = ci.shop_id AND v.id = ci.variant_id
+		JOIN products p ON p.shop_id = v.shop_id AND p.id = v.product_id
+		JOIN vendors vd ON vd.shop_id = v.shop_id AND vd.id = v.vendor_id
+		WHERE ci.shop_id = $1 AND ci.cart_id = $2
+		ORDER BY ci.added_at, ci.variant_id`, shopID, cartID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []checkoutRow
+	for rows.Next() {
+		var c checkoutRow
+		if err := rows.Scan(&c.VariantID, &c.VendorID, &c.Quantity, &c.Price, &c.VariableWeight, &c.NominalWeightG,
+			&c.Stock, &c.Active, &c.VendorActive); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}

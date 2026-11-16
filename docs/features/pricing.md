@@ -53,7 +53,7 @@ Ei kram e poro:
 
 ## Data
 
-Pure; caller `order_items` (`line_total`, `discount_share`, `commission`, `commission_bps`), `order_fulfillments` ar `orders` er taka save kore (6.7). Coupon ashe `orders.coupon_*` snapshot theke, `coupons` table theke na.
+Pure. Caller: quote (`order.QuoteCart`, M6: coupon na khatle coupon chhara abar `Calculate`), cart subtotal (`cart.View`); checkout (M6 step 5) `order_items` (`line_total`, `discount_share`, `commission`, `commission_bps`), `order_fulfillments` ar `orders` er taka save kore (6.7). Coupon ashe `orders.coupon_*` snapshot theke, `coupons` table theke na.
 
 ## Bhul hole ki hoy
 

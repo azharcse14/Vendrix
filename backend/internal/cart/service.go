@@ -407,3 +407,36 @@ func MergeWish(ctx context.Context, d *sql.DB, shopID, userID int64, ids []int64
 func CleanupJob(d *sql.DB) jobs.Handler {
 	return func(ctx context.Context, _ jobs.Job) error { return deleteStaleGuestCarts(ctx, d) }
 }
+
+// CheckoutLine (8.6 step 7): cart er line ar keno kena jay na ("" = jay; "out_of_stock", "vendor_unavailable").
+type CheckoutLine struct {
+	VariantID int64
+	Line      pricing.Line
+	Problem   string
+}
+
+// CheckoutLines (quote, checkout): read-only, GET er moto normalize na (qty komay na, bondho item muche na).
+// Bondho product/variant, stock er kom ba nominal ojon nai → out_of_stock; vendor active na → vendor_unavailable.
+func CheckoutLines(ctx context.Context, q querier, shopID int64, o Owner) ([]CheckoutLine, error) {
+	cartID, err := findCart(ctx, q, shopID, o)
+	if err != nil || cartID == 0 {
+		return nil, err
+	}
+	rows, err := checkoutRows(ctx, q, shopID, cartID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CheckoutLine, 0, len(rows))
+	for _, r := range rows {
+		l, ok := line(r.itemRow)
+		c := CheckoutLine{VariantID: r.VariantID, Line: l}
+		switch {
+		case !r.VendorActive:
+			c.Problem = "vendor_unavailable"
+		case !ok || !r.Active || r.Quantity > r.Stock:
+			c.Problem = "out_of_stock"
+		}
+		out = append(out, c)
+	}
+	return out, nil
+}

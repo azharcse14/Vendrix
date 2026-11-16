@@ -24,9 +24,10 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/cmd/api/router.go` → `newHandler` | Cart route: public + `OptionalCustomer`; wishlist: public + `RequireCustomer` |
-| `backend/internal/cart/handler.go` → `Routes`, `owner`, `Get`, `Count`, `Add`, `Patch`, `Delete`, `fail`, `reply` | HTTP, body (`DisallowUnknownFields`), error mapping, puro cart response |
+| `backend/internal/cart/handler.go` → `Routes`, `OwnerFrom`, `Get`, `Count`, `Add`, `Patch`, `Delete`, `fail`, `reply` | HTTP, body (`DisallowUnknownFields`), error mapping, puro cart response |
 | `backend/internal/cart/service.go` → `View`, `Add`, `SetQuantity`, `Remove`, `checkVariant`, `line`, `label` | Niyom: normalize, notice, pricing, qty/limit, transaction |
 | `backend/internal/cart/service.go` → `Merge`; `backend/cmd/api/router.go` → `cartMerge`; `backend/internal/auth/service.go` → `verifyOTP` | Login e guest cart merge (verify er tx e; router `auth.CartMerge` hishebe dey, import cycle er karone) |
+| `backend/internal/cart/service.go` → `CheckoutLines`; `store.go` → `checkoutRows` | Checkout quote (M6) er read-only line: kena jay kina (`out_of_stock`, `vendor_unavailable`), normalize na; `OwnerFrom` `order` o use kore |
 | `backend/internal/cart/service.go` → `NewKey`, `KeyHash` | Guest key banano ar format check, `sha256` |
 | `backend/internal/cart/service.go` → `MaxQuantity`, `CheckQuantity`, `CheckRoom`, `NormalizeQuantity` | Quantity, line limit, normalize (pure) |
 | `backend/internal/cart/store.go` → `findCart`, `countLines`, `touchCart`, `createCart`, `activeVariant`, `itemState`, `setItem`, `deleteItem`, `removeInactive`, `reduceItem`, `items`, `lockGuestCart`, `guestItems`, `quantities`, `deleteCart` | SQL, protiti query `shop_id` diye |
@@ -40,7 +41,7 @@ Ei kram e poro:
 | Niyom (design section) | Code e kothay | Test |
 |---|---|---|
 | Guest key Go banay, `^[A-Z2-7]{26}$`, DB te `sha256`; bhul format "nai" (8.4 item 1) | `NewKey`, `KeyHash` | `TestCartKeyFormat` |
-| Notun guest cart e `cart_key`; GET row banay na; ochena key e Go er notun key; Bearer e account cart, key ignore; bhul/expire Bearer `401` (8.4 item 1, 2) | `Add`, `View`, `owner`, `OptionalCustomer` | `TestCartKeyIntegration`, `TestOptionalCustomer` |
+| Notun guest cart e `cart_key`; GET row banay na; ochena key e Go er notun key; Bearer e account cart, key ignore; bhul/expire Bearer `401` (8.4 item 1, 2) | `Add`, `View`, `OwnerFrom`, `OptionalCustomer` | `TestCartKeyIntegration`, `TestOptionalCustomer` |
 | `max_quantity` = `min(stock, 50)` (8.4 item 3, 4) | `MaxQuantity` | `TestMaxQuantity` |
 | Add/patch e 1..`min(stock, 50)`, chupchap komay na; `409 out_of_stock` + `details`; abar add e jog, boro qty e o `409` (overflow na) (8.4 item 3, 7.4 v1.31) | `CheckQuantity`, `checkVariant`, `Add` | `TestCheckQuantity`, `TestCartQuantityIntegration` |
 | Badge er count: alada line, normalize/notice na, row banay na, onno shop e 0, expire Bearer `401`, `no-store` (7.4 v1.31) | `Count`, `countLines` | `TestCartCountIntegration` |

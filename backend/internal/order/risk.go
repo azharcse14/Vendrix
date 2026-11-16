@@ -2,9 +2,9 @@ package order
 
 // RiskLimits: settings er checkout.risk (9.2).
 type RiskLimits struct {
-	CODAmountOver      int64
-	NewPhoneAmountOver int64
-	MaxOrdersPerHour   int
+	CODAmountOver      int64 `json:"cod_amount_over"`
+	NewPhoneAmountOver int64 `json:"new_phone_amount_over"`
+	MaxOrdersPerHour   int   `json:"max_orders_per_hour"`
 }
 
 // RiskHistory: ei shop e ager order theke (LoadRiskHistory).

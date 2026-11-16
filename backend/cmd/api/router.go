@@ -13,6 +13,7 @@ import (
 	"vendrix/backend/internal/catalog"
 	"vendrix/backend/internal/config"
 	"vendrix/backend/internal/httpx"
+	"vendrix/backend/internal/order"
 	"vendrix/backend/internal/shipping"
 	"vendrix/backend/internal/shop"
 )
@@ -79,6 +80,8 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	ch := cart.NewHandlers(d, log)
 	ch.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	ch.WishlistRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
+	// checkout (7.5): cart er moto owner
+	order.NewHandlers(d, log).Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 
 	cop := http.NewCrossOriginProtection()
 	for _, o := range cfg.AdminOrigins {
