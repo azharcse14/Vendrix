@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"vendrix/backend/internal/jobs"
@@ -118,18 +119,52 @@ var orderDefault = map[string]map[string]string{
 		"bn": "{shop}: অর্ডার {number} বাতিল হয়েছে।",
 		"en": "{shop}: Order {number} has been cancelled.",
 	},
+	"sms.total_changed": {
+		"bn": "{shop}: ওজন অনুযায়ী অর্ডার {number} এর মোট দাম {total}।",
+		"en": "{shop}: Order {number} final total after weighing: {total}.",
+	},
 }
 
 // OrderText: OTPText er kram (9.8); {number} ar (link thakle) {link} chhara lekha bad, karon oi SMS kaje lage na.
 func OrderText(key, locale string, override map[string]string, shop, number, link string) string {
+	return orderText(key, locale, override, "{shop}", shop, "{number}", number, "{link}", link)
+}
+
+// TotalText (8.16 v1.42): sms.total_changed; {number} ar {total} chhara lekha bad.
+func TotalText(locale string, override map[string]string, shop, number string, total int64) string {
+	return orderText("sms.total_changed", locale, override, "{shop}", shop, "{number}", number, "{total}", taka(total, locale))
+}
+
+// orderText: kv = placeholder, value jora ({shop} prothom); {shop} chhara khali na emon protiti placeholder lekha te lagbe.
+func orderText(key, locale string, override map[string]string, kv ...string) string {
 	def := orderDefault[key]
-	r := strings.NewReplacer("{shop}", shop, "{number}", number, "{link}", link)
+	r := strings.NewReplacer(kv...)
 	for _, t := range []string{override[locale], def[locale], override["bn"]} {
-		if strings.Contains(t, "{number}") && (link == "" || strings.Contains(t, "{link}")) {
+		ok := t != ""
+		for i := 2; i < len(kv); i += 2 {
+			ok = ok && (kv[i+1] == "" || strings.Contains(t, kv[i]))
+		}
+		if ok {
 			return r.Replace(t)
 		}
 	}
 	return r.Replace(def["bn"])
+}
+
+// taka (8.16 v1.42): poisha → "৳1,23,456.50" (en e "Tk ", GSM-7 e ৳ nai); lakh-style comma, poisha 0 hole doshomik na.
+func taka(poisha int64, locale string) string {
+	d := strconv.FormatInt(poisha/100, 10)
+	out := d[max(len(d)-3, 0):]
+	for d = d[:max(len(d)-3, 0)]; d != ""; d = d[:max(len(d)-2, 0)] {
+		out = d[max(len(d)-2, 0):] + "," + out
+	}
+	if p := poisha % 100; p != 0 {
+		out += fmt.Sprintf(".%02d", p)
+	}
+	if locale == "en" {
+		return "Tk " + out
+	}
+	return "৳" + out
 }
 
 // SecurityAlertJob (8.17 alert.security, Q9): ekhon shudhu slog.Warn (payload e phone mask); email/webhook M12 e.

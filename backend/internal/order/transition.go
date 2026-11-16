@@ -145,7 +145,7 @@ func TransitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentI
 	return transitionFulfillment(ctx, tx, shopID, fulfillmentID, to, by, note, nil)
 }
 
-// transitionFulfillment: weights = pack er ojon-variable item → packed_weight_g.
+// transitionFulfillment: weights = pack er ojon-variable item → packed_weight_g; pack e note = customer_ok_note.
 func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string, weights map[int64]int) error {
 	var orderID, vendorID int64
 	err := tx.QueryRowContext(ctx, `SELECT order_id, vendor_id FROM order_fulfillments WHERE shop_id = $1 AND id = $2`,
@@ -182,7 +182,7 @@ func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentI
 		if o.status != Confirmed {
 			return ErrInvalidTransition
 		}
-		if err := pack(ctx, tx, shopID, fulfillmentID, weights); err != nil {
+		if err := pack(ctx, tx, shopID, o, fulfillmentID, weights, note != ""); err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE order_fulfillments SET status = 'packed', packed_at = now()
@@ -218,7 +218,11 @@ func cancelFulfillments(ctx context.Context, tx *sql.Tx, shopID int64, o *locked
 	for _, i := range idx {
 		f := &o.fs[i]
 		if prepaid && f.total > 0 {
-			if err := refundCancel(ctx, tx, shopID, o, f, note); err != nil {
+			reason := note
+			if reason == "" {
+				reason = "cancel"
+			}
+			if err := insertRefund(ctx, tx, shopID, o, f.id, f.total, "cancel", reason); err != nil {
 				return err
 			}
 		}
@@ -283,18 +287,15 @@ func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error 
 	return nil
 }
 
-// refundCancel (8.8): refunds_cancel_once e ekbar-i; mot refund (failed bad) paid er beshi na. Status pending:
-// gateway er refund M10 e.
-func refundCancel(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, f *fRow, note string) error {
-	if note == "" {
-		note = "cancel"
-	}
+// insertRefund (8.8, 8.11): cancel e refunds_cancel_once e ekbar-i; mot refund (failed bad) paid er beshi na. Status
+// pending: gateway er refund M10 e.
+func insertRefund(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid, amount int64, kind, reason string) error {
 	res, err := tx.ExecContext(ctx, `INSERT INTO refunds (shop_id, order_id, fulfillment_id, payment_id, amount, method, kind, reason)
 		SELECT $1, $2, $3, (SELECT max(id) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded'),
-			$4::bigint, $5, 'cancel', $6
+			$4::bigint, $5, $7, $6
 		WHERE (SELECT COALESCE(sum(amount), 0) FROM refunds WHERE shop_id = $1 AND order_id = $2 AND status <> 'failed') + $4::bigint
 			<= (SELECT COALESCE(sum(amount), 0) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded')`,
-		shopID, o.id, f.id, f.total, o.method, note)
+		shopID, o.id, fid, amount, o.method, reason, kind)
 	if err != nil {
 		return err
 	}

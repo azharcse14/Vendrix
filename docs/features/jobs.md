@@ -9,12 +9,12 @@ Request er baire je kaj (SMS, alert, auto-cancel, reconcile) `jobs` table e queu
 ## Kivabe kaj kore
 
 1. Kaj jog: `jobs.Enqueue` (`*sql.DB` ba order er `*sql.Tx`). `DedupeKey` thakle ekoi key e duibar row hoy na. `RunAt` khali hole database er `now()` (app er ghori na).
-2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`, `cart.cleanup` → `cart.CleanupJob`, `inventory.expire` → `inventory.ExpireJob`; `order.JobHandlers`: `sms.order_placed`, `sms.cancelled`, `alert.new_order`, `order.auto_cancel_unconfirmed`, [checkout](checkout.md)), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
+2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`, `cart.cleanup` → `cart.CleanupJob`, `inventory.expire` → `inventory.ExpireJob`; `order.JobHandlers`: `sms.order_placed`, `sms.cancelled`, `sms.total_changed` ([order-status](order-status.md) pack), `alert.new_order`, `order.auto_cancel_unconfirmed`, [checkout](checkout.md)), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
 3. `Worker.Run`: protiti 2 second e `schedule` (recurring `jobs.sweep` 5 minute er slot `dedupe_key`, `jobs.cleanup` ar `cart.cleanup` UTC din er `dedupe_key`; `Recurring` e onno package er scheduler, jemon `inventory.ScheduleExpire`: shop er timezone e 00:10, `dedupe_key` e shop ar shop er tarikh), tarpor `RunOnce`. 10 ta pele shathe shathe abar.
 4. `RunOnce`: 6.4 er claim query (`FOR UPDATE SKIP LOCKED`, `attempts + 1`, `locked_at`). Protiti kaj er age lock notun kore (onno worker niye thakle bad), `call` (1 minute timeout; panic o error), tarpor `finish`.
 5. `finish`: shofol hole `done_at` (`sms.send` hole payload `{}`, PII); fail hole `last_error`, `run_at = now + backoff` (1, 5, 15, 60 minute); `attempts = max_attempts` hole `failed_at` ar `alert`. `locked_at` claim er sathe na mille (5 minute por onno worker niyeche) kichu lekhe na.
 6. `jobs.sweep`: shesh attempt e crash kora job (`attempts >= max_attempts`, lock 5 minute er purono) `failed_at` ar alert. `jobs.cleanup` (protidin): `done_at` 30 din ar `failed_at` 90 din er purono row muche (`dedupe_key` shoho). `cart.cleanup` (protidin): 30 din er purono guest cart muche ([cart](cart.md)). `inventory.expire` (protidin, `batch_expiry` on shop): expire batch ([inventory](inventory.md)).
-7. `notify.NewSMS`: `APP_ENV=local` e log (`phone.Mask`, shesh 3 digit); onno env e `ErrNoProvider` (provider M12 er age, 16.1), tai production e kokhono log mode na. OTP er lekha `OTPText`: kram shop override[locale] → default[locale] → override[bn] → default[bn] (9.8), `{code}` chhara lekha bad; default bn/en Go te (`otpDefault`). Order SMS er lekha `OrderText` (`sms.order_placed`, `sms.order_confirm`, `sms.cancelled`; `{shop}`, `{number}`, `{link}`), ekoi kram; `{number}` ba (link thakle) `{link}` chhara override bad; default `orderDefault`.
+7. `notify.NewSMS`: `APP_ENV=local` e log (`phone.Mask`, shesh 3 digit); onno env e `ErrNoProvider` (provider M12 er age, 16.1), tai production e kokhono log mode na. OTP er lekha `OTPText`: kram shop override[locale] → default[locale] → override[bn] → default[bn] (9.8), `{code}` chhara lekha bad; default bn/en Go te (`otpDefault`). Order SMS er lekha `OrderText` (`sms.order_placed`, `sms.order_confirm`, `sms.cancelled`; `{shop}`, `{number}`, `{link}`), ekoi kram; `{number}` ba (link thakle) `{link}` chhara override bad; default `orderDefault`. `sms.total_changed` er lekha `TotalText` (`{shop}`, `{number}`, `{total}`; `{number}` ba `{total}` chhara override bad); `{total}` `taka`: bn `৳1,23,456.50`, en `Tk 1,23,456.50` (GSM-7 e ৳ nai), lakh-style comma, English digit, poisha 0 hole doshomik na (8.16 v1.42).
 
 ## Code er map
 
@@ -23,7 +23,7 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/internal/jobs/jobs.go` → `Enqueue`, `NewWorker`, `Run`, `RunOnce`, `release`, `finish`, `sweep`, `cleanup`, `backoff` | Queue ar worker |
-| `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `OTP`, `OTPSource`, `OTPText`, `otpDefault`, `OrderText`, `orderDefault`, `SecurityAlertJob` | SMS sender, `sms.send` handler (OTP payload shoho), `alert.security` |
+| `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `OTP`, `OTPSource`, `OTPText`, `otpDefault`, `OrderText`, `TotalText`, `taka`, `orderDefault`, `SecurityAlertJob` | SMS sender, `sms.send` handler (OTP payload shoho), `alert.security` |
 | `backend/cmd/api/main.go` → `runServe` | Worker chalu (handler register) ar shutdown |
 | `backend/internal/order/jobs.go` → `JobHandlers` | Order er job ([checkout](checkout.md)) |
 | `backend/internal/inventory/jobs.go` → `ScheduleExpire`, `ExpireJob` | `inventory.expire` ([inventory](inventory.md)) |
@@ -49,6 +49,7 @@ Ei kram e poro:
 | Order SMS bn ≤ 134 unit (2 part), en ≤ 160; `{number}`/`{link}` chhara override bad (8.16, 8.19 item 7) | `OrderText` | `TestOrderSMSTemplateLength` |
 | Order job: SMS retry e ekoi link, auto-cancel idempotent ([checkout](checkout.md); 8.17) | `order.JobHandlers` | `TestOrderPlacedSMSIntegration`, `TestAutoCancelUnconfirmedIntegration` |
 | SMS shudhu local e log, production e log mode na (8.2 step 4); log e phone mask (12.2) | `NewSMS` | `TestNewSMS` |
+| `sms.total_changed` bn ≤ 134 unit, en ≤ 160 GSM-7, `{total}` format, override er kram (8.16 v1.42) | `TotalText`, `taka` | `TestTotalChangedSMSLength` |
 | `sms.send` payload e phone ar text lage; OTP payload (`{otp_id, nonce, ct}`) e `OTPSource` theke phone ar code (8.2 step 4) | `SendSMSJob` | `TestSendSMSJob` |
 | OTP `sms.send`: `max_attempts` 2 (1 minute por ekbar), done hole payload `{}` (8.17 v1.19) | `auth.sendOTP`, `finish` | `TestOTPJobPayload` |
 

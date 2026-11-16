@@ -71,6 +71,19 @@ func JobHandlers(d *sql.DB, sms notify.SMS, log *slog.Logger, confirmSecret stri
 			}
 			return sms.Send(ctx, j.ShopID, o.phone, notify.OrderText("sms.cancelled", o.locale, o.override["sms.cancelled"], o.shop, o.number, ""))
 		},
+		// 8.11 item 3, 11.7 item 13 iv: pack e COD total bodlale; lekha te pathanor shomoyer total (marketplace e
+		// duita pack hole duita SMS, prottekta tokhonkar total)
+		"sms.total_changed": func(ctx context.Context, j jobs.Job) error {
+			o, err := loadSMSOrder(ctx, d, j, "sms.total_changed")
+			if err != nil || o.status == string(Cancelled) {
+				return err
+			}
+			var total int64
+			if err := d.QueryRowContext(ctx, `SELECT total FROM orders WHERE shop_id = $1 AND id = $2`, j.ShopID, o.id).Scan(&total); err != nil {
+				return err
+			}
+			return sms.Send(ctx, j.ShopID, o.phone, notify.TotalText(o.locale, o.override["sms.total_changed"], o.shop, o.number, total))
+		},
 		// ekhon shudhu log; email/SMS M12 e (ALERT_EMAIL)
 		"alert.new_order": func(ctx context.Context, j jobs.Job) error {
 			var p jobPayload

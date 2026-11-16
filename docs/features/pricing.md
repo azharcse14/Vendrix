@@ -20,6 +20,7 @@ Order er shob taka: line total, coupon er discount, delivery charge, mot taka, a
    3. Bodla vendor: line total (prepaid e ager er beshi na), discount (percent e delta, fixed e edit e onupate), delivery ager ta (shob line bad hole 0).
    4. Prepaid hole parthokko refund.
 3. Database er row theke line shudhu `LineFromItem`; edit e ojon `EditWeightG`.
+4. Caller: packing e `order` package er `reprice` (`pack.go`, M7a; [order-status.md](order-status.md)): order er shob `order_items` `LineFromItem` diye, `Edit = false`, coupon `orders.coupon_*` theke; COD +10% shima pricing e na, pack handler e (8.11 v1.37).
 
 ## Code er map
 

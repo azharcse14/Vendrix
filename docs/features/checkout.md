@@ -47,6 +47,7 @@ Job (8.17; `jobs.go` → `JobHandlers`, `cmd/api` worker e register; shob idempo
 2. `alert.new_order`: `slog` Info `new order` (shop, order id, number, total, payment method; phone/thikana na); email/SMS M12 e.
 3. `order.auto_cancel_unconfirmed`: tx e `lockOrder`; ekhono `pending` COD hole `TransitionOrder(→ cancelled, System, "auto_cancel_unconfirmed")` (stock, coupon ferot, `sms.cancelled`); na hole kichu na (confirm/cancel hoye geche, ba abar chalano).
 4. `sms.cancelled` ([order-status.md](order-status.md)): order cancel er tx e enqueue; template `sms.cancelled` (`{shop}`, `{number}`, karon na).
+5. `sms.total_changed` (M7a, [order-status.md](order-status.md) pack): COD pack e `Reprice` e total bodlale pack er tx e enqueue; handler `loadSMSOrder`, cancelled hole kichu na, pathanor shomoyer `orders.total` diye `notify.TotalText` (`{shop}`, `{number}`, `{total}`).
 
 Risk:
 
