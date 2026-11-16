@@ -2,7 +2,9 @@ import 'package:jaspr/dom.dart';
 import 'package:jaspr/server.dart';
 import 'package:shared/shared.dart';
 
+import '../components/icon.dart';
 import '../components/price.dart';
+import '../components/responsive_image.dart';
 import '../components/site.dart';
 import '../seo/meta.dart';
 import '../services/bff.dart';
@@ -53,9 +55,9 @@ class CartLoad extends InheritedComponent {
 
 const _empty = Cart([], 0, 0, [], null);
 
-/// `/cart` (10.1, 10.5, 10.12 item 4, 6): SSR, `@client` na. Protiti line e JS chhara qty form
-/// (`POST /_/cart/items/{id}` → PATCH) ar bad form (`.../delete`), `303` e page abar; dam, line total ar subtotal
-/// API er (Rule 1). Item thakle checkout link (10.13).
+/// `/cart` (10.1, 10.5, 10.12 item 4, 6): SSR, `@client` na. Protiti line e JS chhara − / + stepper
+/// (`POST /_/cart/items/{id}` → PATCH, duita submit button `quantity` = qty ± 1) ar bad form (`.../delete`), `303` e
+/// page abar; dam, line total ar subtotal API er (Rule 1). Item thakle checkout link (10.13).
 class CartPage extends AsyncStatelessComponent {
   /// URL query (BFF er `error`).
   final Map<String, String> query;
@@ -85,13 +87,13 @@ class CartPage extends AsyncStatelessComponent {
       h1(classes: 'mb-4 font-heading text-2xl', [.text(site.t('cart.title'))]),
       if (error != null)
         p(
-          classes: 'mb-4 rounded border border-line bg-tint p-3 text-sm',
+          classes: 'notice notice-danger mb-4 text-sm',
           attributes: {'role': 'alert'},
           [.text(site.error(error))],
         ),
       if (cart.notices.isNotEmpty)
         div(
-          classes: 'mb-4 space-y-1 rounded border border-line bg-tint p-3 text-sm',
+          classes: 'notice notice-warning mb-4 flex-col gap-1 text-sm',
           attributes: {'role': 'status'},
           [
             for (final n in cart.notices)
@@ -101,7 +103,12 @@ class CartPage extends AsyncStatelessComponent {
           ],
         ),
       if (cart.items.isEmpty)
-        p(classes: 'text-muted', [.text(site.t('cart.empty'))])
+        // Empty state (plan 5, listing er moto): icon, lekha, category te link.
+        div(classes: 'flex flex-col items-center gap-3 py-12 text-center', [
+          const Icon(Icons.cart, classes: 'size-10 text-muted'),
+          p(classes: 'text-muted', [.text(site.t('cart.empty'))]),
+          a(href: site.href('/#categories'), classes: 'btn btn-secondary', [.text(site.t('category.browse'))]),
+        ])
       else
         div(classes: 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-8', [
           ul(classes: 'divide-y divide-line lg:col-span-2', [for (final x in cart.items) _Line(x)]),
@@ -109,7 +116,7 @@ class CartPage extends AsyncStatelessComponent {
           section(
             classes:
                 'sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] -mx-4 mt-4 border-t border-line bg-surface '
-                'p-4 md:bottom-0 lg:bottom-auto lg:top-4 lg:mx-0 lg:mt-0 lg:rounded lg:border',
+                'p-4 shadow-1 md:bottom-0 lg:bottom-auto lg:top-4 lg:mx-0 lg:mt-0 lg:rounded lg:border',
             attributes: {'aria-label': site.t('cart.subtotal')},
             [
               p(classes: 'text-sm text-muted', [
@@ -117,14 +124,14 @@ class CartPage extends AsyncStatelessComponent {
               ]),
               p(classes: 'flex items-baseline justify-between text-lg', [
                 span([.text(site.t('cart.subtotal'))]),
-                span(classes: 'font-medium', [
+                span(classes: 'font-heading font-medium', [
                   .text(site.taka(cart.subtotal)),
                   if (approx) span(classes: 'text-sm text-muted', [.text(' ${site.t('cart.approx')}')]),
                 ]),
               ]),
               a(
                 href: site.href('/checkout'),
-                classes: 'mt-3 flex min-h-11 items-center justify-center rounded bg-primary px-4 text-on-primary',
+                classes: 'btn btn-primary mt-3 w-full',
                 [.text(site.t('cart.checkout'))],
               ),
             ],
@@ -134,7 +141,7 @@ class CartPage extends AsyncStatelessComponent {
   }
 }
 
-// Ek line: naam, variant, dam, qty form, bad form, line total.
+// Ek line: thumbnail, naam, variant, dam, − / + stepper, bad, line total.
 class _Line extends StatelessComponent {
   final CartItem item;
   const _Line(this.item);
@@ -143,37 +150,42 @@ class _Line extends StatelessComponent {
   Component build(BuildContext context) {
     final site = Site.of(context);
     final x = item;
-    final id = 'qty-${x.variantId}';
-    return li(classes: 'space-y-2 py-4', [
-      a(href: site.href('/p/${Uri.encodeComponent(x.productSlug)}'), classes: 'font-medium underline', [
-        .text(x.name),
+    // qty 1 e − na (bad alada button), max_quantity (min(stock, 50), 8.4) e + na.
+    Component step(String label, int to, bool off) => button(
+      type: ButtonType.submit,
+      classes: 'btn btn-ghost min-w-11 px-0 text-lg',
+      attributes: {'name': 'quantity', 'value': '$to', 'aria-label': label, if (off) 'disabled': ''},
+      [.text(to < x.quantity ? '−' : '+')],
+    );
+    return li(classes: 'flex gap-3 py-4', [
+      div(classes: 'w-16 shrink-0 overflow-hidden rounded-sm', [
+        ResponsiveImage(x.image, alt: '', sizes: '64px', width: 64, height: 64),
       ]),
-      if (x.variantLabel.isNotEmpty) p(classes: 'text-sm text-muted', [.text(x.variantLabel)]),
-      Price(x.unitPrice, compareAt: x.compareAtPrice, perKg: x.variableWeight),
-      if (!x.inStock) p(classes: 'text-sm text-muted', [.text(site.t('product.out_of_stock'))]),
-      div(classes: 'flex flex-wrap items-end gap-2', [
-        form(action: '/_/cart/items/${x.variantId}', method: FormMethod.post, classes: 'flex items-end gap-2', [
-          label(classes: 'block space-y-1', [
-            span(classes: 'text-sm', [.text(site.t('cart.quantity'))]),
-            input(
-              id: id,
-              type: InputType.number,
-              name: 'quantity',
-              value: '${x.quantity}',
-              classes: 'block min-h-11 w-20 rounded border border-line bg-page px-3 text-base',
-              attributes: {'min': '1', 'max': '${x.maxQuantity}', 'inputmode': 'numeric', 'required': ''},
-            ),
+      div(classes: 'min-w-0 flex-1 space-y-2', [
+        a(href: site.href('/p/${Uri.encodeComponent(x.productSlug)}'), classes: 'hover:underline', [.text(x.name)]),
+        if (x.variantLabel.isNotEmpty) p(classes: 'text-sm text-muted', [.text(x.variantLabel)]),
+        Price(x.unitPrice, compareAt: x.compareAtPrice, perKg: x.variableWeight),
+        if (!x.inStock) span(classes: 'badge badge-danger', [.text(site.t('product.out_of_stock'))]),
+        div(classes: 'flex flex-wrap items-center gap-2', [
+          form(
+            action: '/_/cart/items/${x.variantId}',
+            method: FormMethod.post,
+            classes: 'flex items-center rounded border border-line',
+            attributes: {'role': 'group', 'aria-label': site.t('cart.quantity')},
+            [
+              step(site.t('cart.decrease'), x.quantity - 1, x.quantity <= 1),
+              span(classes: 'min-w-8 text-center', [.text(site.number(x.quantity))]),
+              step(site.t('cart.increase'), x.quantity + 1, x.quantity >= x.maxQuantity),
+            ],
+          ),
+          form(action: '/_/cart/items/${x.variantId}/delete', method: FormMethod.post, [
+            button(type: ButtonType.submit, classes: 'btn btn-ghost px-2', [.text(site.t('cart.remove'))]),
           ]),
-          button(type: ButtonType.submit, classes: 'min-h-11 rounded border border-line px-4', [
-            .text(site.t('cart.update')),
+          p(classes: 'ml-auto font-heading font-medium', [
+            .text(site.taka(x.lineTotal)),
+            if (x.variableWeight && x.inStock)
+              span(classes: 'font-body text-sm font-normal text-muted', [.text(' ${site.t('cart.approx')}')]),
           ]),
-        ]),
-        form(action: '/_/cart/items/${x.variantId}/delete', method: FormMethod.post, [
-          button(type: ButtonType.submit, classes: 'min-h-11 px-2 underline', [.text(site.t('cart.remove'))]),
-        ]),
-        p(classes: 'ml-auto font-medium', [
-          .text(site.taka(x.lineTotal)),
-          if (x.variableWeight && x.inStock) span(classes: 'text-sm text-muted', [.text(' ${site.t('cart.approx')}')]),
         ]),
       ]),
     ]);

@@ -125,6 +125,8 @@ const en = {
   'cart.add': 'Add to cart',
   'cart.added': 'Added to cart',
   'cart.quantity': 'Quantity',
+  'cart.decrease': 'Decrease quantity',
+  'cart.increase': 'Increase quantity',
   'cart.update': 'Update',
   'cart.remove': 'Remove',
   'cart.empty': 'Your cart is empty.',

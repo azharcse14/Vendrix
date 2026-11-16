@@ -124,6 +124,8 @@ const bn = {
   'cart.add': 'কার্টে যোগ করুন',
   'cart.added': 'কার্টে যোগ হয়েছে',
   'cart.quantity': 'পরিমাণ',
+  'cart.decrease': 'পরিমাণ কমান',
+  'cart.increase': 'পরিমাণ বাড়ান',
   'cart.update': 'বদলান',
   'cart.remove': 'বাদ দিন',
   'cart.empty': 'কার্ট খালি।',

@@ -41,7 +41,8 @@ class ResponsiveImage extends StatelessComponent {
     if (key == null || src == null) {
       return div(
         classes: 'flex aspect-square w-full items-center justify-center bg-tint text-primary',
-        attributes: {'role': 'img', 'aria-label': alt},
+        // alt khali = shajano (naam pashe lekha), tai screen reader e na.
+        attributes: alt.isEmpty ? {'aria-hidden': 'true'} : {'role': 'img', 'aria-label': alt},
         [const Icon(Icons.leaf, classes: 'h-1/4 w-1/4 opacity-40')],
       );
     }
