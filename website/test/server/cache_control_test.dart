@@ -55,6 +55,16 @@ void main() {
       expect(await run('/p/lal-chal', cookie: 'wl=3,5'), 'public, max-age=60');
     });
 
+    test('token page (10.1): cookie chhara-o private, no-store, page er nijer header bodle', () async {
+      const tok = 'QWERTYUIOPASDFGHJKLZXCVBNM';
+      for (final p in ['/order/$tok', '/order/$tok/done', '/en/order/$tok', '/confirm/$tok', '/en/confirm/$tok']) {
+        expect(await run(p), 'private, no-store', reason: p);
+        final res = Response.ok('', headers: {'cache-control': 'public, max-age=60'});
+        expect(await run(p, response: res), 'private, no-store', reason: p);
+      }
+      expect(await run('/orders-guide'), 'public, max-age=60');
+    });
+
     test('page nije dile (503 error page) thake', () async {
       final res = Response(503, headers: {'cache-control': 'no-store'});
       expect(await run('/', response: res), 'no-store');
