@@ -103,6 +103,9 @@ func transitionOrder(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, t
 		if err := coupon.Release(ctx, tx, shopID, o.id); err != nil {
 			return err
 		}
+		if err := enqueueCancelled(ctx, tx, shopID, o.id); err != nil {
+			return err
+		}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE orders SET status = $3::text, display_status = $4,
 		confirmed_at = CASE WHEN $3::text = 'confirmed' THEN now() ELSE confirmed_at END,

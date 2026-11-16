@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"os"
 	"os/signal"
@@ -24,6 +25,7 @@ import (
 	"vendrix/backend/internal/db"
 	"vendrix/backend/internal/jobs"
 	"vendrix/backend/internal/notify"
+	"vendrix/backend/internal/order"
 	"vendrix/backend/internal/shop"
 	"vendrix/backend/migrations"
 )
@@ -81,11 +83,14 @@ func runServe(ctx context.Context, lookup func(string) (string, bool), log *slog
 	if err != nil {
 		return err
 	}
-	w := jobs.NewWorker(database, log, map[string]jobs.Handler{
-		"sms.send":       notify.SendSMSJob(notify.NewSMS(cfg.Env, log), auth.SMSCode(database, cfg.OTPSecret)),
+	sms := notify.NewSMS(cfg.Env, log)
+	handlers := order.JobHandlers(database, sms, log, cfg.ConfirmSecret)
+	maps.Copy(handlers, map[string]jobs.Handler{
+		"sms.send":       notify.SendSMSJob(sms, auth.SMSCode(database, cfg.OTPSecret)),
 		"alert.security": notify.SecurityAlertJob(log),
 		"cart.cleanup":   cart.CleanupJob(database),
 	})
+	w := jobs.NewWorker(database, log, handlers)
 	wctx, stopWorker := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() { w.Run(wctx); close(done) }()

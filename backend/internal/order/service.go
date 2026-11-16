@@ -202,7 +202,7 @@ func authErr(err error) error {
 	return err
 }
 
-// PlaceOrder (8.6 step 1–17). Bhul hole kichu save na.
+// PlaceOrder (8.6 step 1–18). Bhul hole kichu save na.
 func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Owner, in PlaceInput) (Placed, error) {
 	if p, err := findByKey(ctx, d, shopID, in.Key); err != nil || p.found {
 		if err != nil {
@@ -380,7 +380,7 @@ func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Ow
 		if cod && status == "pending" {
 			confirmHash = ConfirmHash(ConfirmToken(g.ConfirmSecret, token))
 		}
-		orderID, ok, err := insertOrder(ctx, tx, newOrder{ShopID: shopID, UserID: o.UserID, ZoneID: zone.ID, Number: number,
+		orderID, placedAt, ok, err := insertOrder(ctx, tx, newOrder{ShopID: shopID, UserID: o.UserID, ZoneID: zone.ID, Number: number,
 			Token: token, Key: in.Key, Hash: in.Hash, In: in, Totals: r.Totals, Coupon: c, PaymentStatus: payStatus,
 			Status: status, Display: Summary(Status(status), nil), Flags: flags, OTPVerified: otpVerified, DeadlineDays: days,
 			ConfirmHash: confirmHash})
@@ -408,8 +408,20 @@ func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Ow
 		if err := insertPlaced(ctx, tx, shopID, orderID, o.UserID, status, c, in.Customer.Phone); err != nil {
 			return err
 		}
-		// step 17; step 18 er job (sms.order_placed, alert.new_order, auto_cancel) M6 step 9 e
+		// step 17
 		if err := cart.Clear(ctx, tx, shopID, o); err != nil {
+			return err
+		}
+		// step 18 (online er auto_cancel_unpaid M10 e)
+		var autoCancel time.Time
+		if cod && status == "pending" {
+			hours := s.AutoCancelHours
+			if hours <= 0 { // setting nai: 9.2 er default, shathe shathe cancel na
+				hours = 24
+			}
+			autoCancel = placedAt.Add(time.Duration(hours) * time.Hour)
+		}
+		if err := enqueuePlaced(ctx, tx, shopID, orderID, autoCancel); err != nil {
 			return err
 		}
 		out = Placed{OrderNumber: number, PublicToken: token, Status: status, Created: true}

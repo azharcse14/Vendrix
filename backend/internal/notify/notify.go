@@ -103,9 +103,33 @@ func OTPText(locale string, override map[string]string, code string) string {
 	return strings.ReplaceAll(otpDefault["bn"], "{code}", code)
 }
 
-// OrderText: order SMS er lekha; M6 step 9 e asol code.
+// orderDefault (8.16, 8.19 item 7): order SMS er default; bn ≤ 134 unit (2 part), en ≤ 160.
+// TestOrderSMSTemplateLength dhore.
+var orderDefault = map[string]map[string]string{
+	"sms.order_placed": {
+		"bn": "{shop}: অর্ডার {number} পেয়েছি। দেখুন {link}",
+		"en": "{shop}: Order {number} received. View: {link}",
+	},
+	"sms.order_confirm": {
+		"bn": "{shop}: অর্ডার {number} কনফার্ম করুন: {link}",
+		"en": "{shop}: Please confirm order {number}: {link}",
+	},
+	"sms.cancelled": {
+		"bn": "{shop}: অর্ডার {number} বাতিল হয়েছে।",
+		"en": "{shop}: Order {number} has been cancelled.",
+	},
+}
+
+// OrderText: OTPText er kram (9.8); {number} ar (link thakle) {link} chhara lekha bad, karon oi SMS kaje lage na.
 func OrderText(key, locale string, override map[string]string, shop, number, link string) string {
-	return ""
+	def := orderDefault[key]
+	r := strings.NewReplacer("{shop}", shop, "{number}", number, "{link}", link)
+	for _, t := range []string{override[locale], def[locale], override["bn"]} {
+		if strings.Contains(t, "{number}") && (link == "" || strings.Contains(t, "{link}")) {
+			return r.Replace(t)
+		}
+	}
+	return r.Replace(def["bn"])
 }
 
 // SecurityAlertJob (8.17 alert.security, Q9): ekhon shudhu slog.Warn (payload e phone mask); email/webhook M12 e.

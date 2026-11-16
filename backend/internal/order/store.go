@@ -38,6 +38,7 @@ type Settings struct {
 	OTPMode         string               `json:"otp_mode"`
 	CODConfirmation string               `json:"cod_confirmation"`
 	Risk            RiskLimits           `json:"risk"`
+	AutoCancelHours int                  `json:"auto_cancel_unconfirmed_hours"`
 	DeliveryMode    pricing.DeliveryMode `json:"-"`
 }
 
@@ -158,10 +159,12 @@ type newOrder struct {
 }
 
 // insertOrder: ON CONFLICT e 0 row (found false); lock er por eta hoy na, tobu chupchap duplicate na.
-func insertOrder(ctx context.Context, tx *sql.Tx, o newOrder) (int64, bool, error) {
+// placed_at DB er ghori (auto-cancel er RunAt).
+func insertOrder(ctx context.Context, tx *sql.Tx, o newOrder) (int64, time.Time, bool, error) {
+	var placedAt time.Time
 	flags, err := json.Marshal(append([]string{}, o.Flags...)) // nil → [] (null na)
 	if err != nil {
-		return 0, false, err
+		return 0, placedAt, false, err
 	}
 	var cID, cMax, cVendor sql.NullInt64
 	var cCode, cKind, cFunded sql.NullString
@@ -182,15 +185,15 @@ func insertOrder(ctx context.Context, tx *sql.Tx, o newOrder) (int64, bool, erro
 		VALUES ($1, $2, $3, $4, $5, NULLIF($6, 0), $7, $8, NULLIF($9, ''), $10, $11, $12, $13, $14, $15, NULLIF($16, ''), $17,
 		  $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, NULLIF($35, ''),
 		  now() + make_interval(days => $36), $37)
-		ON CONFLICT (shop_id, idempotency_key) DO NOTHING RETURNING id`,
+		ON CONFLICT (shop_id, idempotency_key) DO NOTHING RETURNING id, placed_at`,
 		o.ShopID, o.Number, o.Token, o.Key, o.Hash, o.UserID, in.Customer.Name, in.Customer.Phone, in.Customer.Email,
 		in.Recipient.Name, in.Recipient.Phone, in.District, in.Area, in.Line, o.ZoneID, in.Note, in.Locale,
 		o.Totals.Subtotal, o.Totals.Discount, o.Totals.DeliveryCharge, o.Totals.Total, cID, cCode, cKind, cValue, cMax, cVendor,
-		cFunded, in.PaymentMethod, o.PaymentStatus, o.Status, o.Display, flags, o.OTPVerified, in.IP, o.DeadlineDays, o.ConfirmHash).Scan(&id)
+		cFunded, in.PaymentMethod, o.PaymentStatus, o.Status, o.Display, flags, o.OTPVerified, in.IP, o.DeadlineDays, o.ConfirmHash).Scan(&id, &placedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return 0, false, nil
+		return 0, placedAt, false, nil
 	}
-	return id, err == nil, err
+	return id, placedAt, err == nil, err
 }
 
 func insertFulfillment(ctx context.Context, tx *sql.Tx, shopID, orderID int64, seq int, g pricing.Group) (int64, error) {
