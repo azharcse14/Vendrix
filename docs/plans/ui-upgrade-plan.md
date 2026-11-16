@@ -1,6 +1,6 @@
 # Website UI upgrade: plan (khoshra, user er review er jonno)
 
-> Obostha: **prostab**. Code, design doc, STATUS ba milestone e kichu bodlay nai. User approve korle `design-change` skill diye age 9 ar 10 er doc, tarpor code ar test. Notun milestone hole `milestone` skill er niyom: age `docs/milestones/MU.md` plan, approve, tarpor code.
+> Obostha: **approve** (user 16 November 2026, shob recommendation; milestone MU M6 er por, M7 er age): design v1.38, plan [MU](../milestones/MU.md). Ager lekha: User approve korle `design-change` skill diye age 9 ar 10 er doc, tarpor code ar test. Notun milestone hole `milestone` skill er niyom: age `docs/milestones/MU.md` plan, approve, tarpor code.
 > Pora hoyeche: 1.4 (Rule 4), 9.3–9.6, 10.5, 10.7, 10.10, 15; `website/lib/**`, `website/tailwind.{css,config.js}`, `website/lib/services/theme.dart`, `packages/shared/lib/theme/tokens.dart`; M6 Safari screenshot (scratch `m6/shots/`, commit na). M5 er screenshot nai, tai home/category/product/cart code theke.
 
 ## 1. Ekhon ki obostha
