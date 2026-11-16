@@ -442,6 +442,13 @@ var adminRoutes = map[string]routeRoles{
 	"POST /api/admin/orders/{id}/notes":            {roles: shopRoles},
 	"GET /api/admin/fulfillments":                  {roles: allRoles},
 	"POST /api/admin/fulfillments/{id}/transition": {roles: allRoles},
+
+	// inventory (11.2 "stock entry ar wastage", 11.7 item 1, 2): shob role, vendor role nijer variant
+	"GET /api/admin/inventory/variants":    {roles: allRoles},
+	"GET /api/admin/variants/{id}/batches": {roles: allRoles},
+	"POST /api/admin/batches":              {roles: allRoles},
+	"POST /api/admin/inventory/adjust":     {roles: allRoles},
+	"GET /api/admin/inventory/movements":   {roles: allRoles},
 }
 
 // registeredAdminRoutes: backend er (test chhara) Go source e "METHOD /api/admin/..." pattern gulo. ServeMux
