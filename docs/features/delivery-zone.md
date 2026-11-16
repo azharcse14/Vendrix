@@ -4,13 +4,13 @@ Design: 7.2, 8.6 step 5, 8.19 item 2 · Milestone: M6 · Code: `backend/internal
 
 ## Ki kore
 
-Checkout form `GET /api/delivery-zones` theke district ar area er list pay. Checkout (quote ar order) customer er district/area diye zone khuje charge, `min_order`, free delivery ar deadline er `same_city` nay; zone na pele `409 area_not_served`.
+Checkout form `GET /api/delivery-zones` theke district ar area er list pay. Checkout (quote ar order, [checkout.md](checkout.md)) customer er district/area diye zone khuje charge, `min_order`, free delivery ar deadline er `same_city` nay; zone na pele `409 area_not_served`.
 
 ## Kivabe kaj kore
 
 1. Router: `ShopFromHost` → `RateLimit` (public), `GET /api/delivery-zones` → `Handlers.Zones`.
 2. `List`: shop er `is_active` zone `district`, `area` er kram e; district e group, `area NULL` zone thakle `district_wide: true` (form e "Onno area" + free text). Area er `name` request er bhashay (`httpx.Locale`), `en` na thakle `bn`. Area na thakle `areas: []`.
-3. `Lookup` (quote ar checkout er transaction theke, `*sql.DB` ba `*sql.Tx`): ek query te `(district, area)` hubohu ba oi district er `area NULL` zone, `ORDER BY area NULLS LAST` (area age). Bondho zone bad. Na pele `ErrAreaNotServed`.
+3. `Lookup` (`order.QuoteCart` ar `order.PlaceOrder` step 5, transaction er age; querier `*sql.DB` ba `*sql.Tx`): ek query te `(district, area)` hubohu ba oi district er `area NULL` zone, `ORDER BY area NULLS LAST` (area age). Bondho zone bad. Na pele `ErrAreaNotServed`.
 
 ## Code er map
 
@@ -38,7 +38,7 @@ Ei kram e poro:
 
 ## Bhul hole ki hoy
 
-- District/area e active zone nai: `ErrAreaNotServed` → quote (`order.QuoteCart`) ar checkout (M6 step 5) e `409 area_not_served`.
+- District/area e active zone nai: `ErrAreaNotServed` → quote (`order.QuoteCart`) ar order create (`order.PlaceOrder` step 5) e `409 area_not_served`.
 - Ochena shop: middleware `404 shop_not_found`.
 
 ## Bodlanor age mone rakho

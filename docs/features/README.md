@@ -9,33 +9,33 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Feature | Doc | Design | Milestone | Obostha |
 |---|---|---|---|---|
 | Server, config, healthz, CLI | [server.md](server.md) | 2.2, 4.2, 13.5 | M0 | chalu (serve, migrate, shop, staff, credentials) |
-| HTTP er bhitti: client IP, log, error, session middleware | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 11.3, 12.2 | M0, M1, M4, M5 | chalu |
+| HTTP er bhitti: client IP, log, error, session middleware | [http-foundation.md](http-foundation.md) | 3.2, 7.1, 11.3, 12.2 | M0, M1, M4, M5, M6 | chalu |
 | Migration ar database | [migration.md](migration.md) | 6.1, 6.7, 13.6 | M0 | chalu |
 | Shop chena ar khola (`X-Shop-Host`, `shop create`) | [shop.md](shop.md) | 3.2, 3.8, 9.2 | M1 | cholche |
 | Catalog: category, product, search | [catalog.md](catalog.md) | 6.4, 7.2, 7.7 | M1 | cholche |
 | Audit log | [audit.md](audit.md) | 12 | M1 | cholche (category, product, variant) |
-| Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator) |
+| Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator, website ar checkout/order er lekha) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
-| API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4 | M2, M4, M5 | cholche (catalog, settings, account, cart, wishlist) |
-| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3, M4, M5 | cholche (layout, home, category, product, search, policy, login, account, BFF auth, cart, wishlist) |
+| API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4, 7.5 | M2, M4, M5, M6 | cholche (catalog, settings, account, cart, wishlist, checkout, order) |
+| Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3, M4, M5, M6 | cholche (layout, home, category, product, search, policy, login, account, BFF auth, cart, wishlist, checkout, order, confirm, track, `/account/orders`) |
 | SEO: meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) | 10.4 | M3 | cholche |
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora SMS provider ar M10 e) |
-| Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5 | chalu (OTP SMS, cleanup, `cart.cleanup`; SMS provider ar alert email M12 e) |
+| Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5, M6 | chalu (OTP SMS, cleanup, `cart.cleanup`, order SMS, `alert.new_order`, auto-cancel; SMS provider ar alert email M12 e) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
-| Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec) |
-| Checkout: risk, OTP, order | [checkout.md](checkout.md) | 8.6, 8.7, 8.19 | M6 | cholche (quote, risk flag, OTP ar COD confirm er niyom; order create porer step e) |
-| Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4 | chalu (OTP send/verify, customer session, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
+| Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec; DB e cancel ar confirm, packing/shipment M7 e) |
+| Checkout: quote, order, risk/OTP, COD confirm, order page, tracking | [checkout.md](checkout.md) | 7.5, 8.6, 8.7, 8.10, 8.19 | M6 | cholche (quote, order create, checkout OTP, COD confirm, job, order view/track, `/api/me/orders`; online payment M10, admin M7 e) |
+| Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4, M6 | chalu (OTP send/verify, checkout OTP, customer session, guest order jog, staff login + TOTP/recovery, setup, admin session, `reset-2fa`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
-| Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`; website `/cart`, heart) |
+| Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5, M6 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`, checkout er line ar khali; website `/cart`, heart) |
 | Delivery zone | [delivery-zone.md](delivery-zone.md) | 7.2, 8.6, 8.19 | M6 | cholche (lookup, `GET /api/delivery-zones`, dev seed; admin M7 e) |
-| Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19 | M6 | cholche (use, peek, release; checkout/quote e jog step 4–5, admin M7 e) |
+| Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19 | M6 | cholche (use, peek, release; quote, checkout ar cancel e; admin M7 e) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
 
 | Package | Ki | Feature doc |
 |---|---|---|
-| `backend/cmd/api` | Binary `shop-api`: serve, migrate, shop create, staff reset-2fa, credentials, version; router, healthz | [server.md](server.md) |
+| `backend/cmd/api` | Binary `shop-api`: serve, migrate, shop create, staff reset-2fa, credentials, version; router, job register, healthz | [server.md](server.md) |
 | `backend/internal/config` | Env theke config, validation | [server.md](server.md) |
 | `backend/internal/httpx` | Middleware, client IP, log, JSON error, rate limit, customer/admin session, admin cookie | [http-foundation.md](http-foundation.md) |
 | `backend/internal/db` | Connection, transaction, migration runner | [migration.md](migration.md) |
@@ -44,14 +44,14 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/shop` | Shop er data: resolve, credential encrypt ar save | [shop.md](shop.md), [credentials.md](credentials.md) |
 | `backend/internal/catalog` | Category, product, variant: public read, search, admin CRUD | [catalog.md](catalog.md) |
 | `backend/internal/audit` | Admin kaj er log, kaj er transaction e | [audit.md](audit.md) |
-| `backend/internal/auth` | Staff password hash, OTP/TOTP primitive, OTP send/verify, customer session, staff login (`/api/admin/auth/login`, `/totp`, `/recovery`), setup (`/password`, `/totp/setup`, `/totp/enable`), admin session, `/api/admin/me`, `staff reset-2fa` | [auth.md](auth.md) |
+| `backend/internal/auth` | Staff password hash, OTP/TOTP primitive, OTP send/verify, checkout OTP (send/verify/consume), customer session, staff login (`/api/admin/auth/login`, `/totp`, `/recovery`), setup (`/password`, `/totp/setup`, `/totp/enable`), admin session, `/api/admin/me`, `staff reset-2fa` | [auth.md](auth.md) |
 | `backend/internal/jobs` | Job queue, worker, sweep, cleanup | [jobs.md](jobs.md) |
-| `backend/internal/notify` | SMS sender, `sms.send` (OTP template), `alert.security` | [jobs.md](jobs.md) |
+| `backend/internal/notify` | SMS sender, `sms.send` (OTP template), order SMS template (`OrderText`), `alert.security` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
-| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup` | [cart.md](cart.md) |
+| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup`, checkout er line (`CheckoutLines`, `Clear`) | [cart.md](cart.md) |
 | `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones` | [delivery-zone.md](delivery-zone.md) |
 | `backend/internal/coupon` | Coupon: atomic use, phone limit, karon, read-only peek, cancel e ferot | [coupon.md](coupon.md) |
-| `backend/internal/order` | Status er state machine (pure), checkout quote (`POST /api/checkout/quote`), risk flag, OTP ar COD confirm er niyom | [order-status.md](order-status.md), [checkout.md](checkout.md) |
+| `backend/internal/order` | Status er state machine (pure) ar DB transition/cancel, checkout quote ar order create, risk flag/OTP, COD confirm, order view/track/me, order job | [order-status.md](order-status.md), [checkout.md](checkout.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
 
@@ -64,7 +64,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `packages/shared/lib/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
 | `packages/shared/lib/theme` | Token derive, contrast | [theme.md](theme.md) |
 | `packages/shared/lib/api` | `ApiClient`, `ApiError`, repository | [api-client.md](api-client.md) |
-| `packages/shared/lib/models` | API er model (catalog, settings, `User`, `Cart`; `LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
+| `packages/shared/lib/models` | API er model (catalog, settings, `User`, `Cart`, order/checkout; `LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
 
 ## Code map (website)
 

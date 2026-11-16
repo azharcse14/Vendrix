@@ -4,7 +4,7 @@ Design: 7.5, 8.5, 8.6, 8.7, 8.10, 8.16, 8.17, 8.19 item 2–5, 7, 12 · Mileston
 
 ## Ki kore
 
-Customer cart theke order dey (`POST /api/orders`). Ekhon porjonto ache: quote (`POST /api/checkout/quote`: checkout form er live taka, kichu save na), order create (8.6 step 1–18; idempotent, stock ar coupon race-safe, Turnstile, checkout OTP, rate limit) ar risk er niyom: kon order jhukipurno (flag), kokhon checkout OTP lage, ar kokhon COD order SMS link e confirm lage. COD confirm link (`GET`/`POST /api/confirm/{confirm_token}`, 8.10). Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e. Order er job (SMS, alert, auto-cancel; step 18). Order page (`GET /api/orders/{token}`), login chhara tracking (`POST /api/orders/track`) ar nijer order list (`GET /api/me/orders`). Website er page (`/checkout` + `@client CheckoutForm`, `/order/{token}`, done, `/confirm/{token}`, `/track` SSR POST, `/account/orders`) ar BFF [website.md](website.md) e (item 22–27).
+Customer cart theke order dey (`POST /api/orders`). Checkout form er live taka quote theke (`POST /api/checkout/quote`, kichu save na). Order create 8.6 er 18 step: idempotent, stock ar coupon race-safe, Turnstile, risk flag, dorkar hole checkout OTP, rate limit, snapshot, job. COD order jhukipurno hole SMS link e confirm (`GET`/`POST /api/confirm/{confirm_token}`, 8.10), na hole `checkout.auto_cancel_unconfirmed_hours` (default 24) por auto-cancel. Customer order page (`GET /api/orders/{token}`), login chhara tracking (`POST /api/orders/track`) ar nijer order list (`GET /api/me/orders`) dekhe. Customer cancel (`POST /api/orders/{token}/cancel`) ar status bodol [order-status.md](order-status.md) e; website er page (`/checkout` + `@client CheckoutForm`, `/order/{token}`, done, `/confirm/{token}`, `/track` SSR POST, `/account/orders`) ar BFF [website.md](website.md) e (item 22–27).
 
 ## Kivabe kaj kore
 
@@ -61,28 +61,26 @@ Ei kram e poro:
 
 | File → function | Ki kore |
 |---|---|
-| `backend/internal/order/handler.go` → `Handlers.Routes`, `Quote`, `place` | Quote route, input format |
-| `backend/internal/order/handler.go` → `Place`, `hashed`, `placeInput`, `placeResult`, `Guard`, `maskPhone` | Order route: key, hash, field check, Turnstile/OTP config, error → HTTP |
+| `backend/cmd/api/router.go` → `newHandler` | Route: quote, order, view, cancel, confirm public (+ optional login), track e `RateLimit(10, minute)`, me/orders `RequireCustomer`; `Guard` (Turnstile, `OTP_SECRET`, `CONFIRM_SECRET`) |
+| `backend/internal/order/handler.go` → `Routes`, `MeRoutes`, `Guard`, `Quote`, `place` | Route, quote er input format |
+| `backend/internal/order/handler.go` → `Place`, `hashed`, `placeInput`, `placeResult`, `maskPhone` | Order route: key, hash, field check, error → HTTP |
+| `backend/internal/order/handler.go` → `View`, `Track`, `MyOrders`, `ConfirmView`, `Confirm`, `Cancel`, `transitionError` | Order view/track/me, confirm ar cancel route |
 | `backend/internal/order/service.go` → `QuoteCart`, `Quote`, `FieldError`, `ErrCartEmpty` | Quote er kram |
 | `backend/internal/order/service.go` → `PlaceOrder`, `authErr`, `checkoutLines`, `variantLabel`, `OutOfStockError`, `PriceChangedError`, `LimitError` | Order create er 8.6 kram |
+| `backend/internal/order/risk.go` → `RiskFlags`, `OTPRequired`, `ConfirmRequired` | Risk er niyom (pure) |
+| `backend/internal/order/store.go` → `loadSettings`, `Settings`, `userPhone`, `LoadRiskHistory` | Checkout settings, login er phone, flag er jonno ager order |
 | `backend/internal/order/store.go` → `findByKey`, `lockKey`, `orderLimit`, `phoneBlocked`, `takeStock`, `nextOrderNumber`, `insertOrder`, `insertFulfillment`, `insertItem`, `insertPlaced` | Order create er SQL (6.4) |
-| `backend/internal/cart/service.go` → `CheckoutLines`, `CheckoutLine`, `Clear`, `Label` | Cart er line read-only, kena jay kina; order er por cart khali; variant label |
-| `backend/internal/order/jobs.go` → `enqueuePlaced`, `JobHandlers`, `loadSMSOrder` | Step 18 er job ar handler |
-| `backend/internal/notify/notify.go` → `OrderText` | Order SMS er lekha |
-| `backend/internal/order/jobs_integration_test.go` | Job er test, asol Postgres |
+| `backend/internal/cart/service.go` → `CheckoutLines`, `CheckoutLine`, `Clear`, `Label` | Cart er line read-only, kena jay kina; order er por cart khali; variant label ([cart.md](cart.md)) |
 | `backend/internal/order/confirm.go` → `ConfirmToken`, `ConfirmHash`, `ConfirmView`, `ConfirmSummary`, `summary`, `ConfirmByToken` | COD confirm token ar route er kaj; mask kora shar-songkhep |
 | `backend/internal/order/view.go` → `ViewByToken`, `View`, `Track`, `Tracked`, `MyOrders`, `Card` | Order page, tracking, nijer order list |
-| `backend/internal/order/handler.go` → `View`, `Track`, `MyOrders`, `MeRoutes` | Order view/track/me route, track er rate limit |
-| `backend/internal/order/handler.go` → `ConfirmView`, `Confirm` | Confirm route |
-| `backend/internal/order/store.go` → `loadSettings`, `Settings`, `userPhone` | Checkout settings, login er phone |
-| `backend/internal/order/risk.go` → `RiskFlags`, `OTPRequired`, `ConfirmRequired` | Risk er niyom (pure) |
-| `backend/internal/order/store.go` → `LoadRiskHistory` | Flag er jonno ager order er query |
-| `backend/internal/order/risk_test.go` | Protiti mode × flag × payment |
-| `backend/internal/order/risk_integration_test.go` | Asol Postgres e history query |
+| `backend/internal/order/jobs.go` → `enqueuePlaced`, `enqueueCancelled`, `JobHandlers`, `loadSMSOrder` | Step 18 er job, cancel er SMS, handler |
+| `backend/internal/notify/notify.go` → `OrderText` | Order SMS er lekha |
+| `backend/internal/order/risk_test.go`, `risk_integration_test.go` | Protiti mode × flag × payment; asol Postgres e history query |
 | `backend/internal/order/quote_integration_test.go` | Quote er HTTP test, asol Postgres |
 | `backend/internal/order/checkout_integration_test.go` | Order create er HTTP test, race, asol Postgres |
 | `backend/internal/order/confirm_test.go`, `confirm_integration_test.go` | Confirm token (unit), confirm route (asol Postgres) |
 | `backend/internal/order/view_integration_test.go` | View, tracking, me/orders, shop isolation, guest → login (asol Postgres) |
+| `backend/internal/order/jobs_integration_test.go` | Job er test, asol Postgres |
 
 ## Niyom ar tar test
 

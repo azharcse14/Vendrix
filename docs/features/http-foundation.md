@@ -63,7 +63,7 @@ Ei kram e poro:
 
 ## Data
 
-Nai. `IP(ctx)` `sessions.ip`, `audit_logs.ip`, Turnstile er `remoteip` ar rate limit e; `orders.ip` M6 e.
+Nai. `IP(ctx)` `sessions.ip`, `audit_logs.ip`, Turnstile er `remoteip` ar rate limit e; checkout `orders.ip` e rakhe (risk flag ar order limit, [checkout.md](checkout.md)).
 
 ## Bhul hole ki hoy
 

@@ -96,7 +96,7 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 | OTP verify: ek OTP e 5 attempt (autocommit, error path e thake, parallel e 5 er beshi na), tarpor `otp_too_many_attempts`; 24 ghontay 10 bhul e `429` + alert ekbar, lock e thik code o na (8.2 verify step 2-3, 7.8, 14.2 test 10) | `verifyOTP`, `countAttempt`, `phoneLocked` | `TestOTPAttemptsIntegration` |
 | Shudhu shesh, use na hoya, expire na hoya login OTP; expire e attempt gona na; ek code ekbar (8.2 verify step 1, 3) | `latestOTP`, `consumeOTP` | `TestOTPExpiredIntegration` |
 | Ekoi code e parallel verify → ekta session, ekta user (8.2 step 3 v1.7) | `consumeOTP` | `TestOTPParallelVerifyIntegration` |
-| Guest order jog shudhu thik verify er por, `user_id IS NULL`, ei shop (8.2 step 5) | `linkGuestOrders` | `TestGuestOrdersLinkIntegration` |
+| Guest order jog shudhu thik verify er por, `user_id IS NULL`, ei shop (8.2 step 5) | `linkGuestOrders` | `TestGuestOrdersLinkIntegration`, `TestCheckoutGuestThenLoginIntegration` |
 | `X-Cart-Key` er guest cart merge verify er transaction e, bhul code e na, onno shop er key na; `cart_notices` (8.2 step 6, 7.3 v1.30) | `verifyOTP`, `CartMerge` | `TestVerifyMergesCartIntegration` |
 | Session: `rand.Text`, DB te `sha256`, 30 din, ip/user_agent; notun user er locale `Accept-Language`; logout revoke; expire `session_expired`; staff token customer route e `401`; `last_used_at` ghontay ekbar; `/api/me` validate (8.2 step 4, 7, 12.2, Rule 16, Q10 iii) | `verifyOTP`, `LookupSession`, `Logout`, `UpdateMe` | `TestCustomerSessionIntegration` |
 | Onno shop er token `401` (logout o na); OTP ar user shop onujayi (3.2, Rule 3) | `sessionByHash`, `latestOTP`, `upsertUser` | `TestSessionShopIsolationIntegration` |
