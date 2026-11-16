@@ -88,6 +88,22 @@ class PublicSettings {
         : const {},
   );
 
+  /// `branding.tagline` (home er hero, banner na thakle).
+  LocalizedText get tagline => _text('branding', 'tagline');
+
+  /// `features` (9.2, jemon `certification`).
+  List<String> get features => [
+    for (final v in raw['features'] as List<dynamic>? ?? const [])
+      if (v is String) v,
+  ];
+
+  /// `checkout.return_window_days`; na thakle ba 1 er kom hole null (trust strip e dabi na, 10.5).
+  int? get returnWindowDays =>
+      switch (_block('checkout')['return_window_days']) {
+        final int d when d > 0 => d,
+        _ => null,
+      };
+
   /// `homepage.announcement`.
   LocalizedText get announcement => _text('homepage', 'announcement');
 

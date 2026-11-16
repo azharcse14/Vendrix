@@ -70,6 +70,9 @@ const en = {
   'footer.bfsa': 'BFSA registration: {number}',
   'home.categories': 'Categories',
   'home.featured': 'Featured products',
+  // Trust strip (10.5 v1.38): Claude er draft, shop owner review korbe.
+  'home.trust.cod': 'Cash on delivery: pay when it arrives',
+  'home.trust.return': 'Returns within {days} days',
   'product.out_of_stock': 'Out of stock',
   'product.per_kg': '/ kg',
   'product.discount': '{percent}% off',

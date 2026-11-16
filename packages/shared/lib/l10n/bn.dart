@@ -69,6 +69,9 @@ const bn = {
   'footer.bfsa': 'BFSA নিবন্ধন: {number}',
   'home.categories': 'ক্যাটাগরি',
   'home.featured': 'বাছাই করা পণ্য',
+  // Trust strip (10.5 v1.38): Claude er draft, shop owner review korbe.
+  'home.trust.cod': 'ক্যাশ অন ডেলিভারি: পণ্য হাতে পেয়ে টাকা দিন',
+  'home.trust.return': '{days} দিনের মধ্যে ফেরত',
   'product.out_of_stock': 'স্টকে নেই',
   'product.per_kg': '/ কেজি',
   'product.discount': '{percent}% ছাড়',

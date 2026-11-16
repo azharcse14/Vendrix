@@ -35,15 +35,39 @@ class Home extends AsyncStatelessComponent {
             for (final slug in s.featuredCategorySlugs) ...categories.where((c) => c.slug == slug),
           ];
     final announcement = s.announcement.of(site.locale);
+    final tagline = s.tagline.of(site.locale);
+    final returnDays = s.returnWindowDays;
+    // Trust (10.5 v1.38 item 3): shudhu settings e ja shotto. Delivery din home e na (zone er notun API call
+    // lagto); certification na (settings e shop er certificate nai, shudhu product e).
+    final trust = [
+      if (s.paymentMethods.contains('cod')) (Icons.cash, site.t('home.trust.cod')),
+      if (returnDays != null) (Icons.check, site.t('home.trust.return', {'days': site.number(returnDays)})),
+    ];
     return div(classes: 'space-y-8 px-4 py-4', [
       const SeoHead(),
-      // Page e ekta h1 (10.7 v1.38); dekha hero U5 e.
-      h1(classes: 'sr-only', [.text(s.name.of(site.locale))]),
-      if (announcement.isNotEmpty) p(classes: 'rounded bg-tint px-4 py-2 text-center text-sm', [.text(announcement)]),
+      if (announcement.isNotEmpty)
+        p(classes: 'rounded bg-accent-soft px-4 py-2 text-center text-sm', [.text(announcement)]),
+      // Page e ekta h1 (10.7 v1.38): banner na thakle dekha text hero (LCP lekha), thakle sr-only, banner LCP.
+      if (s.banners.isEmpty)
+        div(classes: 'space-y-3 rounded-lg bg-primary-soft px-6 py-10 text-center', [
+          h1(classes: 'text-3xl', [.text(s.name.of(site.locale))]),
+          if (tagline.isNotEmpty) p(classes: 'text-muted', [.text(tagline)]),
+          if (shown.isNotEmpty) a(href: '#categories', classes: 'btn btn-primary', [.text(site.t('category.browse'))]),
+        ])
+      else
+        h1(classes: 'sr-only', [.text(s.name.of(site.locale))]),
       for (final (i, b) in s.banners.indexed) _banner(site, b, lcp: i == 0),
+      if (trust.isNotEmpty)
+        ul(id: 'trust', classes: 'grid gap-3 sm:grid-cols-2', [
+          for (final (icon, text) in trust)
+            li(classes: 'flex items-center gap-3 rounded bg-tint px-4 py-3 text-sm', [
+              Icon(icon, classes: 'h-6 w-6 shrink-0 text-primary'),
+              .text(text),
+            ]),
+        ]),
       if (shown.isNotEmpty)
         section(id: 'categories', [
-          h2(classes: 'mb-3', [.text(site.t('home.categories'))]),
+          h2(classes: 'section-title', [.text(site.t('home.categories'))]),
           // Tile (plan 4): mobile e side-scroll, boro screen e grid 6; chobi na thakle primary-soft + icon.
           ul(classes: 'flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-6 md:overflow-visible', [
             for (final c in shown)
@@ -72,7 +96,7 @@ class Home extends AsyncStatelessComponent {
         ]),
       if (featured.isNotEmpty)
         section([
-          h2(classes: 'mb-3', [.text(site.t('home.featured'))]),
+          h2(classes: 'section-title', [.text(site.t('home.featured'))]),
           div(classes: 'grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4', [
             for (final (i, p) in featured.indexed) ProductCardView(p, lcp: s.banners.isEmpty && i < 2),
           ]),
