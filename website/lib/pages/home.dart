@@ -36,6 +36,8 @@ class Home extends AsyncStatelessComponent {
     final announcement = s.announcement.of(site.locale);
     return div(classes: 'space-y-8 px-4 py-4', [
       const SeoHead(),
+      // Page e ekta h1 (10.7 v1.38); dekha hero U5 e.
+      h1(classes: 'sr-only', [.text(s.name.of(site.locale))]),
       if (announcement.isNotEmpty) p(classes: 'rounded bg-tint px-4 py-2 text-center text-sm', [.text(announcement)]),
       for (final (i, b) in s.banners.indexed) _banner(site, b, lcp: i == 0),
       if (shown.isNotEmpty)
