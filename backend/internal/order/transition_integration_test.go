@@ -161,7 +161,7 @@ func TestTransitionIntegration(t *testing.T) {
 		t.Errorf("online paid system confirm: %v", err)
 	}
 
-	// fulfillment: na-allowed invalid; allowed kintu M6 e na → ErrNotImplemented (8.19 item 8)
+	// fulfillment: na-allowed invalid (open → packed M7a step 5a e hoy: TestPackValidationIntegration)
 	_, fids := f.seedOrder("cod", "unpaid", "confirmed", seedF{vendor: f.vnd, status: "open", items: [][2]int64{{rice, 1}}})
 	for _, c := range []struct {
 		name string
@@ -171,7 +171,6 @@ func TestTransitionIntegration(t *testing.T) {
 	}{
 		{"open → shipped", order.Shipped, staff, order.ErrInvalidTransition},
 		{"customer fulfillment cancel", order.FCancelled, customer, order.ErrInvalidTransition},
-		{"open → packed (M7)", order.Packed, staff, order.ErrNotImplemented},
 		{"onno vendor", order.FCancelled, order.By{Actor: order.Vendor, VendorID: f.vnd + 1000}, order.ErrNotFound},
 	} {
 		if err := f.txFulfillment(fids[0], c.to, c.by, ""); !errors.Is(err, c.want) {

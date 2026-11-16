@@ -442,6 +442,7 @@ var adminRoutes = map[string]routeRoles{
 	"POST /api/admin/orders/{id}/notes":            {roles: shopRoles},
 	"GET /api/admin/fulfillments":                  {roles: allRoles},
 	"POST /api/admin/fulfillments/{id}/transition": {roles: allRoles},
+	"POST /api/admin/fulfillments/{id}/pack":       {roles: allRoles}, // 11.2: packing shob role, vendor nijer
 
 	// inventory (11.2 "stock entry ar wastage", 11.7 item 1, 2): shob role, vendor role nijer variant
 	"GET /api/admin/inventory/variants":    {roles: allRoles},

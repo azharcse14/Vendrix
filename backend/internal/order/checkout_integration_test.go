@@ -40,6 +40,7 @@ type checkoutFx struct {
 	tok       string // login customer er Bearer
 	sv        *siteverify
 	otpIP     *httpx.Limit // login ar checkout er OTP send er ekoi IP limit (router er moto)
+	logs      *logHook     // handler er log (alert.batch_short)
 }
 
 const (
@@ -116,7 +117,8 @@ func newCheckout(t *testing.T) *checkoutFx {
 	f.id(`INSERT INTO sessions (shop_id, token_hash, subject_type, user_id, expires_at)
 		VALUES ($1, $2, 'customer', $3, now() + interval '1 day') RETURNING id`, f.shop, sum[:], f.user)
 
-	log := slog.New(slog.DiscardHandler)
+	f.logs = &logHook{}
+	log := slog.New(f.logs)
 	public := httpx.ShopFromHost(log, shop.NewResolver(f.d).Resolve)
 	opt := httpx.OptionalCustomer(log, auth.LookupSession(f.d))
 	mux := http.NewServeMux()
