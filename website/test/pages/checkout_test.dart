@@ -206,6 +206,8 @@ void main() {
       expect(doc.querySelector('#checkout-error')!.attributes['role'], 'alert');
       // OTP er lekha `{phone}` client bosay.
       expect(doc.querySelector('[data-otp-text]')!.text, t.t('checkout.otp_sent', {'phone': '{phone}'}));
+      // CheckoutForm `_el` form er bhetore khoje (Safari proman e OTP er lekha faka chhilo).
+      expect(form.querySelector('[data-otp-text]'), isNotNull);
       expect(html, contains('<!--@checkout_form data={"digits":"০১২৩৪৫৬৭৮৯","orderBase":"/order/"}-->'));
     });
 

@@ -51,6 +51,13 @@ void main() {
       expect(await run('/_/wishlist/5', cookie: '__Host-sid=abc'), 'private, no-store');
     });
 
+    test('cookie chhara /cart, /checkout (v1.36): private, no-store (browser e khali cart thake na)', () async {
+      for (final p in ['/cart', '/en/cart', '/checkout', '/en/checkout']) {
+        expect(await run(p), 'private, no-store', reason: p);
+      }
+      expect(await run('/cartoon'), 'public, max-age=60');
+    });
+
     test('shudhu wl (guest wishlist, JS e) page public thake (10.12 item 3)', () async {
       expect(await run('/p/lal-chal', cookie: 'wl=3,5'), 'public, max-age=60');
     });
