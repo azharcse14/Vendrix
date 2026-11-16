@@ -48,7 +48,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/jobs` | Job queue, worker, sweep, cleanup | [jobs.md](jobs.md) |
 | `backend/internal/notify` | SMS sender, `sms.send` (OTP template), order SMS template (`OrderText`), `alert.security` | [jobs.md](jobs.md) |
 | `backend/internal/pricing` | Taka er hishab (pure) | [pricing.md](pricing.md) |
-| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup`, checkout er line (`CheckoutLines`, `Clear`) | [cart.md](cart.md) |
+| `backend/internal/cart` | Cart: guest key, quantity niyom, cart API, merge, wishlist, `cart.cleanup`, checkout er line (`CheckoutLines`, `ClearVariants`) | [cart.md](cart.md) |
 | `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones` | [delivery-zone.md](delivery-zone.md) |
 | `backend/internal/coupon` | Coupon: atomic use, phone limit, karon, read-only peek, cancel e ferot | [coupon.md](coupon.md) |
 | `backend/internal/order` | Status er state machine (pure) ar DB transition/cancel, checkout quote ar order create, risk flag/OTP, COD confirm, order view/track/me, order job | [order-status.md](order-status.md), [checkout.md](checkout.md) |

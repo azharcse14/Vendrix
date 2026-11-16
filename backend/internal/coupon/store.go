@@ -49,7 +49,7 @@ func Use(ctx context.Context, tx querier, shopID int64, code, phone string) (Cou
 	if err != nil {
 		return Coupon{}, err
 	}
-	return c, checkPhone(ctx, tx, c, phone)
+	return c, checkPhone(ctx, tx, shopID, c, phone)
 }
 
 // Peek: quote er read-only check (8.19 item 5), Use er karon kintu per-phone chhara (item 13 b: quote e onno
@@ -80,10 +80,10 @@ func check(ctx context.Context, q querier, shopID int64, code string) (Coupon, e
 }
 
 // checkPhone: ei phone (customer_phone) er redemption per_phone_limit er kom kina.
-func checkPhone(ctx context.Context, q querier, c Coupon, phone string) error {
+func checkPhone(ctx context.Context, q querier, shopID int64, c Coupon, phone string) error {
 	var n int
-	if err := q.QueryRowContext(ctx, `SELECT count(*) FROM coupon_redemptions WHERE coupon_id = $1 AND phone = $2`,
-		c.ID, phone).Scan(&n); err != nil {
+	if err := q.QueryRowContext(ctx, `SELECT count(*) FROM coupon_redemptions WHERE shop_id = $1 AND coupon_id = $2 AND phone = $3`,
+		shopID, c.ID, phone).Scan(&n); err != nil {
 		return err
 	}
 	if n >= c.PerPhoneLimit {

@@ -97,14 +97,15 @@ func summary(ctx context.Context, d *sql.DB, shopID, id int64) (ConfirmSummary, 
 func ConfirmByToken(ctx context.Context, d *sql.DB, shopID int64, token string, by By) error {
 	return db.InTx(ctx, d, func(tx *sql.Tx) error {
 		var id int64
-		err := tx.QueryRowContext(ctx, `SELECT id FROM orders WHERE shop_id = $1 AND confirm_token_hash = $2`,
-			shopID, ConfirmHash(token)).Scan(&id)
+		var user sql.NullInt64
+		err := tx.QueryRowContext(ctx, `SELECT id, user_id FROM orders WHERE shop_id = $1 AND confirm_token_hash = $2`,
+			shopID, ConfirmHash(token)).Scan(&id, &user)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
 		if err != nil {
 			return err
 		}
-		return TransitionOrder(ctx, tx, shopID, id, Confirmed, by, "")
+		return TransitionOrder(ctx, tx, shopID, id, Confirmed, linkActor(by, user), "")
 	})
 }

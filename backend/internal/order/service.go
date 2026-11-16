@@ -415,8 +415,12 @@ func PlaceOrder(ctx context.Context, d *sql.DB, g Guard, shopID int64, o cart.Ow
 		if err := insertPlaced(ctx, tx, shopID, orderID, o.UserID, status, c, in.Customer.Phone); err != nil {
 			return err
 		}
-		// step 17
-		if err := cart.Clear(ctx, tx, shopID, o); err != nil {
+		// step 17: shudhu order er variant (onno tab e majhe add kora item thake, 8.19 item 13 f)
+		ordered := make([]int64, len(lines))
+		for i, l := range lines {
+			ordered[i] = l.VariantID
+		}
+		if err := cart.ClearVariants(ctx, tx, shopID, o, ordered); err != nil {
 			return err
 		}
 		// step 18 (online er auto_cancel_unpaid M10 e)

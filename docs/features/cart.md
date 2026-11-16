@@ -28,7 +28,7 @@ Ei kram e poro:
 | `backend/internal/cart/service.go` → `View`, `Add`, `SetQuantity`, `Remove`, `checkVariant`, `line`, `label` | Niyom: normalize, notice, pricing, qty/limit, transaction |
 | `backend/internal/cart/service.go` → `Merge`; `backend/cmd/api/router.go` → `cartMerge`; `backend/internal/auth/service.go` → `verifyOTP` | Login e guest cart merge (verify er tx e; router `auth.CartMerge` hishebe dey, import cycle er karone) |
 | `backend/internal/cart/service.go` → `CheckoutLines`; `store.go` → `checkoutRows` | Checkout quote ar order (M6) er read-only line: kena jay kina (`out_of_stock`, `vendor_unavailable`), normalize na; `OwnerFrom` `order` o use kore |
-| `backend/internal/cart/service.go` → `Clear`, `Label`; `store.go` → `clearItems` | Order er tx e owner er cart khali (8.6 step 17; cart row thake); `Label` `order_items.variant_label` er snapshot o banay |
+| `backend/internal/cart/service.go` → `ClearVariants`, `Label`; `store.go` → `clearItems` | Order er tx e owner er cart theke shudhu order er variant muche (8.6 step 17, 8.19 item 13 f; cart row thake); `Label` `order_items.variant_label` er snapshot o banay |
 | `backend/internal/cart/service.go` → `NewKey`, `KeyHash` | Guest key banano ar format check, `sha256` |
 | `backend/internal/cart/service.go` → `MaxQuantity`, `CheckQuantity`, `CheckRoom`, `NormalizeQuantity` | Quantity, line limit, normalize (pure) |
 | `backend/internal/cart/store.go` → `findCart`, `countLines`, `touchCart`, `createCart`, `activeVariant`, `itemState`, `setItem`, `deleteItem`, `removeInactive`, `reduceItem`, `items`, `lockGuestCart`, `guestItems`, `quantities`, `deleteCart` | SQL, protiti query `shop_id` diye |
@@ -57,7 +57,8 @@ Ei kram e poro:
 | `cart.cleanup`: 30 din er purono guest cart ar item muche (shob shop), login cart ar notun guest cart thake; idempotent (8.17 v1.28, 8.4 item 7) | `CleanupJob`, `deleteStaleGuestCarts` | `TestCartCleanupIntegration` |
 | Merge verify er transaction e (bhul code e na), response e `cart_notices` (khali `[]`) (8.2 step 6, 7.3 v1.30) | `verifyOTP`, `VerifyOTP` | `TestVerifyMergesCartIntegration` |
 | Merge er por transaction e bhul hole puro verify rollback (guest cart, OTP, user, session thake na) (8.2 step 6) | `verifyOTP` (`db.InTx`) | `TestVerifyMergeFailRollsBackIntegration` |
-| Order hole oi owner er cart khali (onno cart e hat na); checkout bhul hole cart thake (8.6 step 17) | `Clear` (`order.PlaceOrder` er tx e) | `TestCheckoutSnapshotIntegration`, `TestCheckoutValidationIntegration` |
+| Order hole oi owner er cart theke order er variant muche (onno cart e hat na); checkout bhul hole cart thake (8.6 step 17) | `ClearVariants` (`order.PlaceOrder` er tx e) | `TestCheckoutSnapshotIntegration`, `TestCheckoutValidationIntegration` |
+| Shudhu deya variant muche, onno tab e majhe add kora item thake (8.19 item 13 f) | `ClearVariants` | `TestClearVariantsIntegration` |
 
 ## Data
 

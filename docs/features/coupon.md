@@ -9,7 +9,7 @@ Checkout e coupon code diye discount: code thik, chalu, shomoy er bhitore, mot `
 ## Kivabe kaj kore
 
 1. `Normalize`: code `trim` + `upper`; `""` = coupon nai; 32 rune er beshi hole `ok = false` (form e `400 validation_failed`). `Use`/`Peek` nijeo normalize kore.
-2. `Use` (checkout er transaction, `order.PlaceOrder`, 8.6 step 11): age 6.4 er atomic `UPDATE coupons SET used_count = used_count + 1 ... RETURNING` (coupon row lock), tarpor `checkPhone` (`coupon_redemptions` e ei `customer_phone` er count `>= per_phone_limit` hole `ErrLimitReached`). Kram ulto hole ek phone er duita checkout duitai 0 dekhe (6.4). `UPDATE` 0 row dile `check` diye karon.
+2. `Use` (checkout er transaction, `order.PlaceOrder`, 8.6 step 11): age 6.4 er atomic `UPDATE coupons SET used_count = used_count + 1 ... RETURNING` (coupon row lock), tarpor `checkPhone` (`coupon_redemptions` e ei shop er (`shop_id`, Rule 3) ei `customer_phone` er count `>= per_phone_limit` hole `ErrLimitReached`). Kram ulto hole ek phone er duita checkout duitai 0 dekhe (6.4). `UPDATE` 0 row dile `check` diye karon.
 3. `check`: code dhore row; nai, `is_active = false` ba shomoy er baire → `ErrInvalid`; tarpor `usage_limit` shesh → `ErrLimitReached`. Bondho ar shesh duitai hole `ErrInvalid` (invalid age).
 4. `Peek` (quote, `order.QuoteCart`; error hole `problems` e code, coupon chhara total): shudhu `check` (per-phone na: quote e onno phone er coupon use jana jay na, 8.19 item 13 b; `Use` e dhore), kichu bodlay na.
 5. Error hole caller transaction `ROLLBACK` kore, tai `used_count` ferot ashe. `ErrorCode` error theke API code (`coupon_invalid`, `coupon_limit_reached`).

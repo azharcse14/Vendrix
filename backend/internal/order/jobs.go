@@ -50,7 +50,7 @@ func JobHandlers(d *sql.DB, sms notify.SMS, log *slog.Logger, confirmSecret stri
 	return map[string]jobs.Handler{
 		"sms.order_placed": func(ctx context.Context, j jobs.Job) error {
 			o, err := loadSMSOrder(ctx, d, j, "sms.order_placed", "sms.order_confirm")
-			if err != nil {
+			if err != nil || o.status == string(Cancelled) { // job er age cancel: SMS na (8.19 item 13 g)
 				return err
 			}
 			key, link := "sms.order_placed", "https://"+o.domain+"/order/"+o.token
@@ -110,6 +110,7 @@ func JobHandlers(d *sql.DB, sms notify.SMS, log *slog.Logger, confirmSecret stri
 type smsOrder struct {
 	id                                 int64
 	token, number, phone, locale, shop string
+	status                             string
 	domain                             string
 	confirmHash                        []byte
 	override                           map[string]map[string]string
@@ -122,13 +123,13 @@ func loadSMSOrder(ctx context.Context, d *sql.DB, j jobs.Job, keys ...string) (s
 	}
 	o := smsOrder{id: p.OrderID}
 	var override []byte
-	err := d.QueryRowContext(ctx, `SELECT o.public_token, o.order_number, o.customer_phone, o.locale,
+	err := d.QueryRowContext(ctx, `SELECT o.status, o.public_token, o.order_number, o.customer_phone, o.locale,
 		  coalesce(nullif(s.name->>o.locale, ''), s.name->>'bn'), coalesce(sd.domain, ''), o.confirm_token_hash,
 		  (SELECT coalesce(jsonb_object_agg(k.key, k.v), '{}') FROM (SELECT t.key, jsonb_object_agg(t.locale, t.value) v
 		   FROM translations t WHERE t.shop_id = o.shop_id AND t.key = ANY($3) GROUP BY t.key) k)
 		FROM orders o JOIN shops s ON s.id = o.shop_id
 		LEFT JOIN shop_domains sd ON sd.shop_id = o.shop_id AND sd.is_primary
-		WHERE o.shop_id = $1 AND o.id = $2`, j.ShopID, p.OrderID, keys).Scan(&o.token, &o.number, &o.phone, &o.locale,
+		WHERE o.shop_id = $1 AND o.id = $2`, j.ShopID, p.OrderID, keys).Scan(&o.status, &o.token, &o.number, &o.phone, &o.locale,
 		&o.shop, &o.domain, &o.confirmHash, &override)
 	if errors.Is(err, sql.ErrNoRows) {
 		return o, fmt.Errorf("%s: order %d nai (shop %d)", j.Kind, p.OrderID, j.ShopID)

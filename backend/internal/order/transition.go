@@ -195,7 +195,8 @@ func cancelFulfillments(ctx context.Context, tx *sql.Tx, shopID int64, o *locked
 }
 
 // restock (8.12): active item er qty variant e ferot (removed item er stock edit e ferot hoye geche), batch e
-// order_item_batches theke; movement cancel (batch er ongsho batch_id shoho). Variant id er kram e lock.
+// order_item_batches theke; movement cancel (batch er ongsho batch_id shoho). Variant, tarpor batch id er kram e
+// lock (8.8; UPDATE ... FROM er nijer kram e deadlock hote parto).
 func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error {
 	for _, q := range []string{
 		`SELECT 1 FROM product_variants WHERE shop_id = $1 AND id IN (SELECT variant_id FROM order_items
@@ -204,6 +205,9 @@ func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error 
 			FROM (SELECT variant_id, sum(quantity) q FROM order_items
 				WHERE shop_id = $1 AND fulfillment_id = ANY($2) AND status = 'active' GROUP BY variant_id) x
 			WHERE v.shop_id = $1 AND v.id = x.variant_id`,
+		`SELECT 1 FROM inventory_batches WHERE shop_id = $1 AND id IN (SELECT ob.batch_id FROM order_items i
+			JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
+			WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active') ORDER BY id FOR UPDATE`,
 		`UPDATE inventory_batches b SET quantity_remaining = b.quantity_remaining + x.q
 			FROM (SELECT ob.batch_id, sum(ob.quantity) q FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
@@ -248,6 +252,15 @@ func refundCancel(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, f *f
 	return err
 }
 
+// linkActor (8.19 item 13 d): link (token) diye customer er kaj e actor_id shudhu order er nijer user hole; onno
+// account er login e link khulle tar naam audit e na.
+func linkActor(by By, user sql.NullInt64) By {
+	if !user.Valid || user.Int64 != by.ID {
+		by.ID = 0
+	}
+	return by
+}
+
 func history(ctx context.Context, tx *sql.Tx, shopID, orderID, fid int64, from, to string, by By, note string) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO order_status_history (shop_id, order_id, fulfillment_id, from_status, to_status,
 		actor_type, actor_id, note) VALUES ($1, $2, NULLIF($3, 0), $4, $5, $6, NULLIF($7, 0), NULLIF($8, ''))`,
@@ -259,13 +272,14 @@ func history(ctx context.Context, tx *sql.Tx, shopID, orderID, fid int64, from, 
 func CancelByToken(ctx context.Context, d *sql.DB, shopID int64, token string, by By, reason string) error {
 	return db.InTx(ctx, d, func(tx *sql.Tx) error {
 		var id int64
-		err := tx.QueryRowContext(ctx, `SELECT id FROM orders WHERE shop_id = $1 AND public_token = $2`, shopID, token).Scan(&id)
+		var user sql.NullInt64
+		err := tx.QueryRowContext(ctx, `SELECT id, user_id FROM orders WHERE shop_id = $1 AND public_token = $2`, shopID, token).Scan(&id, &user)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
 		if err != nil {
 			return err
 		}
-		return TransitionOrder(ctx, tx, shopID, id, Cancelled, by, reason)
+		return TransitionOrder(ctx, tx, shopID, id, Cancelled, linkActor(by, user), reason)
 	})
 }

@@ -118,18 +118,28 @@ type stockRow struct {
 	CommissionBps  int
 }
 
-// takeStock (6.4): atomic komano, product o active; 0 row = stock nai (found false).
+// takeStock (6.4): atomic komano, product ar vendor o active (step 7 er read er por bodlate pare); 0 row = stock
+// nai (found false), vendor active na hole ErrVendorClosed (8.19 item 13 e).
 func takeStock(ctx context.Context, tx *sql.Tx, shopID, variantID int64, qty int) (stockRow, bool, error) {
 	var r stockRow
 	err := tx.QueryRowContext(ctx, `UPDATE product_variants v SET stock = v.stock - $1
 		FROM products p, vendors vd
 		WHERE v.id = $2 AND v.shop_id = $3 AND v.stock >= $1 AND v.is_active
 		  AND p.shop_id = v.shop_id AND p.id = v.product_id AND p.is_active
-		  AND vd.shop_id = v.shop_id AND vd.id = v.vendor_id
+		  AND vd.shop_id = v.shop_id AND vd.id = v.vendor_id AND vd.status = 'active'
 		RETURNING v.vendor_id, v.price, v.cost_price, v.sku, p.name, v.options, p.variable_weight, v.nominal_weight_g, vd.commission_bps`,
 		qty, variantID, shopID).Scan(&r.VendorID, &r.Price, &r.CostPrice, &r.SKU, &r.Name, &r.Options, &r.VariableWeight,
 		&r.NominalWeightG, &r.CommissionBps)
 	if errors.Is(err, sql.ErrNoRows) {
+		var closed bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM product_variants v JOIN vendors vd
+			ON vd.shop_id = v.shop_id AND vd.id = v.vendor_id WHERE v.shop_id = $1 AND v.id = $2 AND vd.status <> 'active')`,
+			shopID, variantID).Scan(&closed); err != nil {
+			return r, false, err
+		}
+		if closed {
+			return r, false, ErrVendorClosed
+		}
 		return r, false, nil
 	}
 	return r, err == nil, err
