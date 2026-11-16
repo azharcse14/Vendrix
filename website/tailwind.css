@@ -44,7 +44,8 @@
     background-position: calc(100% - 1.25rem) 50%, calc(100% - 0.875rem) 50%;
   }
 
-  .card { @apply rounded border border-line bg-surface p-4; }
+  /* Phone e p-3: 360 e card er bhetore Turnstile (300px fixed) dhore. */
+  .card { @apply rounded border border-line bg-surface p-3 sm:p-4; }
 
   /* Lekha/pichon jora 9.3 er derive e 4.5 (status/soft, text/accent-soft). */
   .badge { @apply inline-flex items-center gap-1 rounded-sm px-2 text-sm; }

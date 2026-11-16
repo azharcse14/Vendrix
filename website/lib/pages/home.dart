@@ -41,7 +41,8 @@ class Home extends AsyncStatelessComponent {
     return div(classes: 'space-y-8 px-4 py-4', [
       const SeoHead(),
       if (announcement.isNotEmpty)
-        p(classes: 'rounded bg-accent-soft px-4 py-2 text-center text-sm', [.text(announcement)]),
+        // Puro width strip: base p er 70ch na.
+        p(classes: 'max-w-none rounded bg-accent-soft px-4 py-2 text-center text-sm', [.text(announcement)]),
       // Page e ekta h1 (10.7 v1.38): banner na thakle dekha text hero (LCP lekha), thakle sr-only, banner LCP.
       if (s.banners.isEmpty)
         div(classes: 'space-y-3 rounded-lg bg-primary-soft px-6 py-10 text-center', [

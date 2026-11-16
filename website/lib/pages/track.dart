@@ -60,15 +60,16 @@ class TrackPage extends AsyncStatelessComponent {
               .text(site.t('order.placed_at', {'date': site.date(order.placedAt)})),
             ]),
             h3(classes: 'pt-2 text-base', [.text(site.t('track.history'))]),
-            // Timeline CSS only: bam e line (border), protiti step er dot `before:`; shesh step `aria-current` e
-            // primary (rong chhara-o lekha ache).
-            ol(classes: 'ml-1.5 space-y-3 border-l-2 border-line', [
+            // Timeline CSS only: dot `before:`, line `after:` ek dot theke porer dot porjonto (shesh step e na, tai
+            // line shesh dot er niche jay na); shesh step `aria-current` e primary (rong chhara-o lekha ache).
+            ol(classes: 'ml-1.5', [
               for (final (i, h) in order.history.indexed)
                 li(
                   classes:
-                      'relative pl-5 text-sm text-muted before:absolute before:-left-[7px] before:top-1.5 '
-                      'before:size-3 before:rounded-full before:bg-line aria-[current=step]:text-ink '
-                      'aria-[current=step]:before:bg-primary',
+                      'relative pb-3 pl-5 text-sm text-muted last:pb-0 before:absolute before:-left-1.5 '
+                      'before:top-1.5 before:size-3 before:rounded-full before:bg-line after:absolute after:-left-px '
+                      'after:top-[18px] after:h-[calc(100%-12px)] after:w-0.5 after:bg-line last:after:hidden '
+                      'aria-[current=step]:text-ink aria-[current=step]:before:bg-primary',
                   attributes: {if (i == order.history.length - 1) 'aria-current': 'step'},
                   [
                     span(classes: 'block', [.text(site.t('order.status.${h.status}'))]),

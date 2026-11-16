@@ -131,7 +131,8 @@ class _Header extends StatelessComponent {
             ]),
             a(href: site.href('/cart'), classes: link, attributes: _current(path, '/cart'), [
               span(classes: 'relative', [const Icon(Icons.cart), const _CartBadge()]),
-              span(classes: 'sr-only md:not-sr-only', [.text(site.t('nav.cart'))]),
+              // Badge icon er dan e 8px beriye thake, tai lekha ektu dure.
+              span(classes: 'sr-only md:not-sr-only md:ml-2', [.text(site.t('nav.cart'))]),
             ]),
           ],
         ),
