@@ -2,11 +2,11 @@
 # Druto check: protiti kaj shesh e, ar Claude Code er Stop hook eta chalay.
 # Go (gofmt, vet, test, docsync) shob shomoy. Dart/Flutter shudhu je folder e pubspec.yaml ache ar bodleche
 # (packages/shared bodlale tar upor nirbhor shob app o); QUICK_ALL=1 hole shob (check.sh, CI).
-# QUICK_PARTS=go ba dart diye ekta-i (CI er alada job). DB lage emon test TEST_DATABASE_URL chhara skip.
+# QUICK_PARTS=go, dart (packages/shared, website) ba flutter (admin, app) diye ekta-i (CI er alada job). DB lage emon test TEST_DATABASE_URL chhara skip.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.4}"
-parts=",${QUICK_PARTS:-go,dart},"
+parts=",${QUICK_PARTS:-go,dart,flutter},"
 
 if [[ $parts == *,go,* ]] && [ -d backend ]; then
   (
@@ -43,6 +43,8 @@ dart_part() { # $1 = folder, $2 = dart | flutter (4.6)
 if [[ $parts == *,dart,* ]]; then
   dart_part packages/shared dart
   dart_part website dart
+fi
+if [[ $parts == *,flutter,* ]]; then
   dart_part admin flutter
   dart_part app flutter
 fi

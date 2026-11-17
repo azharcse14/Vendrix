@@ -1,5 +1,5 @@
 # Asol kaj scripts/ e (Windows/Git Bash e make na thakle sorasori chalao).
-.PHONY: quick-check check db-test rules db-up db-down migrate run web https dev-seed
+.PHONY: quick-check check db-test rules db-up db-down migrate run web https dev-seed admin
 quick-check:
 	@bash scripts/quick-check.sh
 check:
@@ -27,3 +27,6 @@ web:
 # Local https (__Host- cookie er jonno): make web er sathe alada terminal e; https://sobujbazar.localhost:8443
 https:
 	@bash scripts/https.sh
+# Admin (Flutter web) build; make https e https://admin.localhost:8443 (API LOCAL_API, default 127.0.0.1:8080)
+admin:
+	@bash scripts/admin.sh

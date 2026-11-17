@@ -1,0 +1,38 @@
+/// Admin er English lekha (`admin.*`, 11.7 item 10); `error.*` shared e.
+const messages = {
+  'admin.title': 'Admin',
+  'admin.language':
+      'বাংলা', // rule4:ok bhasha bodoler button e onno bhashar naam
+  'admin.logout': 'Log out',
+  'admin.continue': 'Continue',
+  'admin.required': 'Required',
+  'admin.not_found': 'Page not found',
+  'admin.home': 'Go to dashboard',
+  'admin.login.title': 'Staff login',
+  'admin.login.shop': 'Shop ID',
+  'admin.login.email': 'Email',
+  'admin.login.password': 'Password',
+  'admin.login.submit': 'Log in',
+  'admin.totp.title': 'Two-step verification',
+  'admin.totp.hint': 'Enter the 6-digit code from your authenticator app',
+  'admin.totp.recovery_hint': 'Enter one of your recovery codes',
+  'admin.totp.code': 'Code',
+  'admin.totp.use_recovery': 'Use a recovery code',
+  'admin.totp.use_totp': 'Use the authenticator app',
+  'admin.totp.back': 'Back to login',
+  'admin.setup.password_title': 'Set a new password',
+  'admin.setup.password_hint':
+      'At least 12 characters, different from the old one',
+  'admin.setup.old': 'Current password',
+  'admin.setup.new': 'New password',
+  'admin.setup.old_wrong': 'Current password is wrong',
+  'admin.setup.new_invalid': 'Use 12 to 128 characters, not the old password',
+  'admin.setup.totp_title': 'Set up two-step verification',
+  'admin.setup.totp_hint': 'Add this key to your authenticator app (Google Authenticator, Authy), then enter the 6-digit code',
+  'admin.setup.secret': 'Key',
+  'admin.setup.recovery_title': 'Recovery codes',
+  'admin.setup.recovery_hint': 'Save these codes somewhere safe. Each works once if you lose your phone. They will not be shown again.',
+  'admin.setup.recovery_done': 'I have saved them',
+  'admin.dashboard.title': 'Dashboard',
+  'admin.dashboard.welcome': 'Welcome, {name}',
+};

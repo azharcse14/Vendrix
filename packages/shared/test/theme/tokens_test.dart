@@ -77,6 +77,9 @@ void main() {
   });
 
   group('deriveTokens (9.3, 9.4, v1.12)', () {
+    test('organicColors = 9.4 er organic preset', () {
+      expect(organicColors, presets['organic']);
+    });
     test('organic preset er token', () {
       final t = deriveTokens(presets['organic']!);
       expect(t, {

@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+import 'di.dart';
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
-    );
-  }
+Future<void> main() async {
+  usePathUrlStrategy();
+  WidgetsFlutterBinding.ensureInitialized();
+  // Semantics shob shomoy (screen reader, WebDriver; 11.7 item 10).
+  SemanticsBinding.instance.ensureSemantics();
+  runApp(await bootstrap());
 }

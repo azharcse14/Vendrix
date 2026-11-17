@@ -5,6 +5,15 @@ final _hex = RegExp(r'^#[0-9A-Fa-f]{6}$');
 /// Admin er 5 rong (9.4): settings `theme.colors` er key.
 const colorKeys = ['primary', 'accent', 'tint', 'text', 'background'];
 
+/// `organic` preset er 5 rong (9.4); admin er theme (11.7 item 10, shop er theme M8 e).
+const organicColors = {
+  'primary': '#1F5A32',
+  'accent': '#F2C230',
+  'tint': '#E3EED3',
+  'text': '#3B2A1A',
+  'background': '#FBFBF6',
+};
+
 List<int> _rgb(String hex) {
   if (!_hex.hasMatch(hex)) throw ArgumentError.value(hex, 'hex');
   return [

@@ -35,6 +35,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Chobi upload ar storage (local, R2 SigV4) | [media.md](media.md) | 2.2, 7.7, 11.7, 12.2 | M7a | cholche (product chobi upload/order/delete; `POST /uploads` M8 e) |
 | Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19, 11.7 | M6, M7a | cholche (use, peek, release; quote, checkout ar cancel e; admin list/create/update) |
 | Admin: customer, phone block ar dashboard | [admin-api.md](admin-api.md) | 7.7, 11.2, 11.7 | M7a | cholche (customer list/detail, block/unblock, dashboard; staff [auth.md](auth.md), audit list [audit.md](audit.md)) |
+| Admin app (Flutter web): login, TOTP, setup, router guard, role, theme, bhasha, build | [admin-app.md](admin-app.md) | 11.1–11.3, 11.7, 9.7, 9.8, 13.3 | M7b | cholche (login, setup, dashboard shagotom; screen M7b er porer step e) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
@@ -83,7 +84,13 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `website/lib` (`main.*.dart`, `app.dart`, `pages/`, `components/`) | Entry, route, layout, page | [website.md](website.md), page: [website-pages.md](website-pages.md) |
 | `website/lib/seo` | Meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) |
 
-`admin` (M7) er map oi milestone e ekhane jog hobe.
+## Code map (admin)
+
+| Folder | Ki | Doc |
+|---|---|---|
+| `admin/lib` (`main.dart`, `di.dart`, `app.dart`, `router.dart`) | Entry, DI, route guard | [admin-app.md](admin-app.md) |
+| `admin/lib/core` | `AuthBloc`, `canOpen`, theme, l10n (`admin.*`) | [admin-app.md](admin-app.md) |
+| `admin/lib/features` | Page (login, setup, dashboard) | [admin-app.md](admin-app.md) |
 
 ## Shobdo
 

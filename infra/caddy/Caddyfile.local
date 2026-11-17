@@ -46,4 +46,23 @@ img.localhost {
   root * {$UPLOAD_DIR:backend/.data/uploads}
   file_server
 }
-# M7: admin.localhost (Flutter web admin ar /api), admin er code ashle ekhane block.
+# Admin (11.7 item 10, 13.3): make admin er build (admin/build/web) ar /api same-origin, tai CORS lage na.
+# API: LOCAL_API (default backend/env.example er ADDR; jemon LOCAL_API=127.0.0.1:8090).
+admin.localhost {
+  handle /api/* {
+    reverse_proxy {$LOCAL_API:127.0.0.1:8080} {
+      import app_proxy
+    }
+  }
+  handle {
+    header {
+      Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; img-src 'self' data: blob: https://img.localhost:8443; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'"
+      X-Content-Type-Options nosniff
+    }
+    @app path / /index.html /flutter_bootstrap.js /main.dart.js /flutter_service_worker.js
+    header @app Cache-Control "no-cache"
+    root * admin/build/web
+    try_files {path} /index.html
+    file_server
+  }
+}
