@@ -3,6 +3,7 @@ package httpx
 import (
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // JSONErrors: route na mille ServeMux er nijer 404/405 (text) er bodle 7.1 er JSON; 405 e Allow header
@@ -90,4 +91,10 @@ func NewPaged[T any](items []T, page, limit int, total int64) Paged[T] {
 		items = []T{}
 	}
 	return Paged[T]{Items: items, Page: page, Limit: limit, Total: total}
+}
+
+// ValidDate: YYYY-MM-DD, year ≥ 1 (Postgres date e year 0 nai; 0000-01-01 SQL e 500 dito).
+func ValidDate(s string) bool {
+	t, err := time.Parse(time.DateOnly, s)
+	return err == nil && t.Year() >= 1
 }

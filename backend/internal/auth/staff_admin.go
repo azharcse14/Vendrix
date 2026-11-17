@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -95,6 +96,9 @@ func (h *StaffAdmin) fail(w http.ResponseWriter, r *http.Request, err error) {
 		httpx.WriteError(w, r, http.StatusNotFound, httpx.ErrorBody{Code: "not_found"})
 	case errors.Is(err, errStaffForbidden):
 		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "forbidden"})
+	// vendor role (MV) er staff ke shop role: vendor_id thake, CHECK e pore
+	case errors.As(err, &pg) && pg.Code == "23514" && pg.ConstraintName == "staff_vendor_role_check":
+		httpx.WriteError(w, r, http.StatusBadRequest, httpx.ErrorBody{Code: "validation_failed", Fields: map[string]string{"role": "invalid"}})
 	case errors.As(err, &pg) && pg.Code == "23505" && pg.ConstraintName == "staff_email_uniq":
 		httpx.WriteError(w, r, http.StatusConflict, httpx.ErrorBody{Code: "staff_exists"})
 	default:
@@ -123,6 +127,10 @@ func (h *StaffAdmin) List(w http.ResponseWriter, r *http.Request) {
 func checkName(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if n := utf8.RuneCountInString(s); n < 1 || n > 100 {
+		return "", fieldErr{"name"}
+	}
+	// control/bidi (Cf) okkhor audit list ar print e naam ulta dekhate pare
+	if strings.IndexFunc(s, func(r rune) bool { return unicode.IsControl(r) || unicode.Is(unicode.Cf, r) }) >= 0 {
 		return "", fieldErr{"name"}
 	}
 	return s, nil

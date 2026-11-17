@@ -129,6 +129,12 @@ func activateSession(ctx context.Context, tx *sql.Tx, shopID, id int64, from str
 		id, shopID, from, stage, hash, ttl.Seconds()))
 }
 
+// loggedIn: setup_pending theke active (setup shesh) o login; TOTP login er moto last_login_at.
+func loggedIn(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
+	_, err := tx.ExecContext(ctx, `UPDATE staff SET last_login_at = now() WHERE id = $1 AND shop_id = $2`, staffID, shopID)
+	return err
+}
+
 func mfaSucceeded(ctx context.Context, tx *sql.Tx, shopID, staffID int64) error {
 	_, err := tx.ExecContext(ctx, `UPDATE staff SET failed_mfa = 0, locked_until = NULL, last_login_at = now()
 		WHERE id = $1 AND shop_id = $2`,

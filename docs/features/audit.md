@@ -12,7 +12,7 @@ Protiti admin kaj (category, product, variant bodol, product chobi ([media.md](m
 2. Ek-i transaction e `audit.Log(ctx, tx, audit.Entry{...})`; IP `httpx.IP(ctx)`.
 3. Log fail korle (jemon onno shop er staff) kaj o rollback.
 4. Login er audit (`staff.login`, `staff.login_failed`, `staff.login_mfa*`, `staff.password_changed`, `staff.totp_*`, `staff.reset_2fa`) `audit.Log` na, `auth` er `insertAudit` e ([auth.md](auth.md)): bhul login er row transaction chhara-o (`*sql.DB`), ochena staff e `staff_id` NULL.
-5. List (`handler.go` → `List`, owner/admin, v1.46): paged, notun age (`created_at DESC, id DESC`, `audit_shop_idx`); filter `action` hubohu (max 64), `staff_id` (> 0; onno shop er hole khali), `from`/`to` `YYYY-MM-DD` shop er timezone e (`to` shoho); row `{id, staff_id, staff_name (LEFT JOIN, CLI row e null), action, entity_type, entity_id, before, after, ip, created_at}`; `no-store`.
+5. List (`handler.go` → `List`, owner/admin, v1.46): paged, notun age (`created_at DESC, id DESC`, `audit_shop_idx`); filter `action` hubohu (max 64), `staff_id` (> 0; onno shop er hole khali), `from`/`to` `YYYY-MM-DD` shop er timezone e (`to` shoho; `httpx.ValidDate`, year 0 `400`); row `{id, staff_id, staff_name (LEFT JOIN, CLI row e null), action, entity_type, entity_id, before, after, ip, created_at}`; `no-store`.
 
 ## Code er map
 

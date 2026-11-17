@@ -291,6 +291,9 @@ func changePassword(ctx context.Context, d *sql.DB, st httpx.Staff, old, pw, ip 
 			if ok, err := activateSession(ctx, tx, st.ShopID, st.SessionID, "setup_pending", th, "active", adminTTL); err != nil || !ok {
 				return cmpErr(err, httpx.ErrNoSession)
 			}
+			if err := loggedIn(ctx, tx, st.ShopID, st.ID); err != nil {
+				return err
+			}
 			token = tok
 		}
 		if err := setPassword(ctx, tx, st.ShopID, st.ID, hash); err != nil {
@@ -380,6 +383,9 @@ func totpEnable(ctx context.Context, d *sql.DB, key []byte, recoverySecret strin
 		}
 		if ok, err := activateSession(ctx, tx, st.ShopID, st.SessionID, "setup_pending", th, "active", adminTTL); err != nil || !ok {
 			return cmpErr(err, httpx.ErrNoSession)
+		}
+		if err := loggedIn(ctx, tx, st.ShopID, st.ID); err != nil {
+			return err
 		}
 		return insertAudit(ctx, tx, audit{shopID: st.ShopID, staffID: st.ID, action: "staff.totp_enabled", ip: ip})
 	})

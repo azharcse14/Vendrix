@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
 	"vendrix/backend/internal/httpx"
 )
@@ -46,7 +45,7 @@ func (h *Handlers) List(w http.ResponseWriter, r *http.Request) {
 		staffID = n
 	}
 	for name, v := range map[string]string{"from": from, "to": to} {
-		if _, err := time.Parse(time.DateOnly, v); v != "" && err != nil {
+		if v != "" && !httpx.ValidDate(v) {
 			field = name
 		}
 	}

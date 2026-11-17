@@ -66,8 +66,7 @@ func dateParam(r *http.Request, name string) (string, bool) {
 	if v == "" {
 		return "", true
 	}
-	_, err := time.Parse(time.DateOnly, v)
-	return v, err == nil
+	return v, httpx.ValidDate(v)
 }
 
 // AdminOrders: GET /api/admin/orders?status=&tab=&risk=&q=&from=&to=&vendor_id=&page=&limit= (11.7 item 13 vii).

@@ -83,8 +83,7 @@ func validPrintShape(kind string, ids []int64, date string) bool {
 	case PrintPackingSlip, PrintInvoice:
 		return date == "" && printIDsField(ids) == ""
 	case PrintPickList:
-		_, err := time.Parse(time.DateOnly, date)
-		return ids == nil && err == nil
+		return ids == nil && httpx.ValidDate(date)
 	}
 	return false
 }
@@ -125,7 +124,7 @@ func (h *Handlers) AdminPrintLink(w http.ResponseWriter, r *http.Request) {
 		if in.OrderIDs != nil {
 			field = "order_ids"
 		} else if in.Date != nil {
-			if _, err := time.Parse(time.DateOnly, *in.Date); err != nil {
+			if !httpx.ValidDate(*in.Date) {
 				field = "date"
 			}
 		}
