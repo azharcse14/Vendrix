@@ -10,8 +10,8 @@ Admin (owner, admin, vendor_owner nijer product e) product e JPEG/PNG chobi tole
 
 1. `image.go` → `UploadImage` (`POST /api/admin/products/{id}/images`, multipart `file`, `alt_bn`, `alt_en`): `http.ResponseController` diye read ar write deadline 2 minute (server er 15s/30s er bodle, 2.2).
 2. `imageRoom` (`lockProduct` autocommit e): product shop/vendor scope e na thakle `404`, 10 ta chobi thakle `400 images=max`, body porar age.
-3. `http.MaxBytesReader` 10 MB, tarpor `readImageForm`: `r.MultipartReader()` stream (temp file na); shudhu ekta `file`, `alt_bn`, `alt_en` (trim, ≤ 200 rune).
-4. `h.sem` (cap 2) e jayga pele `reencode`: `image.DecodeConfig` e format (shudhu `jpeg`/`png`) ar maap (≤ 4000×4000) pixel decode er age; `image.Decode` → JPEG quality 85 ba PNG encode.
+3. `h.sem` (cap 2) e jayga (request cancel e chhere dey; `defer` e ferot, panic holeo), tarpor `http.MaxBytesReader` 10 MB ar `readImageForm`: `r.MultipartReader()` stream (temp file na); shudhu ekta `file`, `alt_bn`, `alt_en` (trim, ≤ 200 rune).
+4. `reencodeImage` (`reencode`): `image.DecodeConfig` e format (shudhu `jpeg`/`png`) ar maap (≤ 4000×4000) pixel decode er age; `image.Decode` → JPEG quality 85 ba PNG encode.
 5. Key `shops/{shop_id}/products/{product_id}/{rand.Text()}.{jpg|png}` → `store.Put`.
 6. `audited` tx: `imageRoom` abar (product `FOR UPDATE`, race e 11 ta na), `insertImage` (`sort_order` = max + 1), audit `image.create`. Tx fail hole `store.Delete` (request cancel holeo), log.
 7. `OrderImages` (`PATCH /products/{id}/images/order {ids}`): product lock, `ids` = product er shob chobi (duplicate/baki/onno na), `sort_order` = index; audit `product.images_order`; `200 {ids}`.
@@ -39,7 +39,7 @@ Ei kram e poro:
 |---|---|---|
 | JPEG/PNG decode + re-encode, EXIF nai; SVG/WebP/PDF/bhanga `400 file=unsupported`; 4000 px er beshi `400 file=too_large`; 10 MB er beshi `413` (MaxBytesReader, multipart er age); file nai/duita/ochena part/alt lomba `400` (2.2, 12.2 item 8) | `readImageForm`, `reencode` | `TestImageUploadIntegration` |
 | Max 10 (`400 images=max`), onno vendor/shop er product ba chobi `404`, DB fail e object muche, key er akar, order PATCH er id set, DELETE row age tarpor object, audit (11.7 item 9, Rule 13) | `imageRoom`, `orderImages`, `deleteImage` | `TestImageUploadIntegration` |
-| Decode/re-encode ekshathe max 2 (11.7 item 9) | `Handlers.sem` | `TestImageUploadSemaphore` |
+| Body pora, decode/re-encode, Put ekshathe max 2 (slot body porar age; panic e o ferot) (11.7 item 9) | `Handlers.sem` | `TestImageUploadSemaphore` |
 | Server timeout er beshi shomoy newa upload er-o response (14.2 test 29) | `UploadImage` (`ResponseController`) | `TestImageUploadDeadline` |
 | SigV4 AWS er published vector e mile; R2 request er akar (2.2) | `signV4`, `R2` | `TestSigV4`, `TestR2Store` |
 | Local store key dir er baire na (11.7 item 9) | `validKey`, `Local` | `TestLocalStore` |
@@ -63,6 +63,7 @@ Ei kram e poro:
 - Key er prefix `shops/{shop_id}/` (6.7 comment); bodlale website er `IMAGE_BASE_URL` ar Caddy (`img.localhost`) dekho.
 - Notun format (WebP) chaile stdlib e decoder nai (2.2); design age.
 - `uploadDeadline` server er `WriteTimeout` er beshi rakhte hobe; Caddy er timeout o (13.3).
+- Semaphore slot body porar age theke response porjonto (Put, DB shoho): memory e ekshathe max 2 ta upload; worst case decode 4000×4000 16-bit PNG ≈ 128 MB protiti.
 - `POST /uploads` (logo, certificate; M8) ei `storage.Store` use korbe.
 
 ## Proshno-uttor

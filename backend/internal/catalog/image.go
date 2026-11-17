@@ -28,7 +28,7 @@ const (
 )
 
 // UploadImage: POST /api/admin/products/{id}/images multipart (file, alt_bn, alt_en) → 201 row. Kram (11.7
-// item 9): product/shima check → MaxBytesReader e body → JPEG/PNG decode + re-encode (EXIF jay) → Put →
+// item 9): product/shima check → semaphore → MaxBytesReader e body → JPEG/PNG decode + re-encode (EXIF jay) → Put →
 // DB (product lock, abar check) → DB fail e object muche.
 func (h *Handlers) UploadImage(w http.ResponseWriter, r *http.Request) {
 	// server er WriteTimeout header porar shomoy-i boshe, tai read ar write duitai barai (2.2)
@@ -46,6 +46,13 @@ func (h *Handlers) UploadImage(w http.ResponseWriter, r *http.Request) {
 		h.writeErr(w, r, err)
 		return
 	}
+	// slot body porar age (memory e max 2 ta 10 MB body + decode); defer: panic holeo ferot
+	select {
+	case h.sem <- struct{}{}:
+	case <-r.Context().Done():
+		return
+	}
+	defer func() { <-h.sem }()
 	r.Body = http.MaxBytesReader(w, r.Body, maxUpload)
 	file, alt, err := readImageForm(r)
 	var tooBig *http.MaxBytesError
@@ -57,13 +64,7 @@ func (h *Handlers) UploadImage(w http.ResponseWriter, r *http.Request) {
 		h.writeErr(w, r, err)
 		return
 	}
-	select {
-	case h.sem <- struct{}{}:
-	case <-r.Context().Done():
-		return
-	}
-	out, ext, width, height, err := reencode(file)
-	<-h.sem
+	out, ext, width, height, err := reencodeImage(file)
 	if err != nil {
 		h.writeErr(w, r, err)
 		return
@@ -149,6 +150,9 @@ func bodyErr(err error) error {
 	}
 	return badField("body", "invalid")
 }
+
+// reencodeImage: test e panic dekhate bodlay.
+var reencodeImage = reencode
 
 // reencode (2.2): DecodeConfig e format ar maap (pixel decode er age), tarpor decode + encode; EXIF/GPS
 // metadata notun file e jay na. SVG/WebP/PDF/onno → unsupported.
