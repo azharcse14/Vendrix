@@ -380,6 +380,18 @@ func TestAdminVendorIsolationIntegration(t *testing.T) {
 		t.Errorf("vendor print pick list: %+v", pt.PickList)
 	}
 
+	// dashboard (11.7 item 13 viii): nijer fulfillment er order ar bikri, nijer variant er low stock
+	f.exec(`UPDATE product_variants SET stock = 2 WHERE id = $1`, rx)
+	f.exec(`UPDATE product_variants SET stock = 0 WHERE id = $1`, ry)
+	for _, st := range []httpx.Staff{vo, vs} {
+		_, got := f.dashboard(st)
+		wantCounts(t, st.Role+" dashboard", got, map[string]int64{"orders": 1, "sales": 10000, "pending": 0, "to_pack": 1,
+			"low_stock": 1, "expiring": 0, "deadline_soon": 0})
+	}
+	_, got := f.dashboard(f.staffAs("owner", 0))
+	wantCounts(t, "owner dashboard", got, map[string]int64{"orders": 2, "sales": 50000, "pending": 0, "to_pack": 3,
+		"low_stock": 2, "expiring": 0, "deadline_soon": 0})
+
 	d := f.admJSON(vs, "GET", "/api/admin/orders/"+s(om), nil, http.StatusOK)
 	fs := d["fulfillments"].([]any)
 	if len(fs) != 1 || fs[0].(map[string]any)["id"] != num(fm[0]) || len(fs[0].(map[string]any)["items"].([]any)) != 1 ||

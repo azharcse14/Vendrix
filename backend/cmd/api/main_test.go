@@ -474,6 +474,14 @@ var adminRoutes = map[string]routeRoles{
 	"GET /api/admin/blocked-phones":        {roles: shopAdmin},
 	"POST /api/admin/blocked-phones":       {roles: shopAdmin},
 	"DELETE /api/admin/blocked-phones":     {roles: shopAdmin},
+
+	// staff, audit, dashboard (11.2, 11.7 item 11, 13 viii): staff shudhu owner, audit owner/admin, dashboard shob (vendor nijer)
+	"GET /api/admin/staff":             {roles: []string{"owner"}},
+	"POST /api/admin/staff":            {roles: []string{"owner"}},
+	"PATCH /api/admin/staff/{id}":      {roles: []string{"owner"}},
+	"POST /api/admin/staff/{id}/reset": {roles: []string{"owner"}},
+	"GET /api/admin/audit-logs":        {roles: shopAdmin},
+	"GET /api/admin/dashboard":         {roles: allRoles},
 }
 
 // registeredAdminRoutes: backend er (test chhara) Go source e "METHOD /api/admin/..." pattern gulo. ServeMux
