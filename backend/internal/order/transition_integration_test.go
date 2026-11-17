@@ -109,7 +109,7 @@ var (
 )
 
 // TestTransitionIntegration (14.2 test 7, 8.8): DB e na-allowed bodol invalid_transition, online unpaid confirm
-// payment_required, side effect (confirmed_at, history, display_status); M6 e packed/shipped ErrNotImplemented.
+// payment_required, side effect (confirmed_at, history, display_status).
 func TestTransitionIntegration(t *testing.T) {
 	f := newCheckout(t)
 	rice := f.variant("rice", 10000, 50)

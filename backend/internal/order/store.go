@@ -314,7 +314,7 @@ func scanAdminOrder(sc func(...any) error, hide bool, extra ...any) (AdminOrder,
 
 // listOrders (11.7 item 13 vii): placed_at DESC. Rule 12: static SQL, khali parameter = filter na; count ar list er
 // WHERE ekoi (ekta bodlale duita). $1 shop, $2 vendor role er vendor (taka nijer ongsho; count e shudhu type), $3 vendor
-// (0 = shob), $4 status, $5 tab, $6 risk, $7 phone, $8 number, $9/$10 from/to (shop timezone er din).
+// (0 = shob), $4 status, $5 tab, $6 risk, $7 phone (vendor role e shudhu recipient; customer phone lukano), $8 number, $9/$10 from/to (shop timezone er din).
 func listOrders(ctx context.Context, d *sql.DB, shopID int64, f ListFilter, page, limit int) ([]AdminOrder, int64, error) {
 	own := int64(0)
 	if f.VendorRole {
@@ -330,7 +330,7 @@ func listOrders(ctx context.Context, d *sql.DB, shopID int64, f ListFilter, page
 		AND ($5::text <> 'deadline_soon' OR (o.delivery_deadline < now() + interval '24 hours'
 			AND o.display_status NOT IN ('delivered', 'returned', 'cancelled')))
 		AND (NOT $6::boolean OR o.risk_flags <> '[]'::jsonb)
-		AND ($7::text = '' OR o.customer_phone = $7::text OR o.recipient_phone = $7::text)
+		AND ($7::text = '' OR o.recipient_phone = $7::text OR ($2::bigint = 0 AND o.customer_phone = $7::text))
 		AND ($8::text = '' OR o.order_number = $8)
 		AND ($9::text = '' OR o.placed_at >= NULLIF($9, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))
 		AND ($10::text = '' OR o.placed_at < (NULLIF($10, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))`,
@@ -349,7 +349,7 @@ func listOrders(ctx context.Context, d *sql.DB, shopID int64, f ListFilter, page
 		AND ($5::text <> 'deadline_soon' OR (o.delivery_deadline < now() + interval '24 hours'
 			AND o.display_status NOT IN ('delivered', 'returned', 'cancelled')))
 		AND (NOT $6::boolean OR o.risk_flags <> '[]'::jsonb)
-		AND ($7::text = '' OR o.customer_phone = $7::text OR o.recipient_phone = $7::text)
+		AND ($7::text = '' OR o.recipient_phone = $7::text OR ($2::bigint = 0 AND o.customer_phone = $7::text))
 		AND ($8::text = '' OR o.order_number = $8)
 		AND ($9::text = '' OR o.placed_at >= NULLIF($9, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))
 		AND ($10::text = '' OR o.placed_at < (NULLIF($10, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1))

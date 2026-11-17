@@ -186,8 +186,13 @@ func Ship(ctx context.Context, d *sql.DB, st httpx.Staff, fid int64, in ShipIn) 
 		}
 		if in.RiderStaffID != nil {
 			var ok bool
-			if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM staff WHERE shop_id = $1 AND id = $2 AND is_active)`,
-				st.ShopID, *in.RiderStaffID).Scan(&ok); err != nil {
+			// vendor role e rider nijer vendor er staff (vendorID 0 = shop staff, shob)
+			rv := int64(0)
+			if by.Actor == Vendor {
+				rv = by.VendorID
+			}
+			if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM staff WHERE shop_id = $1 AND id = $2 AND is_active
+				AND ($3::bigint = 0 OR vendor_id = $3))`, st.ShopID, *in.RiderStaffID, rv).Scan(&ok); err != nil {
 				return err
 			}
 			if !ok {

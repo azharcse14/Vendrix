@@ -87,7 +87,7 @@ func Track(ctx context.Context, d *sql.DB, shopID int64, number, phone string) (
 		return t, err
 	}
 	rows, err := d.QueryContext(ctx, `SELECT to_status, created_at FROM order_status_history
-		WHERE shop_id = $1 AND order_id = $2 AND fulfillment_id IS NULL ORDER BY id`, shopID, id)
+		WHERE shop_id = $1 AND order_id = $2 AND fulfillment_id IS NULL AND from_status IS DISTINCT FROM to_status ORDER BY id`, shopID, id)
 	if err != nil {
 		return t, err
 	}
