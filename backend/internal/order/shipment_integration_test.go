@@ -177,7 +177,13 @@ func TestShipmentIntegration(t *testing.T) {
 	vs := f.staffAs("vendor_staff", vb)
 	wantErr(t, "onno vendor", f.adm(vs, "POST", shipPath(pf[0]), map[string]any{"carrier": "own_rider"}), http.StatusNotFound, "not_found")
 	wantErr(t, "onno vendor shipment", f.adm(vs, "PATCH", shipmentPath(sid2), map[string]any{"tracking_code": "X"}), http.StatusNotFound, "not_found")
-	f.admJSON(vs, "POST", shipPath(vf[0]), map[string]any{"carrier": "own_rider"}, http.StatusCreated)
+	// vendor er rider shudhu nijer vendor er staff (step 17 security L-D)
+	e = wantErr(t, "vendor e shop rider", f.adm(vs, "POST", shipPath(vf[0]), map[string]any{"carrier": "own_rider", "rider_staff_id": st.ID}),
+		http.StatusBadRequest, "validation_failed")
+	if e.Fields["rider_staff_id"] == "" {
+		t.Errorf("vendor e shop rider: fields %v", e.Fields)
+	}
+	f.admJSON(vs, "POST", shipPath(vf[0]), map[string]any{"carrier": "own_rider", "rider_staff_id": vs.ID}, http.StatusCreated)
 	bst := st
 	bst.ShopID = f.id(`SELECT id FROM shops WHERE slug = 'b'`)
 	wantErr(t, "onno shop", f.adm(bst, "PATCH", shipmentPath(sid2), map[string]any{"tracking_code": "X"}), http.StatusNotFound, "not_found")

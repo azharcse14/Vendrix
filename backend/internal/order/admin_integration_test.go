@@ -171,6 +171,17 @@ func TestAdminOrderListIntegration(t *testing.T) {
 	if got, _ := f.listNumbers(vo, "?q="+f.number(o1)); got != nil {
 		t.Errorf("vendor q onno order: %v", got)
 	}
+	// vendor e customer_phone lukano, tai q te o shudhu recipient_phone (step 17 security L-C)
+	f.exec(`UPDATE orders SET customer_phone = '+8801811000066', recipient_phone = '+8801911000066' WHERE id = $1`, o6)
+	if got, _ := f.listNumbers(vo, "?q=01811000066"); got != nil {
+		t.Errorf("vendor q customer phone: %v", got)
+	}
+	if got, _ := f.listNumbers(vo, "?q=01911000066"); !slices.Equal(got, n(o6)) {
+		t.Errorf("vendor q recipient phone: %v", got)
+	}
+	if got, _ := f.listNumbers(staff, "?q=01811000066"); !slices.Equal(got, n(o6)) {
+		t.Errorf("shop staff q customer phone: %v", got)
+	}
 	if got, _ := f.listNumbers(vo, "?vendor_id="+s(vx)); !slices.Equal(got, n(o6)) {
 		t.Errorf("vendor er vendor_id filter session er vendor e: %v", got)
 	}

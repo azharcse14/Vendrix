@@ -169,6 +169,13 @@ func TestTrackIntegration(t *testing.T) {
 		}
 	}
 
+	// order edit er history (from = to, note) status bodol na: track e duibar na (step 17 design L1)
+	f.exec(`INSERT INTO order_status_history (shop_id, order_id, from_status, to_status, actor_type, note)
+		SELECT shop_id, id, status, status, 'staff', 'edit' FROM orders WHERE order_number = $1`, p.OrderNumber)
+	var tr trackJSON
+	if rec := track(p.OrderNumber, cp); json.Unmarshal(rec.Body.Bytes(), &tr) != nil || len(tr.History) != 1 {
+		t.Errorf("edit er por history: %d %s", rec.Code, rec.Body.String())
+	}
 	wantErr(t, "onno phone", track(p.OrderNumber, phoneN(3)), http.StatusNotFound, "not_found")
 	wantErr(t, "ochena number", track("SA-999999", cp), http.StatusNotFound, "not_found")
 	wantErr(t, "phone format", track(p.OrderNumber, "123"), http.StatusBadRequest, "validation_failed")
