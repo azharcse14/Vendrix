@@ -69,9 +69,31 @@ void main() {
   );
 
   group('menu (11.2, canOpen)', () {
-    for (final (role, want) in [
-      ('owner', ['/', '/orders', '/packing', '/shipments']),
-      ('vendor_staff', ['/', '/orders', '/packing', '/shipments']),
+    for (final (role, want, hidden) in [
+      (
+        'owner',
+        [
+          '/',
+          '/orders',
+          '/packing',
+          '/shipments',
+          '/products',
+          '/categories',
+          '/inventory',
+          '/staff',
+        ],
+        <String>[],
+      ),
+      (
+        'staff',
+        ['/', '/orders', '/packing', '/shipments', '/inventory'],
+        ['/products', '/categories', '/staff'],
+      ),
+      (
+        'vendor_staff',
+        ['/', '/orders', '/packing', '/shipments', '/inventory'],
+        ['/products', '/categories', '/staff'],
+      ),
     ]) {
       testWidgets('$role 360px drawer, 1280px rail', (tester) async {
         for (final w in [360.0, 1280.0]) {
@@ -92,6 +114,9 @@ void main() {
               findsOneWidget,
               reason: '$role $w $r',
             );
+          }
+          for (final r in hidden) {
+            expect(find.byKey(Key('nav.$r')), findsNothing, reason: '$role $r');
           }
         }
       });

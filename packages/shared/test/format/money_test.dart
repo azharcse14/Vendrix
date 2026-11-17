@@ -80,4 +80,20 @@ void main() {
       expect(discountPercent(18000, 0), isNull);
     });
   });
+  group('parseTaka (admin form er input, double na)', () {
+    test('taka → poisha int', () {
+      expect(parseTaka('120'), 12000);
+      expect(parseTaka(' 120.5 '), 12050);
+      expect(parseTaka('120.05'), 12005);
+      expect(parseTaka('0'), 0);
+      expect(parseTaka('.5'), 50);
+      expect(parseTaka('১২০.৫০'), 12050);
+      expect(parseTaka('1,25,000'), 12500000);
+    });
+    test('khali, negative, 2 er beshi doshomik, bhul lekha → null', () {
+      for (final s in ['', ' ', '-5', '1.234', 'abc', '1.2.3', '.', '1e3', '99999999999999999']) {
+        expect(parseTaka(s), isNull, reason: s);
+      }
+    });
+  });
 }

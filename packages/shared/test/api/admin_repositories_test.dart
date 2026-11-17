@@ -427,6 +427,128 @@ void main() {
     });
   });
 
+  group('AdminCatalogRepository: product, variant, category (7.7)', () {
+    final cat = {
+      'id': 4,
+      'parent_id': null,
+      'slug': 'rice',
+      'name': {'bn': 'চাল'},
+      'image_key': null,
+      'sort_order': 0,
+      'is_active': true,
+    };
+    final product = {
+      'id': 2,
+      'vendor_id': 1,
+      'category_id': null,
+      'slug': 'red-rice',
+      'name': {'bn': 'লাল চাল'},
+      'description': <String, Object>{},
+      'unit': 'piece',
+      'variable_weight': false,
+      'search_keywords': '',
+      'is_active': true,
+    };
+    final variant = {
+      'id': 3,
+      'product_id': 2,
+      'sku': 'RICE-1',
+      'options': <String, Object>{},
+      'price': 12000,
+      'compare_at_price': null,
+      'cost_price': null,
+      'nominal_weight_g': null,
+      'stock': 0,
+      'low_stock_at': 5,
+      'is_active': true,
+      'sort_order': 0,
+    };
+    test('category: list (array, paging na), create, update, delete', () async {
+      final l = await AdminCatalogRepository(
+        api((_) => [cat]),
+      ).categories();
+      expect(call(), 'GET /api/admin/categories');
+      expect(l.single.slug, 'rice');
+      final body = {
+        'slug': 'rice',
+        'name': {'bn': 'চাল', 'en': 'Rice'},
+        'parent_id': null,
+      };
+      await AdminCatalogRepository(
+        api((_) => cat, status: 201),
+      ).createCategory(body);
+      expect(call(), 'POST /api/admin/categories');
+      expect(sent(), body);
+      await AdminCatalogRepository(
+        api((_) => cat),
+      ).updateCategory(4, {'is_active': false});
+      expect(call(), 'PATCH /api/admin/categories/4');
+      expect(sent(), {'is_active': false});
+      await AdminCatalogRepository(api((_) => null)).deleteCategory(4);
+      expect(call(), 'DELETE /api/admin/categories/4');
+    });
+    test('product: list page, detail, create, update', () async {
+      final p = await AdminCatalogRepository(
+        api((_) => paged([product])),
+      ).products(page: 2);
+      expect(call(), 'GET /api/admin/products?page=2');
+      expect(p.items.single.slug, 'red-rice');
+      final d = await AdminCatalogRepository(
+        api(
+          (_) => {
+            ...product,
+            'variants': [variant],
+            'images': <Object>[],
+          },
+        ),
+      ).product(2);
+      expect(call(), 'GET /api/admin/products/2');
+      expect(d.variants.single.price, 12000);
+      final body = {
+        'slug': 'red-rice',
+        'name': {'bn': 'লাল চাল'},
+      };
+      await AdminCatalogRepository(
+        api((_) => product, status: 201),
+      ).createProduct(body);
+      expect(call(), 'POST /api/admin/products');
+      expect(sent(), body);
+      await AdminCatalogRepository(
+        api((_) => product),
+      ).updateProduct(2, {'is_active': false});
+      expect(call(), 'PATCH /api/admin/products/2');
+      expect(sent(), {'is_active': false});
+    });
+    test('variant: create, update', () async {
+      final body = {'sku': 'RICE-1', 'price': 12000};
+      final v = await AdminCatalogRepository(
+        api((_) => variant, status: 201),
+      ).createVariant(2, body);
+      expect(call(), 'POST /api/admin/products/2/variants');
+      expect(sent(), body);
+      expect(v.sku, 'RICE-1');
+      await AdminCatalogRepository(
+        api((_) => variant),
+      ).updateVariant(3, {'compare_at_price': null});
+      expect(call(), 'PATCH /api/admin/variants/3');
+      expect(sent(), {'compare_at_price': null});
+    });
+    test('409 sku_taken → ApiError', () async {
+      final e =
+          await AdminCatalogRepository(
+                api(
+                  (_) => {
+                    'error': {'code': 'sku_taken', 'message': 'x'},
+                  },
+                  status: 409,
+                ),
+              )
+              .createVariant(2, {'sku': 'X', 'price': 1})
+              .then<ApiError?>((_) => null, onError: (Object e) => e as ApiError);
+      expect(e!.code, 'sku_taken');
+    });
+  });
+
   group('Zone, coupon (11.7 item 13 v, vi)', () {
     final zone = {
       'id': 2,

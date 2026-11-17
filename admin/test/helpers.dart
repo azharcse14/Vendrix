@@ -43,7 +43,12 @@ class FakeApi {
     MockClient((req) async {
       final key = '${req.method} ${req.url.path}';
       calls.add(req.url.hasQuery ? '$key?${req.url.query}' : key);
-      if (req.body.isNotEmpty) bodies[key] = jsonDecode(req.body);
+      if (req.headers['content-type']?.startsWith('application/json') ??
+          false) {
+        bodies[key] = jsonDecode(req.body);
+      } else if (req.bodyBytes.isNotEmpty) {
+        bodies[key] = req.bodyBytes.length; // multipart: shudhu size
+      }
       final q = routes[key];
       if (q == null || q.isEmpty) return err(404, 'not_found');
       return q.length == 1 ? q.first : q.removeAt(0);
@@ -51,6 +56,9 @@ class FakeApi {
   );
 
   AdminOrderRepository get orders => AdminOrderRepository(client);
+  AdminCatalogRepository get catalog => AdminCatalogRepository(client);
+  InventoryRepository get inventory => InventoryRepository(client);
+  StaffRepository get staff => StaffRepository(client);
 }
 
 StaffProfile profile(String role) => StaffProfile.fromJson({
@@ -146,6 +154,9 @@ Map<String, Object?> fulfillmentJson(
 final openedTabs = <Future<String>>[];
 final openedUrls = <String>[];
 
+/// [pumpPage] er [Browser.pickFile] er uttor (null = bondho korlo).
+PickedFile? pickedFile;
+
 /// Page ke app er bloc (auth, theme, bhasha) shoho; [size] logical pixel (360 = phone).
 Future<void> pumpPage(
   WidgetTester tester,
@@ -164,7 +175,11 @@ Future<void> pumpPage(
   openedUrls.clear();
   await tester.pumpWidget(
     RepositoryProvider.value(
-      value: Browser(openTab: openedTabs.add, open: openedUrls.add),
+      value: Browser(
+        openTab: openedTabs.add,
+        open: openedUrls.add,
+        pickFile: () async => pickedFile,
+      ),
       child: MultiBlocProvider(
         providers: [
           BlocProvider<AuthBloc>.value(value: auth),

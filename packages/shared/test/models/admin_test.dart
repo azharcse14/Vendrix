@@ -523,4 +523,118 @@ void main() {
       );
     });
   });
+  group('Catalog admin (7.7, 6.7, 11.7 item 13 ix)', () {
+    // catalog/store_admin.go: to_jsonb(row) - shop_id (- search_text); detail e variants ar images.
+    final productJson = <String, dynamic>{
+      'id': 2,
+      'vendor_id': 1,
+      'category_id': 4,
+      'slug': 'red-rice',
+      'name': {'bn': 'লাল চাল', 'en': 'Red Rice'},
+      'description': {'bn': 'ঢেঁকি ছাঁটা'},
+      'unit': 'kg',
+      'variable_weight': true,
+      'attributes': {'origin': 'Dinajpur'},
+      'search_keywords': 'lal chal',
+      'seo': <String, dynamic>{},
+      'rating_sum': 0,
+      'review_count': 0,
+      'is_active': true,
+      'created_at': '2026-11-16T04:30:00Z',
+      'updated_at': '2026-11-16T04:30:00Z',
+    };
+    final variantJson = <String, dynamic>{
+      'id': 3,
+      'product_id': 2,
+      'vendor_id': 1,
+      'sku': 'RICE-1',
+      'options': {
+        'weight': {'bn': '১ কেজি', 'en': '1 kg'},
+      },
+      'price': 12050,
+      'compare_at_price': null,
+      'cost_price': 9000,
+      'nominal_weight_g': 1000,
+      'stock': 12,
+      'low_stock_at': 5,
+      'is_active': true,
+      'sort_order': 0,
+    };
+
+    test('AdminCategory: parent, {bn, en} naam, inactive o', () {
+      final c = AdminCategory.fromJson({
+        'id': 4,
+        'parent_id': 1,
+        'slug': 'rice',
+        'name': {'bn': 'চাল', 'en': 'Rice'},
+        'image_key': null,
+        'sort_order': 2,
+        'is_active': false,
+      });
+      expect(
+        [c.id, c.parentId, c.slug, c.name.of('en'), c.imageKey, c.sortOrder, c.isActive],
+        [4, 1, 'rice', 'Rice', null, 2, false],
+      );
+    });
+
+    test('AdminProduct list row: variant/chobi khali', () {
+      final p = AdminProduct.fromJson(productJson);
+      expect(
+        [
+          p.id,
+          p.vendorId,
+          p.categoryId,
+          p.slug,
+          p.name.of('bn'),
+          p.description.of('en'),
+          p.unit,
+          p.variableWeight,
+          p.searchKeywords,
+          p.isActive,
+          p.variants,
+          p.images,
+        ],
+        [2, 1, 4, 'red-rice', 'লাল চাল', 'ঢেঁকি ছাঁটা', 'kg', true, 'lal chal', true, isEmpty, isEmpty],
+      );
+    });
+
+    test('AdminProduct detail: variant (taka int poisha, options), chobi', () {
+      final p = AdminProduct.fromJson({
+        ...productJson,
+        'category_id': null,
+        'variants': [variantJson],
+        'images': [
+          {
+            'id': 1,
+            'product_id': 2,
+            'storage_key': 'shops/1/products/2/A.jpg',
+            'alt': <String, dynamic>{},
+            'width': 800,
+            'height': 600,
+            'sort_order': 0,
+          },
+        ],
+      });
+      expect(p.categoryId, isNull);
+      final v = p.variants.single;
+      expect(
+        [
+          v.id,
+          v.productId,
+          v.sku,
+          v.options['weight']!.of('en'),
+          v.price,
+          v.compareAtPrice,
+          v.costPrice,
+          v.nominalWeightG,
+          v.stock,
+          v.lowStockAt,
+          v.isActive,
+          v.sortOrder,
+        ],
+        [3, 2, 'RICE-1', '1 kg', 12050, null, 9000, 1000, 12, 5, true, 0],
+      );
+      expect(p.images.single.storageKey, 'shops/1/products/2/A.jpg');
+    });
+  });
 }
