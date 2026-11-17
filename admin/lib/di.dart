@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:js_interop';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +26,10 @@ void registerServices(ApiClient api, Browser browser) => getIt
   ..registerSingleton(browser)
   ..registerSingleton(AdminAuthRepository(api))
   ..registerSingleton(AdminOrderRepository(api))
-  ..registerSingleton(DashboardRepository(api));
+  ..registerSingleton(DashboardRepository(api))
+  ..registerSingleton(AdminCatalogRepository(api))
+  ..registerSingleton(InventoryRepository(api))
+  ..registerSingleton(StaffRepository(api));
 
 final _browser = Browser(
   openTab: (url) {
@@ -39,7 +45,37 @@ final _browser = Browser(
     );
   },
   open: (u) => web.window.location.href = u,
+  pickFile: _pickFile,
 );
+
+// Lukano `<input type=file>` (package chhara); `cancel` event e null.
+Future<PickedFile?> _pickFile() {
+  final done = Completer<PickedFile?>();
+  final input = web.HTMLInputElement()
+    ..type = 'file'
+    ..accept = 'image/jpeg,image/png';
+  input.addEventListener(
+    'cancel',
+    ((web.Event _) {
+      if (!done.isCompleted) done.complete(null);
+    }).toJS,
+  );
+  input.addEventListener(
+    'change',
+    ((web.Event _) {
+      final f = input.files?.item(0);
+      if (done.isCompleted) return;
+      if (f == null) return done.complete(null);
+      done.complete(
+        f.arrayBuffer().toDart.then(
+          (b) => (bytes: b.toDart.asUint8List(), name: f.name),
+        ),
+      );
+    }).toJS,
+  );
+  input.click();
+  return done.future;
+}
 
 /// Shob register (11.3 item 1), session check er por app (redirect kokhono AuthUnknown dekhe na).
 Future<Widget> bootstrap() async {

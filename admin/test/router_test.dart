@@ -75,7 +75,9 @@ void main() {
     getIt
       ..registerSingleton(AdminOrderRepository(api))
       ..registerSingleton(DashboardRepository(api))
-      ..registerSingleton(Browser(openTab: (_) {}, open: (_) {}));
+      ..registerSingleton(
+        Browser(openTab: (_) {}, open: (_) {}, pickFile: () async => null),
+      );
     addTearDown(getIt.reset);
     final auth = AuthBloc(AdminAuthRepository(api));
     final router = buildRouter(auth);

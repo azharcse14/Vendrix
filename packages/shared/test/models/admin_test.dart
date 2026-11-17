@@ -572,7 +572,15 @@ void main() {
         'is_active': false,
       });
       expect(
-        [c.id, c.parentId, c.slug, c.name.of('en'), c.imageKey, c.sortOrder, c.isActive],
+        [
+          c.id,
+          c.parentId,
+          c.slug,
+          c.name.of('en'),
+          c.imageKey,
+          c.sortOrder,
+          c.isActive,
+        ],
         [4, 1, 'rice', 'Rice', null, 2, false],
       );
     });
@@ -594,7 +602,20 @@ void main() {
           p.variants,
           p.images,
         ],
-        [2, 1, 4, 'red-rice', 'লাল চাল', 'ঢেঁকি ছাঁটা', 'kg', true, 'lal chal', true, isEmpty, isEmpty],
+        [
+          2,
+          1,
+          4,
+          'red-rice',
+          'লাল চাল',
+          'ঢেঁকি ছাঁটা',
+          'kg',
+          true,
+          'lal chal',
+          true,
+          isEmpty,
+          isEmpty,
+        ],
       );
     });
 

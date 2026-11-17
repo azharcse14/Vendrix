@@ -43,7 +43,11 @@ class DashboardPage extends StatelessWidget {
                       context.count(data.deadlineSoon),
                       '/orders?tab=deadline_soon',
                     ),
-                    ('low_stock', context.count(data.lowStock), null),
+                    (
+                      'low_stock',
+                      context.count(data.lowStock),
+                      '/inventory?low=1',
+                    ),
                     ('expiring', context.count(data.expiring), null),
                   ])
                     SizedBox(

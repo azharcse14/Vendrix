@@ -464,9 +464,7 @@ void main() {
       'sort_order': 0,
     };
     test('category: list (array, paging na), create, update, delete', () async {
-      final l = await AdminCatalogRepository(
-        api((_) => [cat]),
-      ).categories();
+      final l = await AdminCatalogRepository(api((_) => [cat])).categories();
       expect(call(), 'GET /api/admin/categories');
       expect(l.single.slug, 'rice');
       final body = {
@@ -544,7 +542,10 @@ void main() {
                 ),
               )
               .createVariant(2, {'sku': 'X', 'price': 1})
-              .then<ApiError?>((_) => null, onError: (Object e) => e as ApiError);
+              .then<ApiError?>(
+                (_) => null,
+                onError: (Object e) => e as ApiError,
+              );
       expect(e!.code, 'sku_taken');
     });
   });

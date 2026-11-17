@@ -91,7 +91,17 @@ void main() {
       expect(parseTaka('1,25,000'), 12500000);
     });
     test('khali, negative, 2 er beshi doshomik, bhul lekha → null', () {
-      for (final s in ['', ' ', '-5', '1.234', 'abc', '1.2.3', '.', '1e3', '99999999999999999']) {
+      for (final s in [
+        '',
+        ' ',
+        '-5',
+        '1.234',
+        'abc',
+        '1.2.3',
+        '.',
+        '1e3',
+        '99999999999999999',
+      ]) {
         expect(parseTaka(s), isNull, reason: s);
       }
     });

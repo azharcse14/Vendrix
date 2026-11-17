@@ -1,10 +1,10 @@
 # Admin app (Flutter web)
 
-Design: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7 item 4–8, 10, 13 vii–viii, 14, 2.3, 4.5, 9.7, 9.8, 13.3 · Milestone: M7b · Code: `admin/`
+Design: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7 item 1, 2, 4–11, 13 vii–ix, 14, 2.3, 4.5, 9.7, 9.8, 13.3 · Milestone: M7b · Code: `admin/`
 
 ## Ki kore
 
-Staff browser e admin khole (`admin.<domain>`, local e `https://admin.localhost:8443`): shop ID, email ar password diye login, TOTP ba recovery code; prothom login ba reset er por password bodol, authenticator app e TOTP setup ar 10 ta recovery code ekbar dekhe. Tarpor dashboard (ajker count, tap e oi list), order list/detail (confirm, cancel, pack, undo, note, call, print), packing (pick list, ojon diye pack, ojon beshi hole customer er raji note) ar shipment (carrier, tracking, delivered, parcel ferot); phone e 360px e chole (11.5). Product, inventory, staff ityadi M7b er porer step e. Bhasha bn/en bodlano jay. Role onujayi route lukano; suraksha backend e (11.2).
+Staff browser e admin khole (`admin.<domain>`, local e `https://admin.localhost:8443`): shop ID, email ar password diye login, TOTP ba recovery code; prothom login ba reset er por password bodol, authenticator app e TOTP setup ar 10 ta recovery code ekbar dekhe. Tarpor dashboard (ajker count, tap e oi list), order list/detail (confirm, cancel, pack, undo, note, call, print), packing (pick list, ojon diye pack, ojon beshi hole customer er raji note) ar shipment (carrier, tracking, delivered, parcel ferot); phone e 360px e chole (11.5). Product (form, variant, chobi upload/kram/delete), category tree, inventory (variant khoja, low stock, stock entry batch, komano wastage/adjust, batch ar movement) ar staff (notun, role, active, reset; temporary password ekbar). Zone, coupon, customer, audit M7b er porer step e. Bhasha bn/en bodlano jay. Role onujayi route lukano; suraksha backend e (11.2).
 
 ## Kivabe kaj kore
 
@@ -30,7 +30,11 @@ Staff browser e admin khole (`admin.<domain>`, local e `https://admin.localhost:
 14. **Print** (11.6): `Browser.openTab(Future<String>)`: tap er bhetore `window.open('', '_blank')` (Safari async `window.open` atkay), `opener = null`, `POST /print-links` er `url` ele `location.href`, bhul e tab bondho.
 15. **Packing** (`/packing`, `PickListCubit`): ajker pick list (variant er mot, order list), print (`pick_list`, list er `date`), order er "Pack" → `/packing/:orderId/:fid` (`PackCubit`: `GET /orders/{id}` theke oi fulfillment er item; fixed item shudhu dekhay, ojon-variable e gram field 1–1,000,000, partial na). `409 weight_over_limit` → `PackReady.overLimit` → note dialog → abar `pack(customerOkNote:)`. Batch dekhano nai (11.7 item 14).
 16. **Shipment** (`/shipments`, `ShipmentsCubit`): `GET /fulfillments?status=packed` + `?status=shipped` (protiti 100, ponytail): pathano baki = packed + shipped kintu active `shipment` nai (abar pathano); pothe = active shipment shoho (v1.50). Ship dialog (carrier, tracking trim, khali hole na; rider picker nai, 11.7 item 14), delivered (vendor role e nai), parcel ferot (`returned`), booking bhul (`cancelled`); `tracking_code: taken` er lekha.
-17. Lekha `admin.*` (bn/en) ar shared `order.status.*`, `order.payment.*`, `print.*`; dialog er title/hint key hishebe pathano (callback e `context.t` `watch` kore, tai na), validator er lekha build e.
+17. **Product** (`/products`, `ProductListCubit`): page (API te khoja nai), inactive chip, notun → `/products/new`. **Form** (`/products/new`, `/products/:id`, `ProductFormCubit`): naam/bornona `{bn, en}` (bn lagbe), slug (`^[a-z0-9]+(-[a-z0-9]+)*$`, max 80, Go `validSlug` er moto), category, unit (6.7), ojon onujayi dam shudhu `kg` e (DB CHECK), khojar shobdo, active; SEO/`attributes` form e nai (PATCH e na pathale bodlay na). Notun save → `createProduct` er row (variant/chobi nai) → `/products/:id`; edit save → PATCH → abar `GET`. Save er por **variant** (`showVariantDialog`: SKU, label bn/en ekta option key e (ager key thake, notun e `size`), dam/ager dam/kena dam taka e lekha → `parseTaka` → poisha, ager dam > dam, ek unit er gram; stock na, 8.12) ar **chobi** (`Browser.pickFile`: lukano `<input type=file accept=image/jpeg,image/png>` `package:web` diye, alt = product er naam; upore/niche → `orderImages` shob id; delete confirm shoho; 10 ta porjonto). Thumbnail `IMAGE_BASE_URL` (`--dart-define`, local `scripts/admin.sh` e `https://img.localhost:8443`) thakle `Image.network` `<img>` element e (`WebHtmlElementStrategy.prefer`: CORS/`connect-src` chhara, CSP `img-src`), na thakle icon.
+18. **Category** (`/categories`, `CategoriesCubit`): `categoryTree` flat list ke parent er niche child (indent, API er kram; parent na pele root, cycle e atke na); notun/edit dialog (`showCategoryDialog`: naam bn/en, slug, parent (nije ar `subtree` bad), kram, active; chobi M8 e); delete confirm, `409 category_not_empty` er lekha.
+19. **Inventory** (`/inventory?low=1`, `InventoryListCubit`): `q` (trim, search e), low filter chip, page; low chinho `stock <= low_stock_at`; tap → `/inventory/:variantId` (`extra` e row, header er jonno; URL shoja khulle header nai). **Variant stock** (`VariantStockCubit`): batch (FIFO) ar movement (prothom page); stock entry (`showBatchDialog`: qty 1–1,000,000, kena dam taka (`staff`/`vendor_staff` e field nai, API o dey na), batch code trim, harvest/expiry `YYYY-MM-DD` asol din, expiry ≥ harvest); komano (`showReduceDialog`: koto (+), karon `wastage`/`adjust`, note lagbe → `change = -qty`); `409 out_of_stock` e `details.available`. Dashboard er low stock → `/inventory?low=1`.
+20. **Staff** (`/staff`, owner, `StaffCubit`): list (prothom page), notun (email, naam, role `owner`/`admin`/`staff`) → temporary password dialog ekbar (copy, bondho korle ar nai; state e rakha hoy na), role dropdown ar active switch (PATCH shudhu oi field), reset confirm → notun temporary password; nijer row e kaj nai (server o `403`).
+21. Lekha `admin.*` (bn/en) ar shared `order.status.*`, `order.payment.*`, `print.*`; dialog er title/hint key hishebe pathano (callback e `context.t` `watch` kore, tai na), validator er lekha build e.
 
 ## Code er map
 
@@ -55,6 +59,11 @@ Ei kram e poro:
 | `admin/lib/features/orders/` → `OrderListBloc`, `OrderDetailCubit` | Order list ar detail |
 | `admin/lib/features/packing/` → `PickListCubit`, `PackCubit` | Pick list, pack |
 | `admin/lib/features/shipments/` → `ShipmentsCubit` | Shipment |
+| `admin/lib/features/products/` → `ProductListCubit`, `ProductFormCubit`, `showVariantDialog` | Product, variant, chobi |
+| `admin/lib/features/categories/` → `CategoriesCubit`, `categoryTree`, `showCategoryDialog` | Category tree |
+| `admin/lib/features/inventory/` → `InventoryListCubit`, `VariantStockCubit`, `showBatchDialog`, `showReduceDialog` | Variant stock, batch, komano |
+| `admin/lib/features/staff/` → `StaffCubit`, `StaffPage` | Staff |
+| `admin/lib/core/widgets/common.dart` → `confirmDialog`, `PageBar`, `ErrorLine` | Confirm, page, kaj er bhul |
 | `scripts/admin.sh`, `make admin` | Release build (`--no-web-resources-cdn`, same-origin) |
 | `infra/caddy/Caddyfile.local` → `admin.localhost` | `admin/build/web` + `/api` → `LOCAL_API`, CSP |
 
@@ -71,7 +80,7 @@ Ei kram e poro:
 | Logout API fail holeo local logout | `LogoutRequested` | `auth_bloc_test.dart` → `logout: ...` |
 | temp_token, secret, recovery code state er `toString` e na (log) | `TotpRequired`, `SetupRequired` | `auth_bloc_test.dart` → `prothom login: ...` |
 | Screen er `401` → login (`error.session_expired`); login er age 401 e kichu na (11.3) | `SessionClient`, `SessionExpired` | `admin/test/core/session_test.dart` |
-| Menu role onujayi (`canOpen`), 360px drawer, 1280px rail; menu er route router e ache | `AppShell`, `menuRoutes` | `session_test.dart` → `group('menu (11.2, canOpen)')` |
+| Menu role onujayi (`canOpen`; `staff` e product/category/staff nai, inventory ache), 360px drawer, 1280px rail; menu er route router e ache | `AppShell`, `menuRoutes` | `session_test.dart` → `group('menu (11.2, canOpen)')` |
 | Dashboard count, bikri taka, 360/1280px (11.7 13 viii) | `DashboardCubit`, `DashboardPage` | `admin/test/features/dashboard/dashboard_test.dart` |
 | Order list: tab (status = `display_status`, `awaiting_confirm`/`deadline_soon` tab param), `q` trim, risk, paging, bhul (11.4, 11.7 13 vii) | `OrderListBloc` | `admin/test/features/orders/order_list_bloc_test.dart` |
 | Order list 360px (bn/en) ar 1280px overflow nai, risk chip, call `tel:` (11.5) | `OrderListPage` | `admin/test/features/orders/order_list_page_test.dart` |
@@ -79,6 +88,10 @@ Ei kram e poro:
 | Detail: confirm, bhul e order thake, undo note shoho (khali note e POST na), call note, print link notun tab, 360px overflow nai (11.4, 11.6) | `OrderDetailCubit`, `OrderDetailPage` | `admin/test/features/orders/order_detail_test.dart` |
 | Pick list ar print; pack e shudhu ojon-variable er gram; `409 weight_over_limit` → note dialog → `customer_ok_note`; gram khali hole submit na; 360px (8.11, 11.7 13 ii) | `PickListCubit`, `PackCubit`, `PackPage` | `admin/test/features/packing/packing_test.dart` |
 | Shipment: packed + abar pathano, carrier/tracking (trim), delivered/returned/cancelled, tracking taken, vendor e delivered nai, 360px (11.7 item 5, v1.50) | `ShipmentsCubit`, `ShipmentsPage` | `admin/test/features/shipments/shipments_test.dart` |
+| Product list page/inactive (360/1280); form: khali naam/bhul slug e POST na, `{bn, en}` body, save er por variant/chobi; edit PATCH, `slug_taken`; variant taka → poisha, ager dam ≤ dam e POST na, ager option key thake, ager dam muchle `null`; chobi upload/kram/delete confirm, pick bondho e upload na (7.7, 11.7 item 9) | `ProductListCubit`, `ProductFormCubit`, `showVariantDialog` | `admin/test/features/products/products_test.dart` → `notun product: khali/bhul slug e POST na; thik hole {bn, en} body`, `variant edit: ager option key thake, compare_at muchle null`, `chobi: upload (multipart), kram bodol, delete confirm shoho` |
+| Category tree (child parent er niche), notun/edit body, parent e nije/child nai, delete confirm + `category_not_empty` | `categoryTree`, `subtree`, `CategoriesCubit` | `admin/test/features/categories/categories_test.dart` → `flatten: parent er niche child, depth shoho`, `edit: parent list e nije ar nijer child nai; PATCH`, `delete: confirm er por; category_not_empty er lekha` |
+| Inventory khoja/low, stock entry body (bhul din/qty e na), komano note lagbe ar `change` negative, `out_of_stock` e available; `staff` e kena dam nai (11.7 item 1, 2) | `InventoryListCubit`, `VariantStockCubit`, stock dialog | `admin/test/features/inventory/inventory_test.dart` → `staff: kena dam nai, batch dialog e cost_price field nai`, `stock entry (batch): bhul din/qty e POST na; body`, `komano: note chhara POST na; change negative; out_of_stock e available` |
+| Staff: temporary password ekbar, `staff_exists`, reset confirm, role/active PATCH shudhu oi field, nijer row e kaj nai (11.7 item 11) | `StaffCubit`, `StaffPage` | `admin/test/features/staff/staff_test.dart` → `create: temp password ekbar dekhay, bondho korle ar nai`, `reset: confirm er por notun temp password`, `role bodol ar active bondho: PATCH shudhu oi field` |
 | Rong token theke, Bangla lekha shudhu `core/l10n/bn.dart` e (Rule 4, 11.7 item 10) | `buildTheme`, `l10n/` | `scripts/check-rules.sh` |
 
 ## Data
@@ -102,7 +115,10 @@ Nai (API: [auth.md](auth.md); session cookie `__Host-asid`, Dart e ba localStora
 
 ## Proshno-uttor
 
-- **Order edit, return (restock + refund) screen nai keno?** Step 2 er list e chhilo na, dialog boro; M7b er porer step e (M7b.md e baki line).
+- **Order edit, return (restock + refund) screen nai keno?** Step 2 er list e chhilo na, dialog boro; M7b step 6 e.
+- **Product e SEO ar attributes field nai keno?** M7b step 4 e lean form (advisor decision, M7b.md); API ache, PATCH e na pathale ager value thake; pore form e.
+- **Chobi pick e package nai keno?** `package:web` er `<input type=file>` (already dependency); type/size server abar dekhe (11.7 item 9).
+- **Inventory variant URL shoja khulle naam nai keno?** Ek variant er GET nai; list theke `extra` e ashe. Batch/movement/kaj thik chole.
 - **Rider bechhe neya jay na keno?** `GET /staff` shudhu owner; ekhon rider chhara shipment (11.7 item 14, 16.1).
 - **List e "aro dekhao" na keno, page keno?** API OFFSET paging; notun order ele row shore jay, "aro" te duplicate.
 

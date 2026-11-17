@@ -7,5 +7,6 @@ set -euo pipefail
 cd "$(dirname "$0")/../admin"
 flutter pub get >/dev/null
 flutter build web --release --no-web-resources-cdn --pwa-strategy=none \
-  --dart-define=API_BASE_URL= --dart-define=SHOP_SLUG="${SHOP_SLUG:-sobujbazar}"
+  --dart-define=API_BASE_URL= --dart-define=SHOP_SLUG="${SHOP_SLUG:-sobujbazar}" \
+  --dart-define=IMAGE_BASE_URL="${IMAGE_BASE_URL:-https://img.localhost:8443}"
 echo "build hoyeche: make https chalu thakle https://admin.localhost:8443"

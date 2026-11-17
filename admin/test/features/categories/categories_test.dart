@@ -28,7 +28,7 @@ Future<FakeApi> pump(
 }) async {
   final api = FakeApi({
     'GET /api/admin/categories': [json(200, tree)],
-    for (final e in extra.entries) e.key: [...e.value],
+    for (final e in extra.entries) e.key: [...e.value.cast()],
   });
   await pumpPage(
     tester,
@@ -44,7 +44,9 @@ Future<FakeApi> pump(
 
 void main() {
   test('flatten: parent er niche child, depth shoho', () {
-    final rows = categoryTree([for (final c in tree) AdminCategory.fromJson(c)]);
+    final rows = categoryTree([
+      for (final c in tree) AdminCategory.fromJson(c),
+    ]);
     expect(rows.map((r) => (r.category.id, r.depth)), [
       (1, 0),
       (3, 1),
@@ -110,11 +112,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('category.parent')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('parent.1')).hitTestable(), findsOneWidget);
-    expect(find.byKey(const Key('parent.2')).hitTestable(), findsOneWidget);
+    // menu khola: parent.1 button e (bechhe newa) ar menu te
+    expect(find.byKey(const Key('parent.1')), findsNWidgets(2));
+    expect(find.byKey(const Key('parent.2')), findsOneWidget);
     expect(find.byKey(const Key('parent.3')), findsNothing);
     expect(find.byKey(const Key('parent.4')), findsNothing);
-    await tester.tap(find.byKey(const Key('parent.2')).hitTestable());
+    await tester.tap(find.byKey(const Key('parent.2')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('category.save')));
     await tester.pumpAndSettle();

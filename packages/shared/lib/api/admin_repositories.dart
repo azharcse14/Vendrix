@@ -356,13 +356,77 @@ class InventoryRepository {
       });
 }
 
-/// Product er chobi (11.7 item 9). Product/variant/category CRUD M7b step 4 e (screen field thik korle).
+/// Product, variant, category (7.7) ar chobi (11.7 item 9). Body 6.7 er field (`name` `{bn, en}`, taka poisha);
+/// PATCH e shudhu deya field bodlay, `null` = muche dao.
 class AdminCatalogRepository {
   /// Client.
   final ApiClient api;
 
   /// AdminCatalogRepository.
   const AdminCatalogRepository(this.api);
+
+  /// `GET /api/admin/categories`: shob (inactive o), array (paging na).
+  Future<List<AdminCategory>> categories() async => [
+    for (final c in await api.get('/api/admin/categories') as List<dynamic>)
+      AdminCategory.fromJson(c as Map<String, dynamic>),
+  ];
+
+  /// `POST /api/admin/categories`; slug duplicate `409 slug_taken`.
+  Future<AdminCategory> createCategory(Map<String, Object?> body) async =>
+      AdminCategory.fromJson(
+        await _json(api, 'POST', '/api/admin/categories', body),
+      );
+
+  /// `PATCH /api/admin/categories/{id}` (parent cycle `400`).
+  Future<AdminCategory> updateCategory(
+    int id,
+    Map<String, Object?> body,
+  ) async => AdminCategory.fromJson(
+    await _json(api, 'PATCH', '/api/admin/categories/$id', body),
+  );
+
+  /// `DELETE /api/admin/categories/{id}`; product ba child thakle `409 category_not_empty`.
+  Future<void> deleteCategory(int id) =>
+      api.send('DELETE', '/api/admin/categories/$id');
+
+  /// `GET /api/admin/products` (notun age; vendor role e nijer).
+  Future<Page<AdminProduct>> products({int? page, int? limit}) => _page(
+    api,
+    '/api/admin/products',
+    AdminProduct.fromJson,
+    {'page': page, 'limit': limit},
+  );
+
+  /// `GET /api/admin/products/{id}`: variant ar chobi shoho.
+  Future<AdminProduct> product(int id) async => AdminProduct.fromJson(
+    await api.get('/api/admin/products/$id') as Map<String, dynamic>,
+  );
+
+  /// `POST /api/admin/products` (shop staff e house vendor); slug duplicate `409 slug_taken`.
+  Future<AdminProduct> createProduct(Map<String, Object?> body) async =>
+      AdminProduct.fromJson(
+        await _json(api, 'POST', '/api/admin/products', body),
+      );
+
+  /// `PATCH /api/admin/products/{id}` (delete na, `is_active`).
+  Future<AdminProduct> updateProduct(int id, Map<String, Object?> body) async =>
+      AdminProduct.fromJson(
+        await _json(api, 'PATCH', '/api/admin/products/$id', body),
+      );
+
+  /// `POST /api/admin/products/{id}/variants` (stock na, 8.12); SKU duplicate `409 sku_taken`.
+  Future<AdminVariant> createVariant(
+    int productId,
+    Map<String, Object?> body,
+  ) async => AdminVariant.fromJson(
+    await _json(api, 'POST', '/api/admin/products/$productId/variants', body),
+  );
+
+  /// `PATCH /api/admin/variants/{id}`.
+  Future<AdminVariant> updateVariant(int id, Map<String, Object?> body) async =>
+      AdminVariant.fromJson(
+        await _json(api, 'PATCH', '/api/admin/variants/$id', body),
+      );
 
   /// `POST /api/admin/products/{id}/images` multipart (`file` JPEG/PNG ≤ 10 MB, `alt_bn`, `alt_en`).
   Future<AdminImage> uploadImage(

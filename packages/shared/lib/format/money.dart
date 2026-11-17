@@ -56,3 +56,18 @@ int? discountPercent(int price, int? compareAt) {
   if (off * 100 < compareAt * 5) return null;
   return (off * 200 + compareAt) ~/ (compareAt * 2);
 }
+
+final _takaInput = RegExp(r'^(\d{0,12})(?:\.(\d{1,2}))?$');
+
+/// Form e lekha taka (`120.50`, `১২০.৫০`, `1,25,000`) → poisha `int`; string diye, `double` na. Khali, negative,
+/// 2 er beshi doshomik ba bhul lekha hole `null` (admin form, Rule 1: hishab na, shudhu input).
+int? parseTaka(String s) {
+  final t = String.fromCharCodes([
+    for (final c in s.trim().replaceAll(',', '').runes)
+      c >= 0x09E6 && c <= 0x09EF ? c - 0x09E6 + 0x30 : c,
+  ]);
+  final m = _takaInput.firstMatch(t);
+  if (m == null || t.isEmpty || t == '.') return null;
+  final whole = m[1]!.isEmpty ? 0 : int.parse(m[1]!);
+  return whole * 100 + int.parse((m[2] ?? '0').padRight(2, '0'));
+}

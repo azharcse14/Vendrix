@@ -43,7 +43,7 @@ Future<FakeApi> pump(
         ]),
       ),
     ],
-    for (final e in extra.entries) e.key: [...e.value],
+    for (final e in extra.entries) e.key: [...e.value.cast()],
   });
   await pumpPage(
     tester,

@@ -726,3 +726,116 @@ class AdminImage {
       height = field(j, 'height'),
       sortOrder = field(j, 'sort_order');
 }
+
+/// Admin category (`GET /api/admin/categories`, inactive o; 6.7).
+class AdminCategory {
+  /// Id, parent (root e null).
+  final int id;
+
+  /// Parent category.
+  final int? parentId;
+
+  /// URL er slug.
+  final String slug;
+
+  /// Naam `{bn, en}`.
+  final LocalizedText name;
+
+  /// Chobi (storage key).
+  final String? imageKey;
+
+  /// Kram.
+  final int sortOrder;
+
+  /// Website e dekhay.
+  final bool isActive;
+
+  /// JSON theke.
+  AdminCategory.fromJson(Map<String, dynamic> j)
+    : id = field(j, 'id'),
+      parentId = field(j, 'parent_id'),
+      slug = field(j, 'slug'),
+      name = LocalizedText.fromJson(_obj(j, 'name')),
+      imageKey = field(j, 'image_key'),
+      sortOrder = field(j, 'sort_order'),
+      isActive = field(j, 'is_active');
+}
+
+/// Admin product (`to_jsonb` row, 6.7): list e [variants]/[images] khali, detail e shob. SEO ar `attributes` ekhon
+/// form e na (PATCH e na pathale bodlay na).
+class AdminProduct {
+  /// Id, vendor.
+  final int id, vendorId;
+
+  /// Category.
+  final int? categoryId;
+
+  /// Slug, unit (`piece`, `kg` ...), khojar shobdo.
+  final String slug, unit, searchKeywords;
+
+  /// Naam, bornona.
+  final LocalizedText name, description;
+
+  /// Ojon onujayi dam (unit `kg`), website e dekhay.
+  final bool variableWeight, isActive;
+
+  /// Variant (sort_order kram).
+  final List<AdminVariant> variants;
+
+  /// Chobi (sort_order kram).
+  final List<AdminImage> images;
+
+  /// JSON theke.
+  AdminProduct.fromJson(Map<String, dynamic> j)
+    : id = field(j, 'id'),
+      vendorId = field(j, 'vendor_id'),
+      categoryId = field(j, 'category_id'),
+      slug = field(j, 'slug'),
+      name = LocalizedText.fromJson(_obj(j, 'name')),
+      description = LocalizedText.fromJson(_obj(j, 'description')),
+      unit = field(j, 'unit'),
+      variableWeight = field(j, 'variable_weight'),
+      searchKeywords = field(j, 'search_keywords'),
+      isActive = field(j, 'is_active'),
+      variants = objects(j, 'variants', AdminVariant.fromJson),
+      images = objects(j, 'images', AdminImage.fromJson);
+}
+
+/// Product variant (6.7); taka poisha `int`; stock shudhu batch/adjust e bodlay (8.12).
+class AdminVariant {
+  /// Id, product.
+  final int id, productId;
+
+  /// SKU.
+  final String sku;
+
+  /// Option (jemon `weight` → `{bn, en}`).
+  final Map<String, LocalizedText> options;
+
+  /// Dam (variable weight e 1 kg er), stock, low stock er shima, kram.
+  final int price, stock, lowStockAt, sortOrder;
+
+  /// Ager dam, kena dam, ek unit er ojon (gram).
+  final int? compareAtPrice, costPrice, nominalWeightG;
+
+  /// Website e dekhay.
+  final bool isActive;
+
+  /// JSON theke.
+  AdminVariant.fromJson(Map<String, dynamic> j)
+    : id = field(j, 'id'),
+      productId = field(j, 'product_id'),
+      sku = field(j, 'sku'),
+      options = {
+        for (final e in _obj(j, 'options').entries)
+          e.key: LocalizedText.fromJson(e.value as Map<String, dynamic>),
+      },
+      price = field(j, 'price'),
+      compareAtPrice = field(j, 'compare_at_price'),
+      costPrice = field(j, 'cost_price'),
+      nominalWeightG = field(j, 'nominal_weight_g'),
+      stock = field(j, 'stock'),
+      lowStockAt = field(j, 'low_stock_at'),
+      isActive = field(j, 'is_active'),
+      sortOrder = field(j, 'sort_order');
+}

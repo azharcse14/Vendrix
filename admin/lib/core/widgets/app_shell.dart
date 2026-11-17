@@ -7,13 +7,26 @@ import '../l10n/locale_cubit.dart';
 import '../permissions.dart';
 
 /// Menu er route (ekhon je screen ache), kram e; lekha `admin.nav.<naam>`.
-const menuRoutes = ['/', '/orders', '/packing', '/shipments'];
+const menuRoutes = [
+  '/',
+  '/orders',
+  '/packing',
+  '/shipments',
+  '/products',
+  '/categories',
+  '/inventory',
+  '/staff',
+];
 
 const _icons = {
   '/': Icons.dashboard_outlined,
   '/orders': Icons.receipt_long_outlined,
   '/packing': Icons.inventory_2_outlined,
   '/shipments': Icons.local_shipping_outlined,
+  '/products': Icons.shopping_basket_outlined,
+  '/categories': Icons.account_tree_outlined,
+  '/inventory': Icons.warehouse_outlined,
+  '/staff': Icons.badge_outlined,
 };
 
 String _label(BuildContext context, String r) =>

@@ -201,6 +201,7 @@ void main() {
         'GET /api/admin/categories': [json(200, categoriesJson)],
         'GET /api/admin/products/2': [
           json(200, productJson(2, variants: [], images: [])),
+          json(200, productJson(2, variants: [variantJson(5)], images: [])),
         ],
         'POST /api/admin/products/2/variants': [json(201, variantJson(5))],
       });

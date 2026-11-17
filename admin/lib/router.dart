@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared/shared.dart' show InventoryVariant;
 
 import 'core/auth/auth_bloc.dart';
 import 'core/browser.dart';
@@ -11,6 +12,16 @@ import 'core/locator.dart';
 import 'core/permissions.dart';
 import 'core/widgets/app_shell.dart';
 import 'features/auth/pages/login_page.dart';
+import 'features/categories/bloc/categories_cubit.dart';
+import 'features/categories/pages/categories_page.dart';
+import 'features/inventory/bloc/inventory_list_cubit.dart';
+import 'features/inventory/bloc/variant_stock_cubit.dart';
+import 'features/inventory/pages/inventory_page.dart';
+import 'features/inventory/pages/variant_stock_page.dart';
+import 'features/products/bloc/product_form_cubit.dart';
+import 'features/products/bloc/product_list_cubit.dart';
+import 'features/products/pages/product_form_page.dart';
+import 'features/products/pages/product_list_page.dart';
 import 'features/auth/pages/setup_page.dart';
 import 'features/auth/pages/totp_page.dart';
 import 'features/dashboard/bloc/dashboard_cubit.dart';
@@ -25,6 +36,8 @@ import 'features/packing/pages/pack_page.dart';
 import 'features/packing/pages/packing_page.dart';
 import 'features/shipments/bloc/shipments_cubit.dart';
 import 'features/shipments/pages/shipments_page.dart';
+import 'features/staff/bloc/staff_cubit.dart';
+import 'features/staff/pages/staff_page.dart';
 
 /// Stream e notun value ele router abar redirect dekhe (11.3).
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -53,7 +66,8 @@ String? authRedirect(AuthState s, String loc) {
 int _id(GoRouterState s, String name) =>
     int.tryParse(s.pathParameters[name]!) ?? 0; // 0 → API 404
 
-/// 11.1 er route (ekhon login, dashboard, order, packing, shipment; baki M7b er porer step e). Screen er bloc
+/// 11.1 er route (ekhon login, dashboard, order, packing, shipment, product, category, inventory, staff; baki M7b
+/// er porer step e). Screen er bloc
 /// route e `BlocProvider(create:)` (getIt shudhu ekhane ar di.dart e, 11.3).
 GoRouter buildRouter(AuthBloc auth) => GoRouter(
   refreshListenable: GoRouterRefreshStream(auth.stream),
@@ -116,6 +130,68 @@ GoRouter buildRouter(AuthBloc auth) => GoRouter(
           builder: (_, _) => BlocProvider(
             create: (_) => ShipmentsCubit(getIt())..load(),
             child: const ShipmentsPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/products',
+          builder: (_, _) => BlocProvider(
+            create: (_) => ProductListCubit(getIt())..load(),
+            child: const ProductListPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/products/new',
+          builder: (_, _) => BlocProvider(
+            create: (_) => ProductFormCubit(getIt())..load(),
+            child: const ProductFormPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/products/:id',
+          builder: (_, state) => BlocProvider(
+            key: ValueKey(
+              state.pathParameters['id'],
+            ), // new → :id e notun cubit
+            create: (_) =>
+                ProductFormCubit(getIt(), id: _id(state, 'id'))..load(),
+            child: const ProductFormPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/categories',
+          builder: (_, _) => BlocProvider(
+            create: (_) => CategoriesCubit(getIt())..load(),
+            child: const CategoriesPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/inventory',
+          builder: (_, state) {
+            final low = state.uri.queryParameters['low'] == '1';
+            return BlocProvider(
+              key: ValueKey(low), // dashboard er low stock theke
+              create: (_) => InventoryListCubit(getIt(), low: low)..load(),
+              child: const InventoryPage(),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/inventory/:variantId',
+          builder: (_, state) => BlocProvider(
+            create: (_) =>
+                VariantStockCubit(getIt(), _id(state, 'variantId'))..load(),
+            child: VariantStockPage(
+              variant: state.extra is InventoryVariant
+                  ? state.extra as InventoryVariant
+                  : null,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/staff',
+          builder: (_, _) => BlocProvider(
+            create: (_) => StaffCubit(getIt())..load(),
+            child: const StaffPage(),
           ),
         ),
       ],

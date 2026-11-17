@@ -62,7 +62,7 @@ Future<FakeApi> pumpStock(
     'GET /api/admin/inventory/movements': [
       json(200, page([movementJson(1, cost: staff ? null : 9000)])),
     ],
-    for (final e in extra.entries) e.key: [...e.value],
+    for (final e in extra.entries) e.key: [...e.value.cast()],
   });
   await pumpPage(
     tester,
