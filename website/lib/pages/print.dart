@@ -87,14 +87,17 @@ String _label(Site site, PrintItem x) {
 
 String? _weight(Site site, int? g) => g == null ? null : site.t('print.grams', {'n': site.number(g)});
 
-Component _cell(String s, {bool end = false}) => td(classes: 'border-b border-line py-1 ${end ? 'text-right' : ''}', [
-  .text(s),
-]);
+Component _cell(String s, {bool end = false}) =>
+    td(classes: 'border-b border-line py-1 ${end ? 'pl-2 text-right' : ''}', [
+      .text(s),
+    ]);
 
 Component _head(List<String> cols, {int endFrom = 99}) => thead([
   tr([
     for (final (i, c) in cols.indexed)
-      th(classes: 'border-b border-ink py-1 text-left font-heading ${i >= endFrom ? 'text-right' : ''}', [.text(c)]),
+      th(classes: 'border-b border-ink py-1 text-left font-heading ${i >= endFrom ? 'pl-2 text-right' : ''}', [
+        .text(c),
+      ]),
   ]),
 ]);
 

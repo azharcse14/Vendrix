@@ -5,6 +5,27 @@
     trusted_proxies static {$CF_IP_RANGES}   # Cloudflare er IPv4/IPv6 range (13.5)
     client_ip_headers CF-Connecting-IP
   }
+  log {                               # error log o request uri dey (upstream down hole): print token muche
+    format filter {
+      fields {
+        request>uri query {
+          delete token
+        }
+      }
+    }
+  }
+}
+# Print link er token query te (11.7 item 8, 13.3): access log e token muche.
+(no_token_log) {
+  log {
+    format filter {
+      fields {
+        request>uri query {
+          delete token
+        }
+      }
+    }
+  }
 }
 (origin_tls) {
   tls /etc/caddy/origin.pem /etc/caddy/origin.key   # Cloudflare origin certificate
@@ -20,6 +41,7 @@ www.tomarshop.com {
 }
 tomarshop.com {                       # shop er nijer domain (jemon sobujbazar.com) holeo ekoi
   import origin_tls
+  import no_token_log
   reverse_proxy 127.0.0.1:8081 {      # Jaspr server
     import app_proxy
   }

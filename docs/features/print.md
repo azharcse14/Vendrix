@@ -58,11 +58,11 @@ Kono table e lekha na (link stateless, migration nai). Pore: `order_fulfillments
 - Token er JSON field bodlale purono link (10 minute) bhenge jay; website page `kind` query pathay ar token er akar (`x.y`) dekhe.
 - `PRINT_SECRET` bodlale chalu link bondho (10 minute er moddhe kichu na).
 - Pick list er din `confirmed_at` diye, `GET /fulfillments` er `date` `placed_at` diye: duita alada.
-- Caddy log e token jabe na (13.3): local e `token` param muche (access + error log); production Caddyfile M12 e.
+- Caddy log e token jabe na (13.3): `Caddyfile` ar `Caddyfile.local` duitai `token` param muche (global error log + shop host er access log, `no_token_log`).
 - `GET /api/print` er JSON field bodlale website er `Slip`/`Invoice` (`lib/services/print.dart`) o.
 
 ## Proshno-uttor
 
-- **Link kar jonno?** Je staff banalo tar onumoti token e; se deactivate hole tar link o bondho.
+- **Link kar jonno?** Je staff banalo tar onumoti token e; se deactivate hole tar link o bondho. Role bodol ba reset e (session revoke) age banano link `exp` porjonto chole (11.7 item 8 shudhu `is_active` dekhe; jana, max 10 minute).
 - **Raat 12 tar por pick list link khulle?** Token e issue er shomoyer tarikh, tai ekoi list.
 - **Vendor invoice keno na?** Invoice e puro order er taka ar customer er tottho; vendor shudhu nijer packing slip.
