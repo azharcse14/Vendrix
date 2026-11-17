@@ -1,6 +1,6 @@
 # Background job ar SMS
 
-Design: 6.4, 8.2, 8.16, 8.17, 12.2, 13.4 · Milestone: M0, M4, M5, M6 · Code: `backend/internal/jobs`, `backend/internal/notify`
+Design: 6.4, 8.2, 8.16, 8.17, 12.2, 13.4 · Milestone: M0, M4, M5, M6, M7a · Code: `backend/internal/jobs`, `backend/internal/notify`
 
 ## Ki kore
 
@@ -9,7 +9,7 @@ Request er baire je kaj (SMS, alert, auto-cancel, reconcile) `jobs` table e queu
 ## Kivabe kaj kore
 
 1. Kaj jog: `jobs.Enqueue` (`*sql.DB` ba order er `*sql.Tx`). `DedupeKey` thakle ekoi key e duibar row hoy na. `RunAt` khali hole database er `now()` (app er ghori na).
-2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`, `cart.cleanup` → `cart.CleanupJob`, `inventory.expire` → `inventory.ExpireJob`; `order.JobHandlers`: `sms.order_placed`, `sms.cancelled`, `sms.total_changed` ([order-status](order-status.md) pack), `alert.new_order`, `order.auto_cancel_unconfirmed`, [checkout](checkout.md)), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
+2. `serve` (`cmd/api/main.go` → `runServe`): `jobs.NewWorker` e kind → handler (`sms.send` → `notify.SendSMSJob` (OTP er jonno `auth.SMSCode` shoho), `alert.security` → `notify.SecurityAlertJob`, `cart.cleanup` → `cart.CleanupJob`, `inventory.expire` → `inventory.ExpireJob`; `order.JobHandlers`: `sms.order_placed`, `sms.cancelled`, `sms.total_changed` ar `sms.shipped` ([fulfillment](fulfillment.md) pack ar shipment), `alert.new_order`, `order.auto_cancel_unconfirmed`, [checkout](checkout.md)), `Worker.Run` goroutine e; shutdown e worker thame, cholche emon kaj er result lekha hoy, tarpor database close.
 3. `Worker.Run`: protiti 2 second e `schedule` (recurring `jobs.sweep` 5 minute er slot `dedupe_key`, `jobs.cleanup` ar `cart.cleanup` UTC din er `dedupe_key`; `Recurring` e onno package er scheduler, jemon `inventory.ScheduleExpire`: shop er timezone e 00:10, `dedupe_key` e shop ar shop er tarikh), tarpor `RunOnce`. 10 ta pele shathe shathe abar.
 4. `RunOnce`: 6.4 er claim query (`FOR UPDATE SKIP LOCKED`, `attempts + 1`, `locked_at`). Protiti kaj er age lock notun kore (onno worker niye thakle bad), `call` (1 minute timeout; panic o error), tarpor `finish`.
 5. `finish`: shofol hole `done_at` (`sms.send` hole payload `{}`, PII); fail hole `last_error`, `run_at = now + backoff` (1, 5, 15, 60 minute); `attempts = max_attempts` hole `failed_at` ar `alert`. `locked_at` claim er sathe na mille (5 minute por onno worker niyeche) kichu lekhe na.

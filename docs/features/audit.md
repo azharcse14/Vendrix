@@ -4,7 +4,7 @@ Design: 12 (Operation 3), 6.1, 6.7, 7.7, 11.7 item 11 · Milestone: M1, M7a · C
 
 ## Ki kore
 
-Protiti admin kaj (category, product, variant bodol; order transition, note, fulfillment transition ([order-status.md](order-status.md)); batch, stock adjust ([inventory.md](inventory.md)); zone, coupon ([delivery-zone.md](delivery-zone.md), [coupon.md](coupon.md)); customer block ([admin-api.md](admin-api.md), phone chhara); pore settings) `audit_logs` e ek row rakhe: ke, kon shop e, ki, ager ar porer obostha, IP. Owner/admin `GET /api/admin/audit-logs` e dekhe ke ki bodleche.
+Protiti admin kaj (category, product, variant bodol, product chobi ([media.md](media.md)); order transition, note, fulfillment transition ([order-status.md](order-status.md)); pack, order edit, shipment ([fulfillment.md](fulfillment.md)); print link ([print.md](print.md)); staff create/update/reset ([auth.md](auth.md)); batch, stock adjust ([inventory.md](inventory.md)); zone, coupon ([delivery-zone.md](delivery-zone.md), [coupon.md](coupon.md)); customer block ([admin-api.md](admin-api.md), phone chhara); pore settings) `audit_logs` e ek row rakhe: ke, kon shop e, ki, ager ar porer obostha, IP. Owner/admin `GET /api/admin/audit-logs` e dekhe ke ki bodleche.
 
 ## Kivabe kaj kore
 

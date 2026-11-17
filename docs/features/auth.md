@@ -166,9 +166,9 @@ Customer phone + OTP diye login kore, staff email + password + TOTP diye. `POST 
 - **TOTP thakle `must_change_password` holeo age TOTP keno?** 8.3 step 4 "password (ar TOTP thakle TOTP)": na hole shudhu password e `setup_pending` pele `/auth/totp/setup` e TOTP bodle dewa jeto.
 - **Setup er secret pending column e keno?** Ager design e setup-i live column e likhto: setup kore enable na korle (scan na kore) porer login TOTP chaito, staff atke jeto (`reset-2fa` lagto). v1.25 (user decision, 16.1): pending e, enable e thik code e live; login shudhu live dekhe.
 - **TOTP live ar `must_change_password` e password bodlale sora-sori `active` keno?** Ei session TOTP par koreche (TOTP chhara `setup_pending` e enable er age password lage, ar password onno session revoke kore), tai notun setup lage na; na hole live TOTP replace korte hoto (security-reviewer M2, 8.3 step 4 v1.25).
-- **Active session e `totp/setup` keno na?** Churi kora cookie diye TOTP bodle dewa jeto; TOTP reset `reset-2fa` (CLI, M7 e `/staff`).
+- **Active session e `totp/setup` keno na?** Churi kora cookie diye TOTP bodle dewa jeto; TOTP reset `reset-2fa` (CLI) ba owner er `POST /api/admin/staff/{id}/reset` (item 18).
 - **`reset-2fa` e `failed_mfa` 0 keno, `locked_until` na keno?** `failed_mfa` purono TOTP er bhul; lock nijei khule (password er lock o oi column e).
-- **`reset-2fa` e `must_change_password` na keno?** Password harano na, shudhu TOTP; dorkar hole M7 er `/staff` e.
+- **`reset-2fa` e `must_change_password` na keno?** Password harano na, shudhu TOTP; password o lagle owner er `POST /api/admin/staff/{id}/reset` (temp password + `must_change_password`).
 - **Staff management e `audit.Log` na keno?** `shop` package `auth` import kore, `audit` er test `shop` import kore: `auth` → `audit` holei test e import cycle; tai `insertAudit` (`before` shoho).
 - **Owner nijeke ba onno owner ke reset korte pare na keno?** Churi kora owner session theke owner er 2FA muche account dokhol kora jeto (security review M1, v1.47); owner er path recovery code ba `reset-2fa` CLI. Owner password bhule gele CLI path ekhono nai (16.1).
 - **Enable e bhul code e `failed_mfa` na keno?** `setup_pending` password e pawa, TOTP chara-i; lock er kono labh nai.

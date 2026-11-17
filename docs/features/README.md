@@ -23,14 +23,15 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Shop er credential | [credentials.md](credentials.md) | 2.2, 3.8, 12.2 | M0 | chalu (pora SMS provider ar M10 e) |
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5, M6 | chalu (OTP SMS, cleanup, `cart.cleanup`, order SMS, `alert.new_order`, auto-cancel; SMS provider ar alert email M12 e) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
-| Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec; DB e cancel ar confirm, admin order list/detail/transition/note M7a; packing/shipment M7a er porer step) |
-| Checkout: quote, order, risk/OTP, COD confirm, order page, tracking | [checkout.md](checkout.md) | 7.5, 8.6, 8.7, 8.10, 8.19 | M6 | cholche (quote, order create, checkout OTP, COD confirm, job, order view/track, `/api/me/orders`; online payment M10, admin M7 e) |
+| Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec; DB e cancel ar confirm, admin order list/detail/transition/note M7a; pack/shipment er kram [fulfillment.md](fulfillment.md)) |
+| Fulfillment: pick list, pack (FIFO, ojon, +10%), undo, order edit, shipment, deliver, return + refund | [fulfillment.md](fulfillment.md) | 8.5, 8.8, 8.11, 8.12, 11.7 | M7a | cholche (backend shob; admin UI M7b e) |
+| Checkout: quote, order, risk/OTP, COD confirm, order page, tracking | [checkout.md](checkout.md) | 7.5, 8.6, 8.7, 8.10, 8.19 | M6 | cholche (quote, order create, checkout OTP, COD confirm, job, order view/track, `/api/me/orders`; online payment M10, admin [fulfillment.md](fulfillment.md)) |
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4, M6, M7a | chalu (OTP send/verify, checkout OTP, customer session, guest order jog, staff login + TOTP/recovery, setup, admin session, `reset-2fa`, staff management `/staff`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
 | Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5, M6 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`, checkout er line ar khali; website `/cart`, heart) |
 | Delivery zone | [delivery-zone.md](delivery-zone.md) | 7.2, 8.6, 8.19, 11.7 | M6, M7a | cholche (lookup, `GET /api/delivery-zones`, dev seed, admin list/create/update) |
-| Inventory: variant khoja, batch, adjust, movement | [inventory.md](inventory.md) | 6.4, 8.12, 11.7 | M7a | cholche (variant khoja, batch, adjust, movement; expire job, pack FIFO M7a er porer step) |
-| Pick list ar print link (packing slip, invoice, pick list) | [print.md](print.md) | 8.11, 11.6, 11.7 | M7a | cholche (backend: pick list, link, `/api/print`; website print page M7a step 14) |
+| Inventory: variant khoja, batch, adjust, movement | [inventory.md](inventory.md) | 6.4, 8.12, 11.7 | M7a | cholche (variant khoja, batch, adjust, movement, `inventory.expire` job, pack er FIFO `Allocate`) |
+| Pick list ar print link (packing slip, invoice, pick list) | [print.md](print.md) | 8.11, 11.6, 11.7 | M7a | cholche (pick list, link, `/api/print`, website print page A4/80mm) |
 | Chobi upload ar storage (local, R2 SigV4) | [media.md](media.md) | 2.2, 7.7, 11.7, 12.2 | M7a | cholche (product chobi upload/order/delete; `POST /uploads` M8 e) |
 | Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19, 11.7 | M6, M7a | cholche (use, peek, release; quote, checkout ar cancel e; admin list/create/update) |
 | Admin: customer, phone block ar dashboard | [admin-api.md](admin-api.md) | 7.7, 11.2, 11.7 | M7a | cholche (customer list/detail, block/unblock, dashboard; staff [auth.md](auth.md), audit list [audit.md](audit.md)) |
@@ -58,8 +59,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones`, admin zone CRUD | [delivery-zone.md](delivery-zone.md) |
 | `backend/internal/coupon` | Coupon: atomic use, phone limit, karon, read-only peek, cancel e ferot, admin coupon | [coupon.md](coupon.md) |
 | `backend/internal/customer` | Admin customer list/detail, phone block/unblock | [admin-api.md](admin-api.md) |
-| `backend/internal/inventory` | Admin stock: variant khoja, batch, adjust (wastage), movement, FIFO `Allocate` | [inventory.md](inventory.md) |
-| `backend/internal/order` | Status er state machine (pure) ar DB transition/cancel, checkout quote ar order create, risk flag/OTP, COD confirm, order view/track/me, order job, admin dashboard | [order-status.md](order-status.md), [checkout.md](checkout.md), [print.md](print.md), [admin-api.md](admin-api.md) |
+| `backend/internal/inventory` | Admin stock: variant khoja, batch, adjust (wastage), movement, FIFO `Allocate`, `inventory.expire` job | [inventory.md](inventory.md) |
+| `backend/internal/order` | Status er state machine (pure) ar DB transition/cancel, checkout quote ar order create, risk flag/OTP, COD confirm, order view/track/me, order job, admin order (list/detail/transition/note), pack/undo/edit/shipment/return, pick list, print link, admin dashboard | [order-status.md](order-status.md), [checkout.md](checkout.md), [fulfillment.md](fulfillment.md), [print.md](print.md), [admin-api.md](admin-api.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
 

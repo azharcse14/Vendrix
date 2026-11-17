@@ -1,6 +1,6 @@
 # Dam er hishab
 
-Design: 8.5 (ar 8.6 step 12, 8.11, 8.13) · Milestone: checkout (M6) ar packing (M7) e use · Code: `backend/internal/pricing`
+Design: 8.5 (ar 8.6 step 12, 8.11, 8.13) · Milestone: checkout (M6) ar packing/edit (M7a) e use · Code: `backend/internal/pricing`
 
 ## Ki kore
 
@@ -20,7 +20,7 @@ Order er shob taka: line total, coupon er discount, delivery charge, mot taka, a
    3. Bodla vendor: line total (prepaid e ager er beshi na), discount (percent e delta, fixed e edit e onupate), delivery ager ta (shob line bad hole 0).
    4. Prepaid hole parthokko refund.
 3. Database er row theke line shudhu `LineFromItem`; edit e ojon `EditWeightG`.
-4. Caller: packing e `order` package er `reprice` (`pack.go`, M7a; [order-status.md](order-status.md)): order er shob `order_items` `LineFromItem` diye, `Edit = false`, coupon `orders.coupon_*` theke; COD +10% shima pricing e na, pack handler e (8.11 v1.37).
+4. Caller: `order` package er `reprice` (`pack.go`; [fulfillment.md](fulfillment.md)): order er shob `order_items` `LineFromItem` diye, coupon `orders.coupon_*` theke; pack ar undo e `Edit = false`, order edit (`edit.go`) e `Edit = true` (bad item `removed`, ojon-variable e `EditWeightG`); COD +10% shima pricing e na, pack handler e (8.11 v1.37).
 
 ## Code er map
 
