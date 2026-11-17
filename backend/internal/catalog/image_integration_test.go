@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"image"
 	"image/color"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -288,7 +290,44 @@ func TestImageUploadSemaphore(t *testing.T) {
 		t.Fatal("slot khali holeo atke ache")
 	}
 	<-f.h.sem
+
+	// security review M2: slot er age body pora na (memory e ekshathe max 2 ta 10 MB body)
+	f.h.sem <- struct{}{}
+	f.h.sem <- struct{}{}
+	body, ctype := form(pngBytes(t, 2, 2))
+	cr := &countReader{r: body}
+	ctx, cancel := context.WithCancel(httpx.WithStaff(context.Background(), a))
+	r := httptest.NewRequestWithContext(ctx, "POST", "/api/admin/products/"+p+"/images", cr)
+	r.Header.Set("Content-Type", ctype)
+	go func() { f.srv.ServeHTTP(httptest.NewRecorder(), r); done <- 0 }()
+	time.Sleep(300 * time.Millisecond)
+	if cr.n.Load() != 0 {
+		t.Error("slot er age body pora hoyeche")
+	}
+	cancel()
+	<-done
+	<-f.h.sem
+	<-f.h.sem
+
+	// security review M1: decode e panic holeo slot ferot ashe
+	old := reencodeImage
+	defer func() { reencodeImage = old }()
+	reencodeImage = func([]byte) ([]byte, string, int, int, error) { panic("decoder bug") }
+	func() {
+		defer func() { _ = recover() }()
+		f.upload(t, a, p, pngBytes(t, 2, 2), 500)
+	}()
+	if len(f.h.sem) != 0 {
+		t.Errorf("panic er por slot atke: %d", len(f.h.sem))
+	}
 }
+
+type countReader struct {
+	r io.Reader
+	n atomic.Int64
+}
+
+func (c *countReader) Read(b []byte) (int, error) { c.n.Add(1); return c.r.Read(b) }
 
 // TestImageUploadDeadline (14.2 test 29, 2.2): server er read/write timeout er beshi shomoy newa upload er-o
 // response ashe (route nijer deadline baray). Server timeout choto (300ms), upload 900ms dhore.
