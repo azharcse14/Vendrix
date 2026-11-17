@@ -441,7 +441,7 @@ func TestDisplayStatusIntegration(t *testing.T) {
 // TestRestockExpiredBatchIntegration (11.7 item 3): cancel e pack er batch already expire (shop er timezone e)
 // hole oi ongsho batch e ferot na, variant.stock e o na: movement cancel +qty ar expired −qty (net 0); expire
 // na hoya batch ar batch chhara ongsho age er moto ferot. Pack undo: expire ongsho batch e na, variant.stock −
-// LEAST(qty, stock), movement expired. Return (step 8) case pore.
+// LEAST(qty, stock), movement expired. Return (step 8): cancel er moto, movement return +qty ar expired −qty (net 0).
 func TestRestockExpiredBatchIntegration(t *testing.T) {
 	f := newCheckout(t)
 	fish := f.variant("fish", 10000, 5)
@@ -502,6 +502,37 @@ func TestRestockExpiredBatchIntegration(t *testing.T) {
 		{"undo movement shudhu expired", f.count(`SELECT count(*) FROM inventory_movements WHERE order_id = $1`, uoid), 1},
 		{"undo order_item_batches", f.count(`SELECT count(*) FROM order_item_batches ob JOIN order_items i ON i.id = ob.order_item_id
 			WHERE i.order_id = $1`, uoid), 0},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s: %d, chai %d", c.name, c.got, c.want)
+		}
+	}
+	// return (step 8): delivered fulfillment, restock_item_ids e item; expire batch er ongsho batch/stock e na
+	nut := f.variant("nut", 10000, 4)
+	nok := f.id(`INSERT INTO inventory_batches (shop_id, variant_id, quantity_received, quantity_remaining) VALUES ($1, $2, 10, 1)
+		RETURNING id`, f.shop, nut)
+	nexp := f.id(`INSERT INTO inventory_batches (shop_id, variant_id, quantity_received, quantity_remaining, expiry_date)
+		VALUES ($1, $2, 10, 0, (SELECT (now() AT TIME ZONE timezone)::date - 1 FROM shops WHERE id = $1)) RETURNING id`, f.shop, nut)
+	roid, rfs := f.seedOrder("cod", "unpaid", "confirmed", seedF{vendor: f.vnd, status: "delivered", items: [][2]int64{{nut, 5}}})
+	f.exec(`INSERT INTO order_item_batches (shop_id, order_item_id, batch_id, variant_id, quantity)
+		SELECT $1, i.id, b.id, $2, b.q FROM order_items i, (VALUES ($3::bigint, 2), ($4::bigint, 3)) b(id, q)
+		WHERE i.order_id = $5`, f.shop, nut, nok, nexp, roid)
+	item := f.id(`SELECT id FROM order_items WHERE order_id = $1`, roid)
+	f.admJSON(f.staffAs("owner", 0), "POST", "/api/admin/fulfillments/"+s(rfs[0])+"/transition",
+		map[string]any{"to": "returned", "note": "ferot", "restock_item_ids": []int64{item}}, http.StatusOK)
+	for _, c := range []struct {
+		name      string
+		got, want int64
+	}{
+		{"return ok batch", f.count(`SELECT quantity_remaining FROM inventory_batches WHERE id = $1`, nok), 3},
+		{"return expire batch", f.count(`SELECT quantity_remaining FROM inventory_batches WHERE id = $1`, nexp), 0},
+		{"return stock (+2)", f.count(`SELECT stock FROM product_variants WHERE id = $1`, nut), 6},
+		{"return expire batch +3", f.count(`SELECT count(*) FROM inventory_movements WHERE order_id = $1 AND batch_id = $2
+			AND reason = 'return' AND change = 3`, roid, nexp), 1},
+		{"return expire batch expired −3", f.count(`SELECT count(*) FROM inventory_movements WHERE order_id = $1 AND batch_id = $2
+			AND reason = 'expired' AND change = -3`, roid, nexp), 1},
+		{"return movement net", f.count(`SELECT sum(change) FROM inventory_movements WHERE order_id = $1`, roid), 2},
+		{"return cancel movement na", f.count(`SELECT count(*) FROM inventory_movements WHERE order_id = $1 AND reason = 'cancel'`, roid), 0},
 	} {
 		if c.got != c.want {
 			t.Errorf("%s: %d, chai %d", c.name, c.got, c.want)

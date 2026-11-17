@@ -232,3 +232,51 @@ func TestTotalChangedSMSLength(t *testing.T) {
 		}
 	}
 }
+
+// TestShippedSMSLength (8.16, 11.7 item 5): sms.shipped er default bn ≤ 134 unit, en ≤ 160 GSM-7; {number} ar {link}
+// lagbe, tracking thakle lekha te; tracking eto lomba je shima pere jay hole tracking chhara (link e order page).
+func TestShippedSMSLength(t *testing.T) {
+	const (
+		shopBn = "সবুজবাজার অর্গানিক"
+		shopEn = "Sobujbazar Organic"
+		number = "SBORG-1000001"
+		link   = "https://sobujbazar-organic.com/order/ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		track  = "DL121224VS8TN1"
+	)
+	for _, tr := range []string{"", track} {
+		bn, en := ShippedText("bn", nil, shopBn, number, link, tr), ShippedText("en", nil, shopEn, number, link, tr)
+		if n := len(utf16.Encode([]rune(bn))); n > 134 || !strings.Contains(bn, number) || !strings.Contains(bn, link) || !strings.Contains(bn, tr) {
+			t.Errorf("bn %d unit (≤ 134 chai): %q", n, bn)
+		}
+		for _, r := range en {
+			if r > 0x7e || r < 0x20 {
+				t.Errorf("en e GSM-7 er baire %q: %q", r, en)
+			}
+		}
+		if len(en) > 160 || !strings.Contains(en, number) || !strings.Contains(en, link) || !strings.Contains(en, tr) ||
+			strings.Contains(bn+en, "{") || en == bn {
+			t.Errorf("en %d (≤ 160 chai): %q", len(en), en)
+		}
+	}
+	if ShippedText("bn", nil, shopBn, number, link, "") == ShippedText("bn", nil, shopBn, number, link, track) {
+		t.Error("tracking lekha te nai")
+	}
+	long := strings.Repeat("X", 64)
+	if bn := ShippedText("bn", nil, shopBn, number, link, long); strings.Contains(bn, long) || len(utf16.Encode([]rune(bn))) > 134 {
+		t.Errorf("lomba tracking: %q", bn)
+	}
+	def := ShippedText("en", nil, "S", "N-1", "L", "T1")
+	for _, c := range []struct {
+		override map[string]string
+		tracking string
+		want     string
+	}{
+		{map[string]string{"en": "#{number}{tracking} {link}"}, "T1", "#N-1 T1 L"},
+		{map[string]string{"en": "#{number} {link}"}, "T1", def},    // tracking ache, lekha te nai
+		{map[string]string{"en": "#{number}{tracking}"}, "T1", def}, // link nai
+	} {
+		if got := ShippedText("en", c.override, "S", "N-1", "L", c.tracking); got != c.want {
+			t.Errorf("%v: %q, chai %q", c.override, got, c.want)
+		}
+	}
+}
