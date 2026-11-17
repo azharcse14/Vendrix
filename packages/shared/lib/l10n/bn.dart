@@ -44,6 +44,7 @@ const bn = {
   'error.coupon_exists': 'এই কোডের কুপন আগেই আছে',
   'error.zone_exists': 'এই এলাকা আগেই আছে',
   'error.staff_exists': 'এই ইমেইলের স্টাফ আগেই আছে',
+  'error.weight_over_limit': 'ওজন সীমার বেশি, গ্রাহকের সম্মতির নোট দিন',
   'theme.low_contrast': 'এই রঙে লেখা পড়তে কঠিন হবে',
   'nav.main': 'প্রধান মেনু',
   'nav.bottom': 'নিচের মেনু',

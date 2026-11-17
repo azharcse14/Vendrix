@@ -45,6 +45,7 @@ var messages = map[string][2]string{
 	"otp_required":             {"মোবাইলে পাঠানো কোড দিন", "Enter the code sent to your phone"},
 	"invalid_transition":       {"এই অর্ডারে এখন এটা করা যাবে না", "This cannot be done for this order now"},
 	"payment_required":         {"আগে পেমেন্ট সম্পন্ন করুন", "Payment must be completed first"},
+	"weight_over_limit":        {"ওজন সীমার বেশি, গ্রাহকের সম্মতির নোট দিন", "Weight is over the limit, add the customer's approval note"},
 	"vendor_unavailable":       {"বিক্রেতা এখন অর্ডার নিচ্ছেন না", "This seller is not taking orders now"},
 	"rate_limited":             {"অনেক বেশি অনুরোধ, একটু পরে চেষ্টা করুন", "Too many requests, try again later"},
 	"db_unavailable":           {"সার্ভারে সমস্যা, একটু পরে চেষ্টা করুন", "Service unavailable, try again later"},

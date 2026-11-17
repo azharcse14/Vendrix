@@ -44,6 +44,8 @@ const en = {
   'error.coupon_exists': 'A coupon with this code already exists',
   'error.zone_exists': 'This delivery area already exists',
   'error.staff_exists': 'A staff member with this email already exists',
+  'error.weight_over_limit':
+      "Weight is over the limit, add the customer's approval note",
   'theme.low_contrast': 'Text in this colour will be hard to read',
   'nav.main': 'Main menu',
   'nav.bottom': 'Bottom menu',
