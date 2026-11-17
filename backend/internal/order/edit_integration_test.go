@@ -260,9 +260,10 @@ func TestEditThenPackIntegration(t *testing.T) {
 	f.admJSON(st, "POST", packPath(fids[0]), packBody("", it[0], 1900), http.StatusOK)
 	for _, c := range []struct{ name, got, want string }{
 		{"rice", f.itemRow(it[1]), "2/removed/-/0/0"},
-		{"fish", f.itemMoney(it[0]), "152000/10000/1900"},
-		{"order", f.oMoney(oid), "152000/10000/6000/148000"},
-		{"fulfillment", f.fMoney(fids[0]), "152000/10000/6000/148000"},
+		// fixed coupon edit e eligible er onupate (10000 × 160000/260000 = 6153), pack e ekoi thake (8.5)
+		{"fish", f.itemMoney(it[0]), "152000/6153/1900"},
+		{"order", f.oMoney(oid), "152000/6153/6000/151847"},
+		{"fulfillment", f.fMoney(fids[0]), "152000/6153/6000/151847"},
 		{"batch", s(f.rem(fb)) + "/" + s(f.rem(rbt)), "8/10"},
 	} {
 		if c.got != c.want {

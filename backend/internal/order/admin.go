@@ -29,6 +29,7 @@ func (h *Handlers) AdminRoutes(mux *http.ServeMux, staff httpx.Middleware) {
 	mux.Handle("GET /api/admin/orders/{id}", admin(h.AdminOrder, all))
 	mux.Handle("POST /api/admin/orders/{id}/transition", admin(h.AdminTransitionOrder, shop))
 	mux.Handle("POST /api/admin/orders/{id}/notes", admin(h.AdminNote, shop))
+	mux.Handle("PATCH /api/admin/orders/{id}/items", admin(h.AdminEdit, shop))
 	mux.Handle("GET /api/admin/fulfillments", admin(h.AdminFulfillments, all))
 	mux.Handle("POST /api/admin/fulfillments/{id}/transition", admin(h.AdminTransitionFulfillment, all))
 	mux.Handle("POST /api/admin/fulfillments/{id}/pack", admin(h.AdminPack, all))

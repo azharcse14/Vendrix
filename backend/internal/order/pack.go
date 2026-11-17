@@ -161,7 +161,7 @@ func pack(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64, w
 		return FieldError("items")
 	}
 	if n > 0 {
-		changed, err := reprice(ctx, tx, shopID, o, fid, weights, customerOK)
+		changed, _, err := reprice(ctx, tx, shopID, o, fid, weights, nil, customerOK)
 		if err != nil {
 			return err
 		}
@@ -198,19 +198,21 @@ func pack(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64, w
 	return nil
 }
 
-// reprice (8.11 item 3, 8.5): order er shob item LineFromItem diye Original, pack er ojon diye notun line,
-// pricing.Reprice (Edit = false; onno vendor freeze); COD e +10% er beshi (customer_ok_note chhara)
-// WeightOverError, kichu likha na. Tarpor item (packed_weight_g, taka, commission), fulfillment ar order er taka;
-// prepaid e refund reprice. Ojon 0 = packed_weight_g NULL (undo: ordered ojon e ferot). COD e total bodlale true
-// (SMS caller er: undo e na).
-func reprice(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64, weights map[int64]int, customerOK bool) (bool, error) {
+// reprice (8.11 item 3, 4; 8.5): order er shob item LineFromItem diye Original, pack er ojon (weights) ba edit er
+// notun qty (qty; 0 = removed, ojon-variable e EditWeightG) diye notun line, pricing.Reprice (Edit = qty != nil; onno
+// vendor freeze); COD e +10% er beshi (customer_ok_note chhara) WeightOverError, kichu likha na. Tarpor item, fulfillment
+// ar order er taka; prepaid e refund reprice (fid 0 = NULL, edit). Ojon 0 = packed_weight_g NULL (undo). COD e total
+// bodlale true (SMS caller er: undo/edit e na); refund ferot (edit er role check).
+func reprice(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64, weights, qty map[int64]int, customerOK bool) (bool, int64, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT id, vendor_id, unit_price, quantity, variable_weight, COALESCE(ordered_weight_g, 0),
 		COALESCE(packed_weight_g, 0), status = 'removed', line_total, discount_share, commission_bps
 		FROM order_items WHERE shop_id = $1 AND order_id = $2 ORDER BY id`, shopID, o.id)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 	var ids []int64
+	var items []pricing.Item
+	var touched []bool
 	var bps []int
 	var orig pricing.Original
 	var lines []pricing.Line
@@ -223,7 +225,7 @@ func reprice(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64
 		if err := rows.Scan(&id, &it.VendorID, &it.UnitPrice, &it.Quantity, &it.VariableWeight, &it.OrderedWeightG,
 			&it.PackedWeightG, &it.Removed, &it.LineTotal, &it.DiscountShare, &b); err != nil {
 			rows.Close()
-			return false, err
+			return false, 0, err
 		}
 		l, lr := pricing.LineFromItem(it)
 		orig.Lines, orig.Result.Lines = append(orig.Lines, l), append(orig.Result.Lines, lr)
@@ -234,32 +236,46 @@ func reprice(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64
 			it.PackedWeightG = g
 			l, _ = pricing.LineFromItem(it)
 		}
-		ids, bps, lines = append(ids, id), append(bps, b), append(lines, l)
+		q, edit := qty[id]
+		if edit {
+			if q == 0 {
+				it.Removed = true // DB te ager quantity thake (CHECK > 0)
+			} else {
+				if it.VariableWeight {
+					it.OrderedWeightG = pricing.EditWeightG(it.OrderedWeightG, it.Quantity, q)
+				}
+				it.Quantity = q
+			}
+			l, _ = pricing.LineFromItem(it)
+		}
+		_, packed := weights[id]
+		ids, items, touched = append(ids, id), append(items, it), append(touched, packed || edit)
+		bps, lines = append(bps, b), append(lines, l)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return false, err
+		return false, 0, err
 	}
 	if len(over) > 0 && !customerOK {
-		return false, &WeightOverError{over}
+		return false, 0, &WeightOverError{over}
 	}
 
 	rows, err = tx.QueryContext(ctx, `SELECT vendor_id, subtotal, discount, delivery_charge, total FROM order_fulfillments
 		WHERE shop_id = $1 AND order_id = $2 ORDER BY id`, shopID, o.id)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 	for rows.Next() {
 		var g pricing.Group
 		if err := rows.Scan(&g.VendorID, &g.Subtotal, &g.Discount, &g.DeliveryCharge, &g.Total); err != nil {
 			rows.Close()
-			return false, err
+			return false, 0, err
 		}
 		orig.Result.Groups = append(orig.Result.Groups, g)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return false, err
+		return false, 0, err
 	}
 	var kind, funded sql.NullString
 	var value, maxD, cVendor sql.NullInt64
@@ -267,44 +283,45 @@ func reprice(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64
 	if err := tx.QueryRowContext(ctx, `SELECT subtotal, discount, delivery_charge, total, coupon_kind, coupon_value,
 		coupon_max_discount, coupon_vendor_id, coupon_funded_by FROM orders WHERE shop_id = $1 AND id = $2`, shopID, o.id).Scan(
 		&t.Subtotal, &t.Discount, &t.DeliveryCharge, &t.Total, &kind, &value, &maxD, &cVendor, &funded); err != nil {
-		return false, err
+		return false, 0, err
 	}
 	if kind.Valid { // snapshot (8.5 v1.4); min_order abar dekha hoy na
 		orig.Coupon = &pricing.Coupon{Kind: kind.String, Value: value.Int64, MaxDiscount: maxD.Int64, VendorID: cVendor.Int64}
 	}
-	orig.Prepaid = !cod
+	orig.Prepaid, orig.Edit = !cod, qty != nil
 	r, refund, err := pricing.Reprice(orig, lines)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	for i, id := range ids {
-		_, packed := weights[id]
-		if !packed && r.Lines[i] == orig.Result.Lines[i] {
+		if !touched[i] && r.Lines[i] == orig.Result.Lines[i] {
 			continue
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE order_items SET packed_weight_g = CASE WHEN $7 THEN NULLIF($3::int, 0) ELSE packed_weight_g END,
-			line_total = $4, discount_share = $5, commission = $6 WHERE shop_id = $1 AND id = $2`, shopID, id, weights[id],
-			r.Lines[i].LineTotal, r.Lines[i].DiscountShare, pricing.Commission(r.Lines[i], funded.String == "vendor", bps[i]), packed); err != nil {
-			return false, err
+		it := items[i]
+		if _, err := tx.ExecContext(ctx, `UPDATE order_items SET packed_weight_g = NULLIF($3::int, 0), line_total = $4, discount_share = $5,
+			commission = $6, quantity = $7, ordered_weight_g = NULLIF($8::int, 0), status = CASE WHEN $9 THEN 'removed' ELSE status END
+			WHERE shop_id = $1 AND id = $2`, shopID, id, it.PackedWeightG, r.Lines[i].LineTotal, r.Lines[i].DiscountShare,
+			pricing.Commission(r.Lines[i], funded.String == "vendor", bps[i]), it.Quantity, it.OrderedWeightG, it.Removed); err != nil {
+			return false, 0, err
 		}
 	}
 	for _, g := range r.Groups {
 		if _, err := tx.ExecContext(ctx, `UPDATE order_fulfillments SET subtotal = $4, discount = $5, delivery_charge = $6, total = $7
 			WHERE shop_id = $1 AND order_id = $2 AND vendor_id = $3`, shopID, o.id, g.VendorID, g.Subtotal, g.Discount, g.DeliveryCharge, g.Total); err != nil {
-			return false, err
+			return false, 0, err
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE orders SET subtotal = $3, discount = $4, delivery_charge = $5, total = $6
 		WHERE shop_id = $1 AND id = $2`, shopID, o.id, r.Subtotal, r.Discount, r.DeliveryCharge, r.Total); err != nil {
-		return false, err
+		return false, 0, err
 	}
 	if refund > 0 {
 		if err := insertRefund(ctx, tx, shopID, o, fid, refund, "reprice", "reprice"); err != nil {
-			return false, err
+			return false, 0, err
 		}
 	}
-	return cod && r.Total != t.Total, nil
+	return cod && r.Total != t.Total, refund, nil
 }
 
 // unpack (8.8 "packed → open", 11.7 item 3): pack er ulto, order ar fulfillment lock er por. Ojon-variable item
@@ -331,7 +348,7 @@ func unpack(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid int64)
 		return err
 	}
 	if len(weights) > 0 {
-		if _, err := reprice(ctx, tx, shopID, o, fid, weights, false); err != nil {
+		if _, _, err := reprice(ctx, tx, shopID, o, fid, weights, nil, false); err != nil {
 			return err
 		}
 	}

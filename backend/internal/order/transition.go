@@ -314,11 +314,11 @@ func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error 
 	return nil
 }
 
-// insertRefund (8.8, 8.11): cancel e refunds_cancel_once e ekbar-i; mot refund (failed bad) paid er beshi na. Status
+// insertRefund (8.8, 8.11): fid 0 = NULL (edit, puro order). cancel e refunds_cancel_once e ekbar-i; mot refund (failed bad) paid er beshi na. Status
 // pending: gateway er refund M10 e.
 func insertRefund(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid, amount int64, kind, reason string) error {
 	res, err := tx.ExecContext(ctx, `INSERT INTO refunds (shop_id, order_id, fulfillment_id, payment_id, amount, method, kind, reason)
-		SELECT $1, $2, $3, (SELECT max(id) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded'),
+		SELECT $1, $2, NULLIF($3::bigint, 0), (SELECT max(id) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded'),
 			$4::bigint, $5, $7, $6
 		WHERE (SELECT COALESCE(sum(amount), 0) FROM refunds WHERE shop_id = $1 AND order_id = $2 AND status <> 'failed') + $4::bigint
 			<= (SELECT COALESCE(sum(amount), 0) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded')`,
