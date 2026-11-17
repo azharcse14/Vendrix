@@ -99,3 +99,11 @@ func TestOpenWithoutDriver(t *testing.T) {
 		t.Errorf("err = %v, want ErrNoDriver", err)
 	}
 }
+
+// TestConnConfigUTC (7.1): DB chhara guard; connection er TimeZone UTC, URL e onno timezone dileo.
+func TestConnConfigUTC(t *testing.T) {
+	c, err := connConfig("postgres://x@127.0.0.1:1/db?timezone=Asia/Dhaka")
+	if err != nil || c.RuntimeParams["timezone"] != "UTC" {
+		t.Fatalf("%v %v", c, err)
+	}
+}
