@@ -6,6 +6,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export GOTOOLCHAIN="${GOTOOLCHAIN:-go1.27.4}"
+# Pin kora Flutter 3.47.9 (2.3, CI er sathe ek) fvm e thakle age: Homebrew er notun Dart e website resolve hoy na.
+pinned="$HOME/fvm/versions/3.47.9/bin"
+if [ -z "${CI:-}" ] && [ -x "$pinned/dart" ]; then export PATH="$pinned:$PATH"; fi
 parts=",${QUICK_PARTS:-go,dart,flutter},"
 
 if [[ $parts == *,go,* ]] && [ -d backend ]; then
