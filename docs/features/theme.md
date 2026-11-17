@@ -26,6 +26,7 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `packages/shared/lib/theme/tokens.dart` → `deriveTokens`, `mixColor`, `contrastRatio`, `contrastWarnings`, `ContrastWarning`, `cssVariables` | Token, contrast, CSS variable |
+| `admin/lib/core/theme/theme_cubit.dart` → `buildTheme`, `ThemeCubit` | Admin Flutter `ThemeData` (organic preset, Noto Sans + Noto Sans Bengali) |
 
 ## Niyom ar tar test
 

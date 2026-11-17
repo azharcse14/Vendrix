@@ -4,7 +4,7 @@ Design: 8.13, 6.4, 8.6 step 11, 8.19 item 5, 7.7, 11.7 item 13 v · Milestone: M
 
 ## Ki kore
 
-Checkout e coupon code diye discount: code thik, chalu, shomoy er bhitore, mot `usage_limit` ar ek phone er `per_phone_limit` er bhitore hole coupon er shorto ferot dey (discount er hishab `pricing` e). Quote e ekoi check read-only. Order cancel e coupon ferot (redemption muche, `used_count - 1`). Owner/admin admin theke coupon toiri ar bodlay (`/api/admin/coupons`).
+Checkout e coupon code diye discount: code thik, chalu, shomoy er bhitore, mot `usage_limit` ar ek phone er `per_phone_limit` er bhitore hole coupon er shorto ferot dey (discount er hishab `pricing` e). Quote e ekoi check read-only. Order cancel e coupon ferot (redemption muche, `used_count - 1`). Owner/admin admin theke coupon toiri ar bodlay (`/api/admin/coupons`). Admin screen (`/coupons`, form, lock, active): [admin-app.md](admin-app.md).
 
 ## Kivabe kaj kore
 

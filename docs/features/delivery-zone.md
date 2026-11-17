@@ -4,7 +4,7 @@ Design: 7.2, 7.7, 8.6 step 5, 8.19 item 2, 11.7 item 13 vi · Milestone: M6, M7a
 
 ## Ki kore
 
-Checkout form `GET /api/delivery-zones` theke district ar area er list pay. Checkout (quote ar order, [checkout.md](checkout.md)) customer er district/area diye zone khuje charge, `min_order`, free delivery ar deadline er `same_city` nay (din `DeadlineDays`: same city 5, na hole 10, 8.15; order ar zone list ekoi function); zone na pele `409 area_not_served`. Owner/admin admin theke zone toiri ar bodlay (`/api/admin/delivery-zones`).
+Checkout form `GET /api/delivery-zones` theke district ar area er list pay. Checkout (quote ar order, [checkout.md](checkout.md)) customer er district/area diye zone khuje charge, `min_order`, free delivery ar deadline er `same_city` nay (din `DeadlineDays`: same city 5, na hole 10, 8.15; order ar zone list ekoi function); zone na pele `409 area_not_served`. Owner/admin admin theke zone toiri ar bodlay (`/api/admin/delivery-zones`). Admin screen (`/zones`): [admin-app.md](admin-app.md).
 
 ## Kivabe kaj kore
 

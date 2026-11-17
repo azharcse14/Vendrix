@@ -4,7 +4,7 @@ Design: 8.5, 8.8, 8.11, 8.12, 11.7 item 3–7, 13 ii–iv · Milestone: M7a · C
 
 ## Ki kore
 
-Confirmed order er protiti fulfillment (ek vendor er parcel) packing er staff pick list dekhe tole, ojon diye pack kore (FIFO batch, ojon-variable er notun dam), dorkar hole pack undo kore, order e item kom/bad kore (edit), shipment banay, deliver (COD e `paid`) ar ferot (return + refund) kore. Status er onumoti, `lockOrder`, cancel ar `restock` [order-status.md](order-status.md) e; ekhane shudhu fulfillment er kaj er kram.
+Confirmed order er protiti fulfillment (ek vendor er parcel) packing er staff pick list dekhe tole, ojon diye pack kore (FIFO batch, ojon-variable er notun dam), dorkar hole pack undo kore, order e item kom/bad kore (edit), shipment banay, deliver (COD e `paid`) ar ferot (return + refund) kore. Status er onumoti, `lockOrder`, cancel ar `restock` [order-status.md](order-status.md) e; ekhane shudhu fulfillment er kaj er kram. Admin screen (packing, pack, undo, shipment, order edit/return dialog): [admin-app.md](admin-app.md).
 
 ## Kivabe kaj kore
 

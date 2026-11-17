@@ -4,7 +4,7 @@ Design: 2.2 (upload, R2 SigV4), 7.7 (Product), 11.7 item 9, 12.2 item 8, 13.5, 1
 
 ## Ki kore
 
-Admin (owner, admin, vendor_owner nijer product e) product e JPEG/PNG chobi tole (max 10), kram bodlay ar muche. Server chobi decode kore abar encode kore (EXIF/GPS jay), object store e rakhe: staging/production e Cloudflare R2, local e `backend/.data/uploads` (Caddy `img.localhost` serve kore, M7a step 14). Website `IMAGE_BASE_URL` + `storage_key` diye dekhay.
+Admin (owner, admin, vendor_owner nijer product e) product e JPEG/PNG chobi tole (max 10), kram bodlay ar muche. Server chobi decode kore abar encode kore (EXIF/GPS jay), object store e rakhe: staging/production e Cloudflare R2, local e `backend/.data/uploads` (Caddy `img.localhost` serve kore, M7a step 14). Website `IMAGE_BASE_URL` + `storage_key` diye dekhay. Admin screen (product form e chobi upload/kram/delete): [admin-app.md](admin-app.md).
 
 ## Kivabe kaj kore
 

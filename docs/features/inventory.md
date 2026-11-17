@@ -4,7 +4,7 @@ Design: 8.12, 8.17, 11.7 item 1, 2, 3, 6.4, 7.7 (Inventory) · Milestone: M7a ·
 
 ## Ki kore
 
-Admin (owner, admin, staff, vendor_owner, vendor_staff) `/inventory` e variant khoje (naam/SKU, low stock), notun maal ele batch dey (stock barano shudhu eta), nosto ba bhul gona hole stock komay (wastage/adjust, note shoho), ar movement er itihash dekhe. Protidin `inventory.expire` job expire hoya batch er baki stock theke bad dey. Vendor role shudhu nijer vendor er variant. `staff` ar `vendor_staff` kena dam (`cost_price`) dekhe na.
+Admin (owner, admin, staff, vendor_owner, vendor_staff) `/inventory` e variant khoje (naam/SKU, low stock), notun maal ele batch dey (stock barano shudhu eta), nosto ba bhul gona hole stock komay (wastage/adjust, note shoho), ar movement er itihash dekhe. Protidin `inventory.expire` job expire hoya batch er baki stock theke bad dey. Vendor role shudhu nijer vendor er variant. `staff` ar `vendor_staff` kena dam (`cost_price`) dekhe na. Admin screen (`/inventory`, batch/komano dialog): [admin-app.md](admin-app.md).
 
 ## Kivabe kaj kore
 

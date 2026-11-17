@@ -4,7 +4,7 @@ Design: 7.7, 11.2, 11.7 item 12, 13 viii, 8.19 item 6, 12.2 · Milestone: M7a ·
 
 ## Ki kore
 
-Owner/admin shop er customer (account) er list (order count, mot kena) ar detail (profile, shesh order) dekhe, ar phone block/unblock kore. Block kora phone e COD checkout ar OTP send `403 phone_blocked` (M6 er niyom). Dashboard e shob role ajker order, bikri ar kaj er count dekhe (vendor nijer). Zone ar coupon admin [delivery-zone.md](delivery-zone.md) ar [coupon.md](coupon.md) e; staff [auth.md](auth.md), audit list [audit.md](audit.md) e.
+Owner/admin shop er customer (account) er list (order count, mot kena) ar detail (profile, shesh order) dekhe, ar phone block/unblock kore. Block kora phone e COD checkout ar OTP send `403 phone_blocked` (M6 er niyom). Dashboard e shob role ajker order, bikri ar kaj er count dekhe (vendor nijer). Zone ar coupon admin [delivery-zone.md](delivery-zone.md) ar [coupon.md](coupon.md) e; staff [auth.md](auth.md), audit list [audit.md](audit.md) e. Admin screen (dashboard, `/customers`, block list): [admin-app.md](admin-app.md).
 
 ## Kivabe kaj kore
 

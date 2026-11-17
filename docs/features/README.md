@@ -24,7 +24,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Background job ar SMS | [jobs.md](jobs.md) | 6.4, 8.16, 8.17 | M0, M4, M5, M6 | chalu (OTP SMS, cleanup, `cart.cleanup`, order SMS, `alert.new_order`, auto-cancel; SMS provider ar alert email M12 e) |
 | Dam er hishab | [pricing.md](pricing.md) | 8.5 | checkout (M6), packing (M7) e use | chalu (code-i spec) |
 | Order ar fulfillment er status | [order-status.md](order-status.md) | 3.7, 8.8 | M6, M7 e use | chalu (code-i spec; DB e cancel ar confirm, admin order list/detail/transition/note M7a; pack/shipment er kram [fulfillment.md](fulfillment.md)) |
-| Fulfillment: pick list, pack (FIFO, ojon, +10%), undo, order edit, shipment, deliver, return + refund | [fulfillment.md](fulfillment.md) | 8.5, 8.8, 8.11, 8.12, 11.7 | M7a | cholche (backend shob; admin UI M7b e) |
+| Fulfillment: pick list, pack (FIFO, ojon, +10%), undo, order edit, shipment, deliver, return + refund | [fulfillment.md](fulfillment.md) | 8.5, 8.8, 8.11, 8.12, 11.7 | M7a, M7b | cholche (backend shob; admin screen [admin-app.md](admin-app.md)) |
 | Checkout: quote, order, risk/OTP, COD confirm, order page, tracking | [checkout.md](checkout.md) | 7.5, 8.6, 8.7, 8.10, 8.19 | M6 | cholche (quote, order create, checkout OTP, COD confirm, job, order view/track, `/api/me/orders`; online payment M10, admin [fulfillment.md](fulfillment.md)) |
 | Login: OTP, customer session, staff login, TOTP, recovery | [auth.md](auth.md) | 8.2, 8.3 | M4, M6, M7a | chalu (OTP send/verify, checkout OTP, customer session, guest order jog, staff login + TOTP/recovery, setup, admin session, `reset-2fa`, staff management `/staff`) |
 | Phone number | [phone.md](phone.md) | 8.1 | M4, M6 e use | chalu (code-i spec) |
@@ -35,7 +35,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Chobi upload ar storage (local, R2 SigV4) | [media.md](media.md) | 2.2, 7.7, 11.7, 12.2 | M7a | cholche (product chobi upload/order/delete; `POST /uploads` M8 e) |
 | Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19, 11.7 | M6, M7a | cholche (use, peek, release; quote, checkout ar cancel e; admin list/create/update) |
 | Admin: customer, phone block ar dashboard | [admin-api.md](admin-api.md) | 7.7, 11.2, 11.7 | M7a | cholche (customer list/detail, block/unblock, dashboard; staff [auth.md](auth.md), audit list [audit.md](audit.md)) |
-| Admin app (Flutter web): login, TOTP, setup, router guard, role, theme, bhasha, build | [admin-app.md](admin-app.md) | 11.1–11.3, 11.7, 9.7, 9.8, 13.3 | M7b | cholche (login, setup, dashboard shagotom; screen M7b er porer step e) |
+| Admin app (Flutter web): login, TOTP, setup, router guard, role, theme, bhasha, build | [admin-app.md](admin-app.md) | 11.1–11.3, 11.7, 9.7, 9.8, 13.3 | M7b | cholche (login, setup, dashboard, order, packing, shipment, product, category, inventory, staff, coupon, zone, customer, audit; Safari proman baki) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
 ## Code map (backend)
@@ -90,7 +90,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 |---|---|---|
 | `admin/lib` (`main.dart`, `di.dart`, `app.dart`, `router.dart`) | Entry, DI, route guard | [admin-app.md](admin-app.md) |
 | `admin/lib/core` | `AuthBloc`, `canOpen`, theme, l10n (`admin.*`) | [admin-app.md](admin-app.md) |
-| `admin/lib/features` | Page (login, setup, dashboard) | [admin-app.md](admin-app.md) |
+| `admin/lib/core/auth`, `core/widgets` | `SessionClient` (`401` → login), `AppShell` menu, `common.dart` (confirm, taka/din field) | [admin-app.md](admin-app.md) |
+| `admin/lib/features/<screen>/{bloc,pages,widgets}` | Screen: auth, dashboard, orders, packing, shipments, products, categories, inventory, staff, coupons, zones, customers, audit | [admin-app.md](admin-app.md) |
 
 ## Shobdo
 

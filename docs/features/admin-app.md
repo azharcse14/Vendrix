@@ -81,14 +81,14 @@ Ei kram e poro:
 
 | Niyom (design section) | Code e kothay | Test |
 |---|---|---|
-| Role onujayi route: 11.2 er table (staff e product/category/coupon na, credential shudhu owner), ochena route na | `canOpen` | `admin/test/core/permissions_test.dart` → protiti route e `canOpen /coupons (11.2)` er moto test, `ochena role kichui khulte pare na` |
+| Role onujayi route: 11.2 er table (staff e product/category/coupon na, credential shudhu owner), ochena route na | `canOpen` | `admin/test/core/permissions_test.dart` → `canOpen ${e.key} (11.2)` (protiti route er row), `ochena role kichui khulte pare na` |
 | Redirect: setup, TOTP, login, role (11.3) | `authRedirect` | `admin/test/router_test.dart` → `group('authRedirect (11.3)')` |
 | AuthBloc bodlale router nijei redirect (`refreshListenable`) | `GoRouterRefreshStream` | `admin/test/router_test.dart` → `AuthBloc bodlale router nijei redirect kore` |
 | Login → TOTP (bhul code e temp_token thake) → dashboard; recovery code; bhul password; temp_token expire (8.3) | `AuthBloc` | `admin/test/features/auth/auth_bloc_test.dart` |
-| Setup: password (bhul `fields.old`) → TOTP (bhul code e ekoi secret) → recovery code → dashboard; TOTP live + `must_change_password`; reset er por shoja TOTP (8.3 step 4) | `AuthBloc._setup` | `auth_bloc_test.dart` → `prothom login: ...`, `TOTP live + must_change_password ...`, `reset er por ...` |
-| Shuru te session nai ba network bhul → login (app atke na) | `AuthBloc` `AuthStarted` | `auth_bloc_test.dart` → `shuru: ...` |
-| Logout API fail holeo local logout | `LogoutRequested` | `auth_bloc_test.dart` → `logout: ...` |
-| temp_token, secret, recovery code state er `toString` e na (log) | `TotpRequired`, `SetupRequired` | `auth_bloc_test.dart` → `prothom login: ...` |
+| Setup: password (bhul `fields.old`) → TOTP (bhul code e ekoi secret) → recovery code → dashboard; TOTP live + `must_change_password`; reset er por shoja TOTP (8.3 step 4) | `AuthBloc._setup` | `auth_bloc_test.dart` → `prothom login: setup_pending → password → TOTP setup/enable → recovery code → dashboard`, `TOTP live + must_change_password: password er por shoja dashboard`, `reset er por (password bodol lage na): shoja TOTP setup` |
+| Shuru te session nai ba network bhul → login (app atke na) | `AuthBloc` `AuthStarted` | `auth_bloc_test.dart` → `shuru: session nai → Unauthenticated (error chhara)`, `shuru: network bhul o Unauthenticated (app atke na)` |
+| Logout API fail holeo local logout | `LogoutRequested` | `auth_bloc_test.dart` → `logout: API fail holeo Unauthenticated` |
+| temp_token, secret, recovery code state er `toString` e na (log) | `TotpRequired`, `SetupRequired` | `auth_bloc_test.dart` → `prothom login: setup_pending → password → TOTP setup/enable → recovery code → dashboard` (recovery code; temp_token/secret er `toString` code e) |
 | Screen er `401` → login (`error.session_expired`); login er age 401 e kichu na (11.3) | `SessionClient`, `SessionExpired` | `admin/test/core/session_test.dart` |
 | Menu role onujayi (`canOpen`; `staff` e product/category/coupon/zone/customer/staff/audit nai, inventory ache), 360px drawer, 1280px rail (lomba hole scroll); menu er route router e ache | `AppShell`, `menuRoutes` | `session_test.dart` → `group('menu (11.2, canOpen)')` |
 | Dashboard count, bikri taka, 360/1280px (11.7 13 viii) | `DashboardCubit`, `DashboardPage` | `admin/test/features/dashboard/dashboard_test.dart` |
