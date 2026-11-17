@@ -42,7 +42,7 @@ func (f *checkoutFx) shippedJobs(oid, sid int64) int64 {
 // packed → shipped (shipped_at, history, display_status, audit shipment.create), COD e cod_amount = fulfillment total,
 // prepaid e 0; sms.shipped tx e (payload {order_id, shipment_id}), lekha te tracking ar order link. Ek fulfillment e
 // ek active shipment (abar POST 409); shipment returned tarpor notun shipment (fulfillment shipped e thake, notun
-// history na, notun SMS); duplicate tracking 400 taken; PATCH tracking_code; bondho shipment PATCH 409; open
+// history na, notun SMS); GET /fulfillments row e active shipment (v1.50); duplicate tracking 400 taken; PATCH tracking_code; bondho shipment PATCH 409; open
 // fulfillment 409; /transition shipped ar delivered 409; body validation 400; onno vendor 404, nijer vendor 201.
 func TestShipmentIntegration(t *testing.T) {
 	f := newCheckout(t)
@@ -90,6 +90,22 @@ func TestShipmentIntegration(t *testing.T) {
 		t.Errorf("SMS %q, chai %q", got, want)
 	}
 
+	// GET /fulfillments row e active shipment (v1.50)
+	activeShipment := func() any {
+		fl := f.admJSON(st, "GET", "/api/admin/fulfillments?status=shipped", nil, http.StatusOK)
+		for _, it := range fl["items"].([]any) {
+			if row := it.(map[string]any); row["id"] == num(fid) {
+				return row["shipment"]
+			}
+		}
+		t.Fatalf("fulfillment %d list e nai: %v", fid, fl)
+		return nil
+	}
+	if sh, _ := activeShipment().(map[string]any); sh == nil || sh["id"] != num(sid) || sh["carrier"] != "steadfast" ||
+		sh["tracking_code"] != "TR1" || sh["status"] != "booked" || sh["cod_amount"] != num(20000) {
+		t.Errorf("list e shipment %v", sh)
+	}
+
 	// ek active shipment
 	wantErr(t, "duita active", f.adm(st, "POST", shipPath(fid), map[string]any{"carrier": "own_rider"}), http.StatusConflict, "invalid_transition")
 	// tracking bodol
@@ -101,6 +117,9 @@ func TestShipmentIntegration(t *testing.T) {
 	out = f.admJSON(st, "PATCH", shipmentPath(sid), map[string]any{"status": "returned"}, http.StatusOK)
 	if out["status"] != "returned" || f.fStatuses(oid) != "shipped" {
 		t.Errorf("shipment returned: %v, fulfillment %s", out, f.fStatuses(oid))
+	}
+	if sh := activeShipment(); sh != nil {
+		t.Errorf("returned er por list e shipment %v, chai null", sh)
 	}
 	wantErr(t, "bondho shipment", f.adm(st, "PATCH", shipmentPath(sid), map[string]any{"status": "cancelled"}), http.StatusConflict, "invalid_transition")
 	// abar pathano: duplicate tracking 400, notun tracking 201

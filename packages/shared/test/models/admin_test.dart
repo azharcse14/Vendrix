@@ -182,6 +182,36 @@ void main() {
         'placed_at': '2026-11-16T04:30:00Z',
       });
       expect([f.orderId, f.orderNumber, f.status], [7, 'SB-100001', 'packed']);
+      expect(f.shipment, isNull);
+      // v1.50: row e active shipment (display_status chhara)
+      final shipped = FulfillmentRow.fromJson({
+        'id': 5,
+        'order_id': 7,
+        'order_number': 'SB-100001',
+        'vendor_id': 1,
+        'seq': 1,
+        'status': 'shipped',
+        'total': 96000,
+        'recipient_name': 'R',
+        'district': 'D',
+        'area': 'A',
+        'placed_at': '2026-11-16T04:30:00Z',
+        'shipment': {
+          'id': 9,
+          'carrier': 'pathao',
+          'tracking_code': null,
+          'status': 'booked',
+          'cod_amount': 96000,
+        },
+      });
+      expect(
+        [
+          shipped.shipment?.id,
+          shipped.shipment?.carrier,
+          shipped.shipment?.displayStatus,
+        ],
+        [9, 'pathao', null],
+      );
       final s = Shipment.fromJson({
         'id': 9,
         'fulfillment_id': 5,
