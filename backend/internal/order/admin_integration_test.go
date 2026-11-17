@@ -364,6 +364,22 @@ func TestAdminVendorIsolationIntegration(t *testing.T) {
 		t.Errorf("vendor fulfillments: %v", fl)
 	}
 
+	// pick list ar print data (11.7 item 4, 8): shudhu nijer fulfillment; Y er order er slip 404
+	f.exec(`UPDATE orders SET confirmed_at = now() WHERE id IN ($1, $2)`, oy, om)
+	if pl := f.pickList(vs, ""); !slices.Equal(pl.fids(), []int64{fm[0]}) || pv(pl.Variants) != s(rx)+":1" {
+		t.Errorf("vendor pick list: %v %s", pl.fids(), pv(pl.Variants))
+	}
+	if p := f.printData("packing_slip", f.printLink(vs, map[string]any{"kind": "packing_slip", "order_ids": []int64{om, oy}})); len(p.Slips) != 1 ||
+		p.Slips[0].VendorID != vx || len(p.Slips[0].Items) != 1 || p.Slips[0].Items[0].Quantity != 1 {
+		t.Errorf("vendor slip: %+v", p.Slips)
+	}
+	wantErr(t, "Y er slip", f.printGet("a.com", "packing_slip", f.printLink(vo, map[string]any{"kind": "packing_slip",
+		"order_ids": []int64{oy}})), http.StatusNotFound, "not_found")
+	pt := f.printData("pick_list", f.printLink(vo, map[string]any{"kind": "pick_list"}))
+	if pt.PickList == nil || !slices.Equal(pt.PickList.fids(), []int64{fm[0]}) {
+		t.Errorf("vendor print pick list: %+v", pt.PickList)
+	}
+
 	d := f.admJSON(vs, "GET", "/api/admin/orders/"+s(om), nil, http.StatusOK)
 	fs := d["fulfillments"].([]any)
 	if len(fs) != 1 || fs[0].(map[string]any)["id"] != num(fm[0]) || len(fs[0].(map[string]any)["items"].([]any)) != 1 ||

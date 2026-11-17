@@ -21,7 +21,7 @@ const totpKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 
 // authEnv: serve er M4 secret (13.5).
 var authEnv = []string{"OTP_SECRET", secret, "TURNSTILE_SECRET", "0x4AAAAAAAreal-turnstile-secret", "TOTP_KEY", totpKey,
-	"RECOVERY_SECRET", secret, "CONFIRM_SECRET", secret}
+	"RECOVERY_SECRET", secret, "CONFIRM_SECRET", secret, "PRINT_SECRET", secret}
 
 func TestLoadServe(t *testing.T) {
 	c, err := Load(env(append([]string{"APP_ENV", "production", "DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5432/shop",
@@ -32,7 +32,7 @@ func TestLoadServe(t *testing.T) {
 	if c.Addr != "127.0.0.1:8080" || len(c.AdminOrigins) != 2 || c.AdminOrigins[1] != "https://admin2.tomarshop.com" {
 		t.Errorf("config: %+v", c)
 	}
-	if c.OTPSecret != secret || c.RecoverySecret != secret || c.ConfirmSecret != secret || len(c.TOTPKey) != 32 || c.TurnstileSecret == "" {
+	if c.OTPSecret != secret || c.RecoverySecret != secret || c.ConfirmSecret != secret || c.PrintSecret != secret || len(c.TOTPKey) != 32 || c.TurnstileSecret == "" {
 		t.Errorf("auth secret: %+v", c)
 	}
 	// local e http://localhost er admin cholbe, ADMIN_ORIGINS chhara-o
@@ -79,6 +79,8 @@ func TestLoadRejects(t *testing.T) {
 		{"RECOVERY_SECRET nai", with("RECOVERY_SECRET", ""), "RECOVERY_SECRET"},
 		{"CONFIRM_SECRET nai", with("CONFIRM_SECRET", ""), "CONFIRM_SECRET"},
 		{"CONFIRM_SECRET choto", with("CONFIRM_SECRET", "short"), "CONFIRM_SECRET"},
+		{"PRINT_SECRET nai", with("PRINT_SECRET", ""), "PRINT_SECRET"},
+		{"PRINT_SECRET choto", with("PRINT_SECRET", "short"), "PRINT_SECRET"},
 		{"TURNSTILE_SECRET nai", with("TURNSTILE_SECRET", ""), "TURNSTILE_SECRET"},
 		{"TOTP_KEY nai", with("TOTP_KEY", ""), "TOTP_KEY"},
 		{"TOTP_KEY base64 na", with("TOTP_KEY", "pw-secret not base64!"), "TOTP_KEY"},
@@ -158,7 +160,7 @@ func TestRejectExampleSecrets(t *testing.T) {
 		return example(k)
 	}
 	_, err := Load(staging, Serve)
-	for _, k := range []string{"JASPR_INTERNAL_SECRET", "OTP_SECRET", "TOTP_KEY", "RECOVERY_SECRET", "CONFIRM_SECRET", "TURNSTILE_SECRET"} {
+	for _, k := range []string{"JASPR_INTERNAL_SECRET", "OTP_SECRET", "TOTP_KEY", "RECOVERY_SECRET", "CONFIRM_SECRET", "PRINT_SECRET", "TURNSTILE_SECRET"} {
 		if err == nil || !strings.Contains(err.Error(), k) {
 			t.Errorf("staging e env.example er %s: %v", k, err)
 		}

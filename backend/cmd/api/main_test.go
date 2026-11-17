@@ -380,6 +380,7 @@ func TestSessionRouteKind(t *testing.T) {
 		{"guest confirm view (ochena token)", "GET", "/api/confirm/x", "", "", 404, "not_found"},
 		{"guest confirm (ochena token)", "POST", "/api/confirm/x", "", "", 404, "not_found"},
 		{"staff token Bearer confirm e", "POST", "/api/confirm/x", "staff-token", "", 401, "unauthenticated"},
+		{"guest print (ochena token)", "GET", "/api/print?kind=packing_slip&token=x", "", "", 404, "not_found"},
 		{"guest order view (ochena token)", "GET", "/api/orders/x", "", "", 404, "not_found"},
 		{"staff token Bearer order view e", "GET", "/api/orders/x", "staff-token", "", 401, "unauthenticated"},
 		{"guest track (body nai)", "POST", "/api/orders/track", "", "", 400, "validation_failed"},
@@ -446,6 +447,8 @@ var adminRoutes = map[string]routeRoles{
 	"POST /api/admin/fulfillments/{id}/pack":       {roles: allRoles}, // 11.2: packing shob role, vendor nijer
 	"POST /api/admin/fulfillments/{id}/shipments":  {roles: allRoles}, // 11.2: shipment shob role, vendor nijer
 	"PATCH /api/admin/shipments/{id}":              {roles: allRoles}, // vendor er delivered state machine e 409
+	"GET /api/admin/packing/pick-list":             {roles: allRoles}, // 11.7 item 4: vendor nijer
+	"POST /api/admin/print-links":                  {roles: allRoles}, // 11.7 item 8: vendor invoice 403 service e
 
 	// inventory (11.2 "stock entry ar wastage", 11.7 item 1, 2): shob role, vendor role nijer variant
 	"GET /api/admin/inventory/variants":    {roles: allRoles},

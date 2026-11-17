@@ -46,6 +46,7 @@ type checkoutFx struct {
 const (
 	otpSecret     = "test-otp-secret-0123456789abcdef"
 	confirmSecret = "test-confirm-secret-0123456789ab"
+	printSecret   = "test-print-secret-0123456789abcd"
 	tsSecret      = "ts-secret"
 )
 
@@ -126,7 +127,7 @@ func newCheckout(t *testing.T) *checkoutFx {
 	f.sv, svURL = newSiteverify(t)
 	ts := auth.Turnstile{URL: svURL, Secret: tsSecret}
 	f.otpIP = httpx.NewLimit(10, time.Hour)
-	oh := order.NewHandlers(f.d, log, order.Guard{Turnstile: ts, OTPSecret: otpSecret, ConfirmSecret: confirmSecret, OTPIP: f.otpIP})
+	oh := order.NewHandlers(f.d, log, order.Guard{Turnstile: ts, OTPSecret: otpSecret, ConfirmSecret: confirmSecret, PrintSecret: printSecret, OTPIP: f.otpIP})
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(opt(h)) })
 	login := httpx.RequireCustomer(log, auth.LookupSession(f.d))
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(login(h)) })
