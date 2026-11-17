@@ -1,6 +1,8 @@
 -- Shudhu local (M3): `sobujbazar.localhost` shop e category, product, variant ar stock (batch + movement, 8.12).
 -- Admin product API M4 er staff session chhara 401, tai SQL. Abar chalale kichu bodlay na (slug/sku thakle bad).
 -- Delivery zone (M6, 8.19 item 2): Dhaka er kichu area + Dhaka district-wide ("Onno area"), Gazipur district-wide.
+-- M7a step 11: organic variant e expiry shoho batch, `staff` role er user (password `dev-staff-password-1`,
+-- prothom login e bodlay ar TOTP setup, 8.3) ar coupon (WELCOME10, FLAT50); shob abar chalale bad.
 -- Chobi nai: website `tint` placeholder dekhay (10.10 item 3). Chalano: make dev-seed (shop_owner).
 \set ON_ERROR_STOP on
 BEGIN;
@@ -90,5 +92,39 @@ FROM shop_domains d, (VALUES
 ) AS z(name, district, area, charge, min_order, free, same_city)
 WHERE d.domain = 'sobujbazar.localhost'
 ON CONFLICT (shop_id, district, area) DO NOTHING;
+
+-- M7a (8.12): madhu ar teler notun batch, harvest/expiry shoho (FIFO, expire job dekhar jonno); batch_code thakle bad
+WITH b AS (
+  INSERT INTO inventory_batches (shop_id, variant_id, batch_code, quantity_received, quantity_remaining, cost_price, harvest_date, expiry_date)
+  SELECT v.shop_id, v.id, 'DEV-' || v.sku, x.qty, x.qty, x.cost, current_date - 30, current_date + x.days
+  FROM shop_domains d
+  JOIN product_variants v ON v.shop_id = d.shop_id
+  JOIN (VALUES ('HNY-KHL-500', 10, 40000::bigint, 180), ('HNY-MUS-500', 10, 28000, 5), ('OIL-MUS-1', 20, 22000, 90))
+    AS x(sku, qty, cost, days) ON x.sku = v.sku
+  WHERE d.domain = 'sobujbazar.localhost'
+    AND NOT EXISTS (SELECT 1 FROM inventory_batches o WHERE o.shop_id = v.shop_id AND o.batch_code = 'DEV-' || v.sku)
+  RETURNING shop_id, variant_id, id, quantity_received
+), s AS (
+  UPDATE product_variants v SET stock = v.stock + b.quantity_received FROM b WHERE v.shop_id = b.shop_id AND v.id = b.variant_id
+)
+INSERT INTO inventory_movements (shop_id, variant_id, batch_id, change, reason, note)
+SELECT shop_id, variant_id, id, quantity_received, 'purchase', 'dev-seed' FROM b;
+
+-- M7a (11.2): `staff` role (packing, stock); shudhu local, temporary password
+INSERT INTO staff (shop_id, email, name, password_hash, role)
+SELECT shop_id, 'staff@sobujbazar.localhost', 'Dev Staff',
+  'pbkdf2-sha256$600000$aZIYLJ50UUQ4U3nce+tArw==$5ywc0xVTjP4iib2XUCYVLWxfDG/cviadJc3+kKKCgMM=', 'staff'
+FROM shop_domains WHERE domain = 'sobujbazar.localhost'
+ON CONFLICT (shop_id, lower(email)) DO NOTHING;
+
+-- M7a (8.13): coupon
+INSERT INTO coupons (shop_id, code, kind, value, min_order, max_discount, usage_limit)
+SELECT d.shop_id, c.code, c.kind, c.value, c.min_order, c.max_discount, c.usage_limit
+FROM shop_domains d, (VALUES
+  ('WELCOME10', 'percent', 10::bigint, 50000::bigint, 10000::bigint, NULL::int),
+  ('FLAT50', 'fixed', 5000, 100000, NULL, 100)
+) AS c(code, kind, value, min_order, max_discount, usage_limit)
+WHERE d.domain = 'sobujbazar.localhost'
+ON CONFLICT (shop_id, upper(code)) DO NOTHING;
 
 COMMIT;

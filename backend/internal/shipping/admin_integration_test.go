@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -86,7 +87,12 @@ func TestAdminZoneIntegration(t *testing.T) {
 		z["min_order"] != 0.0 || z["free_delivery_over"] != nil || z["is_active"] != true || z["shop_id"] != nil {
 		t.Fatalf("create: %d %v", code, z)
 	}
-	zid := strconv.FormatInt(int64(z["id"].(float64)), 10)
+	var id int64
+	d.QueryRow(`SELECT id FROM delivery_zones WHERE shop_id = $1 AND area = 'Boalia'`, ids["a"]).Scan(&id)
+	zid := strconv.FormatInt(id, 10)
+	if json.Number(fmt.Sprint(z["id"])) != json.Number(zid) {
+		t.Fatalf("id: %v %s", z["id"], zid)
+	}
 	// area khali = puro district; duibar = 409 (NULLS NOT DISTINCT)
 	code, dw := call(admin, "POST", "/api/admin/delivery-zones", map[string]any{
 		"name": map[string]string{"bn": "রাজশাহী"}, "district": "Rajshahi", "area": "  ", "charge": 12000, "same_city": false})

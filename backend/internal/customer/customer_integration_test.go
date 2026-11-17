@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -123,8 +124,8 @@ func (f *fx) checkout(phone string) error {
 		json.NewEncoder(w).Encode(map[string]any{"success": true, "hostname": "a.com"})
 	}))
 	defer sv.Close()
-	g := order.Guard{Turnstile: auth.Turnstile{URL: sv.URL, Secret: "s"}, OTPSecret: []byte(strings.Repeat("o", 32)),
-		ConfirmSecret: []byte(strings.Repeat("c", 32)), OTPIP: httpx.NewLimit(10, 3600e9)}
+	g := order.Guard{Turnstile: auth.Turnstile{URL: sv.URL, Secret: "s"}, OTPSecret: strings.Repeat("o", 32),
+		ConfirmSecret: strings.Repeat("c", 32), OTPIP: httpx.NewLimit(10, 3600e9)}
 	p := order.Person{Name: "C", Phone: phone}
 	_, err := order.PlaceOrder(context.Background(), f.d, g, f.a, cart.Owner{KeyHash: []byte("nai")}, order.PlaceInput{
 		Customer: p, Recipient: p, District: "Dhaka", Area: "Banani", Line: "Road 1", PaymentMethod: "cod",
@@ -161,7 +162,7 @@ func TestAdminCustomerIntegration(t *testing.T) {
 		t.Errorf("rahim: %v", r)
 	}
 	for q, want := range map[string]float64{"01711-000001": 1, "rahim": 1, "UDDIN": 1, "kar": 1, "01911000009": 0, "%": 0, "x_": 0} {
-		code, l := f.call(owner, "GET", "/api/admin/customers?q="+q, nil)
+		code, l := f.call(owner, "GET", "/api/admin/customers?q="+url.QueryEscape(q), nil)
 		if code != http.StatusOK || l["total"] != want {
 			t.Errorf("q %s: %d %v", q, code, l)
 		}
