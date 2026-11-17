@@ -218,6 +218,171 @@ void main() {
       });
     });
 
+    Future<FakeApi> pumpApi(
+      WidgetTester tester,
+      Map<String, List<dynamic>> routes, {
+      String role = 'owner',
+      String locale = 'bn',
+    }) async {
+      final api = FakeApi({
+        for (final e in routes.entries) e.key: [...e.value.cast()],
+      });
+      await pumpPage(
+        tester,
+        BlocProvider(create: (_) => cubit(api), child: const OrderDetailPage()),
+        role: role,
+        size: const Size(360, 740),
+        locale: locale,
+      );
+      return api;
+    }
+
+    final twoItems = orderJson(
+      1,
+      status: 'confirmed',
+      fulfillments: [
+        fulfillmentJson(10, items: [itemJson(1), itemJson(2)]),
+      ],
+    );
+
+    testWidgets('order edit: shudhu kom, note lagbe, bodla item shudhu', (
+      tester,
+    ) async {
+      final api = await pumpApi(tester, {
+        'GET /api/admin/orders/1': [json(200, twoItems)],
+        'PATCH /api/admin/orders/1/items': [
+          json(200, {'status': 'confirmed', 'display_status': 'confirmed'}),
+        ],
+      });
+      await tester.ensureVisible(find.byKey(const Key('order.edit')));
+      await tester.tap(find.byKey(const Key('order.edit')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // barano na (qty 2)
+      await tester.enterText(find.byKey(const Key('edit.1')), '3');
+      await tester.enterText(
+        find.byKey(const Key('edit.note')),
+        'customer bollo',
+      );
+      await tester.tap(find.byKey(const Key('edit.save')));
+      await tester.pumpAndSettle();
+      expect(api.bodies['PATCH /api/admin/orders/1/items'], isNull);
+      // note chhara na
+      await tester.enterText(find.byKey(const Key('edit.1')), '0');
+      await tester.enterText(find.byKey(const Key('edit.note')), ' ');
+      await tester.tap(find.byKey(const Key('edit.save')));
+      await tester.pumpAndSettle();
+      expect(api.bodies['PATCH /api/admin/orders/1/items'], isNull);
+      await tester.enterText(
+        find.byKey(const Key('edit.note')),
+        ' customer bollo ',
+      );
+      await tester.tap(find.byKey(const Key('edit.save')));
+      await tester.pumpAndSettle();
+      expect(api.bodies['PATCH /api/admin/orders/1/items'], {
+        'items': [
+          {'item_id': 1, 'quantity': 0},
+        ],
+        'note': 'customer bollo',
+      });
+    });
+
+    testWidgets('order edit: staff e 403 hole limit er lekha', (tester) async {
+      await pumpApi(
+        tester,
+        {
+          'GET /api/admin/orders/1': [json(200, twoItems)],
+          'PATCH /api/admin/orders/1/items': [err(403, 'forbidden')],
+        },
+        role: 'staff',
+        locale: 'en',
+      );
+      await tester.ensureVisible(find.byKey(const Key('order.edit')));
+      await tester.tap(find.byKey(const Key('order.edit')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('edit.2')), '1');
+      await tester.enterText(find.byKey(const Key('edit.note')), 'kom');
+      await tester.tap(find.byKey(const Key('edit.save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Staff cannot remove all items of a seller or make a refund. Ask the owner or an admin.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    final delivered = orderJson(
+      1,
+      status: 'confirmed',
+      display: 'delivered',
+      payment: 'paid',
+      fulfillments: [
+        fulfillmentJson(
+          10,
+          status: 'delivered',
+          items: [itemJson(1), itemJson(2)],
+        ),
+      ],
+    );
+
+    testWidgets('return: restock item bechhe, note lagbe', (tester) async {
+      final api = await pumpApi(tester, {
+        'GET /api/admin/orders/1': [json(200, delivered)],
+        'POST /api/admin/fulfillments/10/transition': [
+          json(200, {'status': 'returned'}),
+        ],
+      });
+      expect(find.byKey(const Key('order.edit')), findsNothing);
+      await tester.ensureVisible(
+        find.byKey(const Key('fulfillment.10.return')),
+      );
+      await tester.tap(find.byKey(const Key('fulfillment.10.return')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const Key('return.2')));
+      await tester.tap(find.byKey(const Key('return.save')));
+      await tester.pumpAndSettle();
+      expect(
+        api.calls,
+        isNot(contains('POST /api/admin/fulfillments/10/transition')),
+      );
+      await tester.enterText(find.byKey(const Key('return.note')), 'nilo na');
+      await tester.tap(find.byKey(const Key('return.save')));
+      await tester.pumpAndSettle();
+      expect(api.bodies['POST /api/admin/fulfillments/10/transition'], {
+        'to': 'returned',
+        'note': 'nilo na',
+        'restock_item_ids': [2],
+      });
+    });
+
+    testWidgets('return: staff e refund 403 er lekha', (tester) async {
+      await pumpApi(
+        tester,
+        {
+          'GET /api/admin/orders/1': [json(200, delivered)],
+          'POST /api/admin/fulfillments/10/transition': [err(403, 'forbidden')],
+        },
+        role: 'staff',
+        locale: 'en',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('fulfillment.10.return')),
+      );
+      await tester.tap(find.byKey(const Key('fulfillment.10.return')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('return.note')), 'nilo na');
+      await tester.tap(find.byKey(const Key('return.save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Money was taken for this parcel, so the return needs a refund. Only the owner or an admin can do it.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('1280px e o overflow nai, en', (tester) async {
       await pump(
         tester,

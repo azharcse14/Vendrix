@@ -59,6 +59,10 @@ class FakeApi {
   AdminCatalogRepository get catalog => AdminCatalogRepository(client);
   InventoryRepository get inventory => InventoryRepository(client);
   StaffRepository get staff => StaffRepository(client);
+  AdminZoneRepository get zones => AdminZoneRepository(client);
+  AdminCouponRepository get coupons => AdminCouponRepository(client);
+  AdminCustomerRepository get customers => AdminCustomerRepository(client);
+  AuditRepository get audit => AuditRepository(client);
 }
 
 StaffProfile profile(String role) => StaffProfile.fromJson({

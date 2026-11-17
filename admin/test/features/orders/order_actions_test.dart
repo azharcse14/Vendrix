@@ -138,4 +138,57 @@ void main() {
       },
     );
   });
+
+  group('canEdit (11.7 item 7: shudhu kom, open fulfillment)', () {
+    test('pending/confirmed COD, open item: shop role', () {
+      for (final r in shop) {
+        expect(canEdit(detail(), r), isTrue, reason: r);
+        expect(canEdit(detail(status: 'confirmed'), r), isTrue, reason: r);
+      }
+    });
+    test('vendor role na', () {
+      for (final r in vendor) {
+        expect(canEdit(detail(), r), isFalse, reason: r);
+      }
+    });
+    test('packed (age undo), shipped, cancelled order e na', () {
+      expect(
+        canEdit(detail(status: 'confirmed', fs: ['packed']), 'owner'),
+        isFalse,
+      );
+      expect(
+        canEdit(detail(status: 'cancelled', fs: ['cancelled']), 'owner'),
+        isFalse,
+      );
+    });
+    test('online unpaid e na (payment_required), paid e hya', () {
+      expect(canEdit(detail(method: 'sslcommerz'), 'owner'), isFalse);
+      expect(
+        canEdit(detail(method: 'sslcommerz', payment: 'paid'), 'owner'),
+        isTrue,
+      );
+    });
+  });
+
+  group('canReturn (11.7 item 6)', () {
+    bool r(String fs, String role) {
+      final o = detail(status: 'confirmed', fs: [fs]);
+      return canReturn(o, o.fulfillments.first, role);
+    }
+
+    test('shipped/delivered: shop role (refund er 403 backend e)', () {
+      for (final role in shop) {
+        expect(r('shipped', role), isTrue, reason: role);
+        expect(r('delivered', role), isTrue, reason: role);
+      }
+    });
+    test('vendor role ar onno status e na', () {
+      for (final role in vendor) {
+        expect(r('delivered', role), isFalse, reason: role);
+      }
+      for (final s in ['open', 'packed', 'returned', 'cancelled']) {
+        expect(r(s, 'owner'), isFalse, reason: s);
+      }
+    });
+  });
 }
