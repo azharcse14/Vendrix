@@ -34,7 +34,7 @@ Ei kram e poro:
 | `website/lib/services/render.dart` → `renderPage`, `resolvePage` | Request → page, status (404/503), `Document` |
 | `website/lib/components/site.dart` → `Site` | Request er shop, bhasha, lekha |
 | `website/lib/app.dart` → `App` | Route (`/en` shoho), router 404 |
-| `website/lib/components/layout.dart` → `Layout` | Header, bottom nav, footer |
+| `website/lib/components/layout.dart` → `Layout` | Header, bottom nav, footer (`/print/` e na) |
 | `website/lib/pages/status.dart` → `StatusPage`, `StatusKind`, `pageError` | 404, bondho, error page; page er API bhul |
 | `website/lib/services/link.dart` → `safeLink` | Admin er link check |
 | `website/lib/services/theme.dart` → `themeCss`, `fontPreload`, `fontFiles` | `:root` variable ar `@font-face` |
@@ -77,6 +77,7 @@ Ei kram e poro:
 | `styles.css` minify ≤ 30 KB, gzip ≤ 7 KB; base e focus ring (`--color-focus`), `accent-color`, `prefers-reduced-motion` (10.5, 10.7 v1.38) | `website/tailwind.css` | `website/test/styles_test.dart` → `test('styles.css budget ar base (10.5, 10.7 v1.38)')` |
 | Icon: protiti naam inline SVG `0 0 24 24`, `currentColor`, `fill=none`, `aria-hidden`; 14 naam (plan 3.4 er 12 + `chevronRight`, `heart`); class bodlano jay (10.5 v1.38 item 1) | `Icon`, `Icons` | `website/test/components/icon_test.dart` → `group('Icon (10.5 v1.38 item 1: Lucide inline SVG)')` |
 | UI te Bangla okkhor shorasori na, lekha key theke (Rule 4, 9.8) | `scripts/check-rules.sh` | `bash scripts/check-rules.sh` |
+| Print page (`/print/*`): site er header/footer/nav ar cart count call na; Jaspr er client `<script>` HTML theke bad (404 o); token page header (10.1, 11.6) | `Layout`, `renderPage` (`_noClientScript`) | `website/test/pages/print_test.dart` → `group('Print page /print/{kind}?token= (10.1, 11.6, 11.7 item 8)')` |
 | Env nai ba bhul hole server uthe na; `TURNSTILE_SITE_KEY` lage (13.5, 10.11) | `Config.fromEnv` | `website/test/services/api_test.dart` → `group('Config (13.5)')` |
 
 ## Data
@@ -100,9 +101,11 @@ Nai (website database dhore na; shob Go API theke).
 - `X-Real-IP` shudhu Caddy dey: tai server shudhu loopback e (`main.server.dart`); Jaspr er default `runApp` `0.0.0.0` e bind kore, oita use koro na.
 - BFF e notun route `bffRoutes` e ar test; Go er `Set-Cookie` forward hoy na, cookie shudhu route er `session` theke.
 - Notun personal cookie (jemon M4/M5 e) hole `_personal` e jog ar test.
+- Print page e client script `renderPage` regex diye bad (`<script src="/….client.dart.js" defer>`); Jaspr script er akar bodlale `print_test.dart` er `script` check fail kore.
 - `Document(base: null)` (`render.dart`): `<base>` CSP `base-uri 'none'` e atke, tokhon client script relative path e `/c/...`, `/p/...` e 404, hydration chole na; base na thakle Jaspr `/main.client.dart.js` dey.
 - Cookie shob jaygay `parseCookies` (`bff.dart`; page e `requestCookies`) diye; Jaspr er `context.cookies` na: oita `dart:io` `Cookie` e pore, `wl` er koma te `FormatException` e puro page bhange (`cart_test.dart`).
 - Jaspr update hole `jaspr install-skills --agent claude-code` abar ar `*.options.dart` (`dart run build_runner build`).
+- Local Caddy (`infra/caddy/Caddyfile.local`): `img.localhost` `UPLOAD_DIR` (default `backend/.data/uploads`) serve kore (`IMAGE_BASE_URL=https://img.localhost:8443`); log e `token` query param muche (access ar error log, 13.3).
 - `__Host-sid` e `Secure` ar `__Host-` prefix: browser shudhu https e rakhe, tai local `make web` (http) e login cookie thake na; browser e login `make https` (`https://sobujbazar.localhost:8443`, 13.1). Cookie naam env onujayi bodlabe na.
 
 ## Proshno-uttor

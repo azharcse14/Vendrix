@@ -8,15 +8,42 @@
   auto_https disable_redirects       # :80 e listen na
   https_port 8443
   default_bind 127.0.0.1             # shudhu ei machine theke
+  log {                              # error log o request uri dey (upstream down hole): token muche
+    format filter {
+      fields {
+        request>uri query {
+          delete token
+        }
+      }
+    }
+  }
 }
 (app_proxy) {                        # Caddyfile er moto: X-Forwarded-Proto https Caddy nijei dey
   header_up X-Real-IP {client_ip}
   header_up -X-Client-IP             # client nije boshate parbe na (3.2)
   header_up -X-Internal-Auth
 }
+# Print link er token query te (11.7 item 8, 13.3): access log e token muche.
+(no_token_log) {
+  log {
+    format filter {
+      fields {
+        request>uri query {
+          delete token
+        }
+      }
+    }
+  }
+}
 {$LOCAL_SHOP_HOSTS:sobujbazar.localhost} {
+  import no_token_log
   reverse_proxy 127.0.0.1:8081 {     # make web (Jaspr)
     import app_proxy
   }
+}
+# Local chobi (11.7 item 9): STORAGE=local er UPLOAD_DIR (repo root theke; scripts/https.sh cd kore).
+img.localhost {
+  root * {$UPLOAD_DIR:backend/.data/uploads}
+  file_server
 }
 # M7: admin.localhost (Flutter web admin ar /api), admin er code ashle ekhane block.

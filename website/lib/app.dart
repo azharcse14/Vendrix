@@ -12,6 +12,7 @@ import 'pages/home.dart';
 import 'pages/login.dart';
 import 'pages/order.dart';
 import 'pages/policy.dart';
+import 'pages/print.dart';
 import 'pages/product.dart';
 import 'pages/search.dart';
 import 'pages/status.dart';
@@ -47,6 +48,8 @@ class App extends StatelessComponent {
           ...both('/track', (_) => const TrackPage()),
           // Ochena kind e API call na, sheshe router er 404.
           for (final kind in policyKinds) ...both('/policy/$kind', (_) => PolicyPage(kind)),
+          // Staff er page, admin link bn path dey; `/en` na.
+          for (final kind in printKinds) Route(path: '/print/$kind', builder: (_, s) => PrintPage(kind, s.queryParams)),
         ],
         errorBuilder: (context, state) => const _NotFound(),
       ),

@@ -18,6 +18,8 @@ class Layout extends StatelessComponent {
 
   @override
   Component build(BuildContext context) {
+    // Print page kagoj: header/footer/nav ar cart count call na (11.6).
+    if (Uri.parse(context.url).path.startsWith('/print/')) return main_(classes: 'mx-auto max-w-screen-md', [child]);
     // Product page e bottom nav er bodole page er sticky bar (10.5 niyom 1).
     final product = localeOf(Uri.parse(context.url).path).path.startsWith('/p/');
     // Badge er halka count, page er data call er shathe (10.12 item 5); ignore: badge-i await kore.

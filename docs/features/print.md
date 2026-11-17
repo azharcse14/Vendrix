@@ -1,6 +1,6 @@
 # Pick list ar print link
 
-Design: 8.11 item 1, 5, 11.6, 11.7 item 4, 8 (v1.44), 7.7 (Packing), 10.1, 13.5 · Milestone: M7a · Code: `backend/internal/order` (`picklist.go`, `print.go`)
+Design: 8.11 item 1, 5, 11.6, 11.7 item 4, 8 (v1.44), 7.7 (Packing), 10.1, 13.5 · Milestone: M7a · Code: `backend/internal/order` (`picklist.go`, `print.go`), `website/lib/pages/print.dart`
 
 ## Ki kore
 
@@ -12,6 +12,7 @@ Packing er staff `GET /api/admin/packing/pick-list` e ek diner (shop er timezone
 2. `print.go` → `AdminPrintLink`: body `{kind, order_ids | date}`; `packing_slip`/`invoice` e 1–50 alada positive id, `date` na; `pick_list` e `order_ids` na, `date` na dile `shopToday` token e (midnight er por khulleo ekoi list). Vendor role e `invoice` `403`. Token `PrintToken{shop_id, kind, ids|date, staff_id, vendor_id?, exp}`, `SignPrint`; url = primary domain (`shop_domains.is_primary`) `https://<domain>/print/<kind>?token=`; audit `print.link` (`entity_type` = kind, after `{kind, count}` ba `{kind, date}`); `200 {url, expires_at}`.
 3. `SignPrint`/`VerifyPrint`: `base64url(json) + "." + base64url(HMAC-SHA256(PRINT_SECRET, "print:" + payload))` (padding chhara). Verify: signature `hmac.Equal` JSON porar age, ochena field na, `exp` (unix second) por na, `shop_id`/`staff_id` > 0, kind er sathe ids|date mile.
 4. `print.go` → `Print` (public, `ShopFromHost` er pore) → `LoadPrint`: verify, token `kind` = `?kind=`, token shop = host er shop, invoice token e `vendor_id` na, issuing staff ekhono `is_active`; tarpor data abar scope e: `loadSlips` (fulfillment onujayi, cancelled fulfillment ar removed item bad, vendor e shudhu nijer, `cod_amount` COD e fulfillment `total`), `loadInvoices` (puro order, cancelled order bad, taka order er snapshot theke), `pick_list` e `LoadPickList`. Kichu na thakle ba kono check fail e `404 not_found`. Response `no-store`.
+5. Website (`website/lib/pages/print.dart` → `PrintPage`, `lib/services/print.dart` → `loadPrint`): `/print/{kind}?token=` SSR e `GET /api/print?kind=&token=`; A4 ba `?paper=80mm`, client JS na, site er chrome na; Go `404` → page `404`. UI: [website-pages.md](website-pages.md). Local Caddy log e `token` query param muche (`infra/caddy/Caddyfile.local`, 13.3).
 
 ## Code er map
 
@@ -26,6 +27,8 @@ Ei kram e poro:
 | `backend/internal/order/admin.go` → `AdminRoutes` | `GET /api/admin/packing/pick-list`, `POST /api/admin/print-links` (shob 5 role) |
 | `backend/internal/order/handler.go` → `Routes`, `Guard.PrintSecret` | `GET /api/print` |
 | `backend/internal/config/config.go` → `Load` | `PRINT_SECRET` (32+ okkhor, `local-only` shudhu local e) |
+| `website/lib/pages/print.dart` → `PrintPage`; `lib/services/print.dart` → `loadPrint` | Print page (HTML, A4/80mm) |
+| `infra/caddy/Caddyfile.local` | Log e `token` na |
 
 ## Niyom ar tar test
 
@@ -36,6 +39,7 @@ Ei kram e poro:
 | Link: kind, max 50, field er mil, vendor invoice `403`, url primary domain, 10 minute, audit; render: kind/shop/expire/staff inactive `404`, vendor scope, data shape, `no-store` (11.7 item 8, v1.44) | `AdminPrintLink`, `LoadPrint` | `TestPrintLinkIntegration` |
 | Vendor onno vendor er pick list ba slip pay na (Rule 13) | `scope`, `loadSlips` | `TestAdminVendorIsolationIntegration` |
 | Route er role (11.2) | `AdminRoutes` | `TestAdminRouteRoles` |
+| Website print page: render, A4/80mm, `404`, token page header, script na (10.1, 11.6) | `PrintPage` | `website/test/pages/print_test.dart` → `group('Print page /print/{kind}?token= (10.1, 11.6, 11.7 item 8)')` |
 | `PRINT_SECRET` lagbe (13.5) | `config.Load` | `TestLoadRejects`, `TestRejectExampleSecrets` |
 
 ## Data
@@ -51,10 +55,11 @@ Kono table e lekha na (link stateless, migration nai). Pore: `order_fulfillments
 
 ## Bodlanor age mone rakho
 
-- Token er JSON field bodlale purono link (10 minute) bhenge jay; website step 14 er page `kind` query pathay.
+- Token er JSON field bodlale purono link (10 minute) bhenge jay; website page `kind` query pathay ar token er akar (`x.y`) dekhe.
 - `PRINT_SECRET` bodlale chalu link bondho (10 minute er moddhe kichu na).
 - Pick list er din `confirmed_at` diye, `GET /fulfillments` er `date` `placed_at` diye: duita alada.
-- Caddy log e `/print*` ar `/api/print*` er query string jabe na (13.3; step 14).
+- Caddy log e token jabe na (13.3): local e `token` param muche (access + error log); production Caddyfile M12 e.
+- `GET /api/print` er JSON field bodlale website er `Slip`/`Invoice` (`lib/services/print.dart`) o.
 
 ## Proshno-uttor
 

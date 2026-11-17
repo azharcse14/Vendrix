@@ -151,11 +151,24 @@ Future<Response> renderPage(
       body: page.site,
     ),
   );
+  if (request.url.path.startsWith('print/')) return _noClientScript(res, page);
   if (page.status == 200 && page.headers.isEmpty) return res;
   // Router er 404 (`NotFound`) render e status dey; tai shudhu 200 hole amader status boshe.
   return Response(
     res.statusCode == 200 ? page.status : res.statusCode,
     body: res.read(),
     headers: {...res.headersAll, ...page.headers},
+  );
+}
+
+// Jaspr protiti page e client script dey; print page e JS na (10.1 token page, 11.6), tai tag bad.
+final _clientScript = RegExp(r'<script src="/[^"]*\.client\.dart\.js" defer></script>');
+
+Future<Response> _noClientScript(Response res, ResolvedPage page) async {
+  final html = (await res.readAsString()).replaceAll(_clientScript, '');
+  return Response(
+    res.statusCode == 200 ? page.status : res.statusCode,
+    body: html,
+    headers: {...res.headersAll, ...page.headers}..removeWhere((k, _) => k.toLowerCase() == 'content-length'),
   );
 }

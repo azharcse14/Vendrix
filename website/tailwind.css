@@ -66,5 +66,9 @@
   /* Bhetorer radio/checkbox sr-only, tai focus ring chip e. */
   .chip:has(:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 
+  /* 11.6: 80mm thermal (@page page-i dey); lekha choto, kagojer chhapar jayga. */
+  .paper-80mm { @apply text-sm; max-width: 74mm; }
+  .paper-80mm h1 { font-size: 1.25rem; }
+
   .section-title { @apply mb-4 flex items-center justify-between gap-3; }
 }
