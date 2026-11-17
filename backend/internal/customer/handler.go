@@ -155,7 +155,7 @@ func (h *Handlers) Block(w http.ResponseWriter, r *http.Request) {
 		if err != nil || !created {
 			return err
 		}
-		return h.audit(r, tx, st, "customer.block", p, nil, reasonJSON(reason))
+		return h.audit(r, tx, st, "customer.block", p, nil, auditJSON(reason, p))
 	})
 	if err != nil {
 		h.fail(w, r, err)
@@ -183,7 +183,7 @@ func (h *Handlers) Unblock(w http.ResponseWriter, r *http.Request) {
 		if err != nil || !found {
 			return err
 		}
-		return h.audit(r, tx, st, "customer.unblock", p, reasonJSON(reason), nil)
+		return h.audit(r, tx, st, "customer.unblock", p, auditJSON(reason, p), nil)
 	})
 	if err != nil {
 		h.fail(w, r, err)
@@ -192,12 +192,13 @@ func (h *Handlers) Unblock(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func reasonJSON(reason any) json.RawMessage {
-	b, _ := json.Marshal(map[string]any{"reason": reason})
+// auditJSON: reason ar masked phone (12.2); puro phone na, kintu guest phone er unblock o chena jay.
+func auditJSON(reason any, p string) json.RawMessage {
+	b, _ := json.Marshal(map[string]any{"reason": reason, "phone_masked": phone.Mask(p)})
 	return b
 }
 
-// audit: entity oi phone er user (na thakle 0); before/after e phone kokhono na (12.2, v1.45).
+// audit: entity oi phone er user (na thakle 0); before/after e puro phone kokhono na (12.2, v1.45).
 func (h *Handlers) audit(r *http.Request, tx *sql.Tx, st httpx.Staff, action, p string, before, after json.RawMessage) error {
 	uid, err := userByPhone(r.Context(), tx, st.ShopID, p)
 	if err != nil {

@@ -14,7 +14,7 @@ Owner/admin shop er customer (account) er list (order count, mot kena) ar detail
 4. `GET /api/admin/blocked-phones`: paged, notun age (`phone`, `reason`, `staff_id`, `created_at`).
 5. `POST /api/admin/blocked-phones {phone, reason?}`: phone normalize (Rule 6), reason trim max 200 (khali = `NULL`). `block`: `INSERT ... ON CONFLICT DO NOTHING`; notun hole `201` + audit `customer.block`, already thakle `200` ager row (write/audit na).
 6. `DELETE /api/admin/blocked-phones {phone}` (phone URL/access log e na): `unblock` muchle audit `customer.unblock`, na thakleo `204`.
-7. Audit (`Handlers.audit`): `entity_type` `customer`, `entity_id` oi phone er user (na thakle 0), `before`/`after` e shudhu `{reason}`; phone kokhono na (12.2, 11.7 item 13 x).
+7. Audit (`Handlers.audit`): `entity_type` `customer`, `entity_id` oi phone er user (na thakle 0), `before`/`after` e `{reason, phone_masked}` (`phone.Mask`, shesh 3 digit; guest phone er unblock o chena jay); puro phone kokhono na (12.2, 11.7 item 13 x).
 
 ## Code er map
 
@@ -23,7 +23,7 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/cmd/api/router.go` → `newHandler` | Route: admin session |
-| `backend/internal/customer/handler.go` → `AdminRoutes`, `Customers`, `Customer`, `Blocked`, `Block`, `Unblock`, `decodeBlock`, `audit` | HTTP, validation, tx, audit |
+| `backend/internal/customer/handler.go` → `AdminRoutes`, `Customers`, `Customer`, `Blocked`, `Block`, `Unblock`, `decodeBlock`, `audit`, `auditJSON` | HTTP, validation, tx, audit |
 | `backend/internal/customer/store.go` → `listCustomers`, `customerDetail`, `listBlocked`, `block`, `unblock`, `userByPhone` | SQL (protiti query `shop_id`) |
 | `backend/internal/customer/customer_integration_test.go` | Asol Postgres e test |
 
@@ -35,7 +35,7 @@ Ei kram e poro:
 | Detail: profile, `blocked`, shesh 50 order; onno shop `404` (Rule 3) | `store.go` → `customerDetail` | `TestAdminCustomerIntegration`, `TestAdminShopIsolationIntegration` |
 | Block e COD checkout `403 phone_blocked`, unblock e abar chole (8.19 item 6) | `block`/`unblock`; effect `order.PlaceOrder` | `TestAdminCustomerIntegration` |
 | Abar block `200` (write na), na thaka unblock `204`; onno shop er block muche na (v1.45) | `handler.go` → `Block`, `Unblock` | `TestAdminCustomerIntegration`, `TestAdminShopIsolationIntegration` |
-| Audit e phone na, shudhu `{reason}` (12.2) | `handler.go` → `audit` | `TestAdminCustomerIntegration` |
+| Audit e puro phone na, `{reason, phone_masked}` (12.2) | `handler.go` → `audit`, `auditJSON` | `TestAdminCustomerIntegration` |
 | Shudhu owner/admin (11.2) | `AdminRoutes` | `TestAdminCustomerIntegration`, `TestAdminRouteRoles` |
 
 ## Data
