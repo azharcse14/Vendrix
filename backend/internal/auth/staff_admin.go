@@ -337,7 +337,7 @@ func (h *StaffAdmin) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // Reset: POST /api/admin/staff/{id}/reset → 200 {temp_password}: notun password, must_change_password, lock khole,
-// TOTP ar recovery code muche, shob session revoke (11.7 item 11). Nijeke 403 (recovery code ba CLI, 8.3).
+// TOTP ar recovery code muche, shob session revoke (11.7 item 11). Nijeke ar onno owner ke 403 (recovery code ba CLI, 8.3).
 func (h *StaffAdmin) Reset(w http.ResponseWriter, r *http.Request) {
 	id, err := staffID(r)
 	if err != nil {
@@ -359,13 +359,16 @@ func (h *StaffAdmin) Reset(w http.ResponseWriter, r *http.Request) {
 		if err := lockOwners(ctx, tx, st); err != nil {
 			return err
 		}
-		ok, err := affected(tx.ExecContext(ctx, `UPDATE staff SET password_hash = $3, must_change_password = true,
-			failed_logins = 0, locked_until = NULL WHERE shop_id = $1 AND id = $2`, st.ShopID, id, hash))
-		if err != nil {
+		var role string
+		if err := tx.QueryRowContext(ctx, `SELECT role FROM staff WHERE shop_id = $1 AND id = $2 FOR UPDATE`, st.ShopID, id).Scan(&role); err != nil {
 			return err
 		}
-		if !ok {
-			return sql.ErrNoRows
+		if role == "owner" { // churi kora owner session e onno owner er 2FA muche dokhol na (v1.47)
+			return errStaffForbidden
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE staff SET password_hash = $3, must_change_password = true,
+			failed_logins = 0, locked_until = NULL WHERE shop_id = $1 AND id = $2`, st.ShopID, id, hash); err != nil {
+			return err
 		}
 		if err := clearStaff2FA(ctx, tx, st.ShopID, id); err != nil {
 			return err
