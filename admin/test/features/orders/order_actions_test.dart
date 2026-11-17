@@ -100,8 +100,9 @@ void main() {
     test('open: pack shobai; cancel owner/admin/vendor_owner', () {
       for (final r in [...shop, ...vendor]) {
         final want = {FulfillmentAction.pack};
-        if (!{'staff', 'vendor_staff'}.contains(r))
+        if (!{'staff', 'vendor_staff'}.contains(r)) {
           want.add(FulfillmentAction.cancel);
+        }
         expect(f('open', r), want, reason: r);
       }
     });

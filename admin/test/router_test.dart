@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:admin/app.dart';
 import 'package:admin/core/auth/auth_bloc.dart';
+import 'package:admin/core/browser.dart';
+import 'package:admin/core/locator.dart';
 import 'package:admin/features/auth/pages/login_page.dart';
 import 'package:admin/features/auth/pages/totp_page.dart';
 import 'package:admin/features/dashboard/pages/dashboard_page.dart';
@@ -68,9 +70,14 @@ void main() {
       };
       return http.Response(jsonEncode(body ?? {}), body == null ? 404 : 200);
     });
-    final auth = AuthBloc(
-      AdminAuthRepository(ApiClient(Uri.parse('https://api.test'), client)),
-    );
+    final api = ApiClient(Uri.parse('https://api.test'), client);
+    // dashboard er cubit getIt theke (di.dart er registerServices er moto)
+    getIt
+      ..registerSingleton(AdminOrderRepository(api))
+      ..registerSingleton(DashboardRepository(api))
+      ..registerSingleton(Browser(openTab: (_) {}, open: (_) {}));
+    addTearDown(getIt.reset);
+    final auth = AuthBloc(AdminAuthRepository(api));
     final router = buildRouter(auth);
     await tester.pumpWidget(AdminApp(auth: auth, router: router));
     await tester.pumpAndSettle();

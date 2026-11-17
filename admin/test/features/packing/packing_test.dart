@@ -176,12 +176,12 @@ void main() {
       await tester.enterText(find.byKey(const Key('pack.item.2')), '1200');
       await tester.tap(find.byKey(const Key('pack.submit')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('pack.note')), findsOneWidget);
+      expect(find.byKey(const Key('note.field')), findsOneWidget);
       await tester.enterText(
-        find.byKey(const Key('pack.note')),
+        find.byKey(const Key('note.field')),
         'customer raji',
       );
-      await tester.tap(find.byKey(const Key('pack.note.submit')));
+      await tester.tap(find.byKey(const Key('note.submit')));
       await tester.pumpAndSettle();
       expect(
         (api.bodies['POST /api/admin/fulfillments/10/pack']!

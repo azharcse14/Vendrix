@@ -531,6 +531,17 @@ type FulfillmentRow struct {
 	District      string    `json:"district"`
 	Area          string    `json:"area"`
 	PlacedAt      time.Time `json:"placed_at"`
+	// Shipment: active shipment (shipments_one_active e ekta) ba null; admin e deliver/ferot er id (v1.50).
+	Shipment *RowShipment `json:"shipment"`
+}
+
+// RowShipment: GET /fulfillments row er active shipment.
+type RowShipment struct {
+	ID           int64   `json:"id"`
+	Carrier      string  `json:"carrier"`
+	TrackingCode *string `json:"tracking_code"`
+	Status       string  `json:"status"`
+	CODAmount    int64   `json:"cod_amount"`
 }
 
 // listFulfillments: vendor 0 = shob, -1 = kichu na; date = order er din (shop timezone).
@@ -545,8 +556,9 @@ func listFulfillments(ctx context.Context, d *sql.DB, shopID int64, status, date
 		return nil, 0, err
 	}
 	rows, err := d.QueryContext(ctx, `SELECT f.id, f.order_id, o.order_number, f.vendor_id, f.seq, f.status, f.total, o.recipient_name,
-		o.ship_district, o.ship_area, o.placed_at
+		o.ship_district, o.ship_area, o.placed_at, s.id, s.carrier, s.tracking_code, s.status, s.cod_amount
 		FROM order_fulfillments f JOIN orders o ON o.shop_id = f.shop_id AND o.id = f.order_id
+		LEFT JOIN shipments s ON s.shop_id = f.shop_id AND s.fulfillment_id = f.id AND s.status NOT IN ('cancelled','returned')
 		WHERE f.shop_id = $1 AND ($2::bigint = 0 OR f.vendor_id = $2) AND ($3::text = '' OR f.status = $3)
 		AND ($4::text = '' OR (o.placed_at >= NULLIF($4, '')::date::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1)
 			AND o.placed_at < (NULLIF($4, '')::date + 1)::timestamp AT TIME ZONE (SELECT timezone FROM shops WHERE id = $1)))
@@ -558,9 +570,16 @@ func listFulfillments(ctx context.Context, d *sql.DB, shopID int64, status, date
 	var out []FulfillmentRow
 	for rows.Next() {
 		var x FulfillmentRow
+		var sid, cod sql.NullInt64
+		var carrier, status sql.NullString
+		var sh RowShipment
 		if err := rows.Scan(&x.ID, &x.OrderID, &x.OrderNumber, &x.VendorID, &x.Seq, &x.Status, &x.Total, &x.RecipientName,
-			&x.District, &x.Area, &x.PlacedAt); err != nil {
+			&x.District, &x.Area, &x.PlacedAt, &sid, &carrier, &sh.TrackingCode, &status, &cod); err != nil {
 			return nil, 0, err
+		}
+		if sid.Valid {
+			sh.ID, sh.Carrier, sh.Status, sh.CODAmount = sid.Int64, carrier.String, status.String, cod.Int64
+			x.Shipment = &sh
 		}
 		out = append(out, x)
 	}

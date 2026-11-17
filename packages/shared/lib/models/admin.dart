@@ -266,6 +266,9 @@ class FulfillmentRow {
   /// Order kokhon.
   final DateTime placedAt;
 
+  /// Active shipment (deliver/ferot er id; v1.50), na thakle null.
+  final Shipment? shipment;
+
   /// JSON theke.
   FulfillmentRow.fromJson(Map<String, dynamic> j)
     : id = field(j, 'id'),
@@ -278,16 +281,24 @@ class FulfillmentRow {
       recipientName = field(j, 'recipient_name'),
       district = field(j, 'district'),
       area = field(j, 'area'),
-      placedAt = time(j, 'placed_at');
+      placedAt = time(j, 'placed_at'),
+      shipment = switch (field<Map<String, dynamic>?>(j, 'shipment')) {
+        final m? => Shipment.fromJson(m),
+        null => null,
+      };
 }
 
-/// Shipment er POST/PATCH er uttor (PATCH e shudhu [id], [status], [displayStatus]).
+/// Shipment: POST/PATCH er uttor (PATCH e shudhu [id], [status], [displayStatus]) ba [FulfillmentRow.shipment]
+/// ([displayStatus] chhara).
 class Shipment {
   /// Id.
   final int id;
 
-  /// Shipment status, order er `display_status`.
-  final String status, displayStatus;
+  /// Shipment status.
+  final String status;
+
+  /// Order er `display_status` (shudhu POST/PATCH e).
+  final String? displayStatus;
 
   /// Shudhu create e.
   final int? fulfillmentId, codAmount;

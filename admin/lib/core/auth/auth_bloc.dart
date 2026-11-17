@@ -38,6 +38,9 @@ final class RecoveryCodesSaved extends AuthEvent {}
 /// Logout (ba TOTP theke login e ferot).
 final class LogoutRequested extends AuthEvent {}
 
+/// Screen er API `401` (session expire ba revoke); shudhu [Authenticated] e kaj kore.
+final class SessionExpired extends AuthEvent {}
+
 /// Login er obostha; router er redirect eta dekhe (11.3).
 sealed class AuthState {}
 
@@ -145,6 +148,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     });
     on<RecoveryCodesSaved>((_, emit) => _me(emit));
+    on<SessionExpired>((_, emit) {
+      // login/TOTP er 401 nijer handler e; ekhane shudhu active session gele
+      if (state is Authenticated) {
+        emit(Unauthenticated(error: const ApiError(401, 'session_expired')));
+      }
+    });
     on<LogoutRequested>((_, emit) async {
       try {
         await repo.logout();

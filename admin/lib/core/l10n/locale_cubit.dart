@@ -32,4 +32,21 @@ extension L10n on BuildContext {
 
   /// API bhul er lekha: `error.<code>`.
   String errorText(ApiError e) => t('error.${e.code}');
+
+  // ponytail: Bangla digit shob shomoy bn e; shop er `locales.bangla_digits` M8 e (settings).
+  String get _numbers =>
+      numberLocale(watch<LocaleCubit>().state, banglaDigits: true);
+
+  /// Content `{bn, en}` UI bhasha e.
+  String text(LocalizedText l) => l.of(watch<LocaleCubit>().state);
+
+  /// Taka (poisha) locale er digit e (9.8).
+  String taka(int poisha) => formatTaka(poisha, _numbers);
+
+  /// Shonkhya locale er digit e.
+  String count(int n) => formatCount(n, _numbers);
+
+  /// Tarikh shop er timezone e.
+  String date(DateTime d) =>
+      formatDate(d, uiLocale: watch<LocaleCubit>().state, banglaDigits: true);
 }
