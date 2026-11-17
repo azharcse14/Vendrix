@@ -204,7 +204,7 @@ class TrackedOrder {
     this.history,
   );
 
-  /// JSON theke (`tracking` courier M7 e).
+  /// JSON theke (`tracking` Phase 2 e, 7.5).
   factory TrackedOrder.fromJson(Map<String, dynamic> j) => TrackedOrder(
     field(j, 'order_number'),
     field(j, 'display_status'),

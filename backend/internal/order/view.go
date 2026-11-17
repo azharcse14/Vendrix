@@ -64,7 +64,7 @@ type Tracked struct {
 	DisplayStatus string    `json:"display_status"`
 	PlacedAt      time.Time `json:"placed_at"`
 	History       []Event   `json:"history"`
-	Tracking      *struct{} `json:"tracking"` // courier M7 e; ekhon null
+	Tracking      *struct{} `json:"tracking"` // Phase 2 (courier, 7.5 v1.48); ekhon null
 }
 
 type Event struct {

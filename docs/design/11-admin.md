@@ -32,7 +32,7 @@
 | Dashboard, order dekha, packing, shipment | Hya | Hya | Hya | Nijer fulfillment | Nijer fulfillment |
 | Order status change, edit | Hya | Hya | Hya (v1.37: COD pack undo `packed → open`, note shoho, 8.8; cancel chhara; v1.5: je edit e kono vendor er shob item bad ba refund hoy, sheta na; v1.7: fulfillment cancel na, ar `returned` shudhu refund chhara, jemon COD e taka newa hoyni) | Nijer fulfillment: pack, ship, cancel (pack er age), v1.37: pack undo | Pack, ship, v1.37: pack undo |
 | Order cancel, refund | Hya | Hya | Na | Na | Na |
-| Product, category, inventory | Hya | Hya | Stock entry ar wastage | Nijer product ar stock (category: shudhu list, manage na; v1.37) | Stock entry ar wastage |
+| Product, category, inventory | Hya | Hya | Stock entry ar wastage (v1.48: `adjust` o, shudhu komano, note shoho) | Nijer product ar stock (category: shudhu list, manage na; v1.37) | Stock entry ar wastage (v1.48: `adjust` o) |
 | Coupon, review, customer block | Hya | Hya | Na | Nijer vendor er coupon (Phase 3) | Na |
 | Delivery zone | Hya | Hya | Na | Na | Na |
 | Store settings (theme, bhasha, homepage, checkout) | Hya | Hya | Na | Na | Na |

@@ -121,7 +121,7 @@ v1.31 spashto niyom (M5 er code, review e lekha):
 | POST | `/api/orders/{token}/cancel` | Customer cancel (order `pending`, ba `confirmed` ar shob fulfillment `open`). v1.32: body `{reason?}` (max 200) → `orders.cancel_reason` |
 | POST | `/api/orders/{token}/pay` | Fail hoya online payment abar cheshta → `payment_url` |
 | GET | `/api/orders/{token}/invoice` | Invoice page er data |
-| POST | `/api/orders/track` | `{number, phone}` (phone URL ba log e jay na). Login chhara tracking. Shudhu status, tarikh, courier tracking. Rate limited. v1.32: phone `customer_phone` ba `recipient_phone` mille `{order_number, display_status, placed_at, history: [{status, at}], tracking: null}` (courier M7), token na; na mille `404 not_found` (8.19 item 6) |
+| POST | `/api/orders/track` | `{number, phone}` (phone URL ba log e jay na). Login chhara tracking. Shudhu status, tarikh, courier tracking. Rate limited. v1.32: phone `customer_phone` ba `recipient_phone` mille `{order_number, display_status, placed_at, history: [{status, at}], tracking: null}` (v1.48: `tracking` Phase 2 e courier API/`shipment_events` er sathe, protiti active shipment `{carrier, tracking_code, status, shipped_at}`, rider/fee/`cod_amount` na; tar age tracking code shudhu `sms.shipped` e (11.7 item 5); `history` shudhu status bodol, edit er note row na), token na; na mille `404 not_found` (8.19 item 6) |
 | POST | `/api/reviews` | `{order_token \| login, product_id, rating, comment, reviewer_name}` |
 
 `POST /api/orders` er body:
