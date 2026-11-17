@@ -108,7 +108,7 @@ func path(id int64, rest string) string {
 // POST /staff/{id}/reset shudhu owner (admin, staff, vendor 403); temp password crypto/rand, response e ekbar
 // (no-store), audit/log e na, tai diye login e setup_pending; email/role/name validation, duplicate 409
 // staff_exists; role/is_active bodlale oi staff er shob session revoke (naam e na); nijeke deactivate/role bodol
-// 403; duijon owner ek shathe ekjon arek jon ke namale-o ek active owner thake; reset e must_change_password,
+// 403; duijon owner ek shathe ekjon arek jon ke namale-o ek active owner thake; onno owner reset 403 (v1.47); reset e must_change_password,
 // TOTP ar recovery code muche, lock khole, session revoke, nijeke 403; onno shop er staff 404.
 func TestStaffAdminIntegration(t *testing.T) {
 	sf := newStaffFixture(t)
@@ -294,6 +294,16 @@ func TestStaffAdminIntegration(t *testing.T) {
 	f.want(owner, "PATCH", path(sid, ""), map[string]bool{"is_active": false}, http.StatusOK, "")
 	f.want(owner, "POST", path(sid, "/reset"), nil, http.StatusOK, "")
 	f.noSecret(pw2)
+
+	// onno owner reset 403 (v1.47, security review M1): 2FA muche account dokhol na
+	_, co, _ := f.call(owner, "POST", "/api/admin/staff", map[string]string{"email": "co-r@a.com", "name": "Co", "role": "owner"})
+	coID := int64(co["id"].(float64))
+	f.setTOTP(t, a, coID)
+	f.session(a, coID)
+	f.want(owner, "POST", path(coID, "/reset"), nil, http.StatusForbidden, "forbidden")
+	if f.live(coID) != 1 || f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND totp_secret_enc IS NOT NULL`, coID) != 1 {
+		t.Error("onno owner er reset e bodleche")
+	}
 }
 
 func mustJSON(v any) string {
