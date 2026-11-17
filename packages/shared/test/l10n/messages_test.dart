@@ -64,5 +64,27 @@ void main() {
         }
       },
     );
+    test(
+      'DB er protiti payment_status (001_init.sql) er print.payment_status.<s> ache (11.6)',
+      () {
+        final sql = File(
+          '../../backend/migrations/001_init.sql',
+        ).readAsStringSync();
+        final check = RegExp(
+          r'payment_status IN \(([^)]*)\)',
+        ).firstMatch(sql)![1]!;
+        final codes = RegExp(
+          r"'([a-z_]+)'",
+        ).allMatches(check).map((m) => m[1]!);
+        expect(codes, containsAll(['unpaid', 'paid', 'refunded']));
+        for (final c in codes) {
+          expect(
+            defaultMessages['bn'],
+            contains('print.payment_status.$c'),
+            reason: c,
+          );
+        }
+      },
+    );
   });
 }
