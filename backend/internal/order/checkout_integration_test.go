@@ -1102,3 +1102,30 @@ func wantRetry(t *testing.T, name string, rec *httptest.ResponseRecorder) {
 		t.Errorf("%s: Retry-After %q", name, rec.Header().Get("Retry-After"))
 	}
 }
+
+// Checkout e shoja confirmed (risk na, cod_confirmation risky) order er confirmed_at thakbe (8.8), na hole
+// pick list (confirmed_at diye) e kokhono ashe na (M7a step 15 e dhora).
+func TestCheckoutAutoConfirmedAtIntegration(t *testing.T) {
+	f := newCheckout(t)
+	f.exec(`UPDATE shop_settings SET published = jsonb_set(published, '{checkout,risk,new_phone_amount_over}', '1000000') WHERE shop_id = $1`, f.shop)
+	rice := f.variant("rice", 50000, 10)
+	p := decodePlaced(t, f.place(idemKey(), f.guestCart([2]int64{rice, 1}), orderBody("01811000002", 56000)), http.StatusCreated)
+	if p.Status != "confirmed" {
+		t.Fatalf("status %s, confirmed chai", p.Status)
+	}
+	var id int64
+	var at sql.NullTime
+	if err := f.d.QueryRowContext(f.ctx, `SELECT id, confirmed_at FROM orders WHERE public_token = $1`, p.PublicToken).Scan(&id, &at); err != nil {
+		t.Fatal(err)
+	}
+	if !at.Valid {
+		t.Error("confirmed_at NULL")
+	}
+	pl, err := order.LoadPickList(f.ctx, f.d, f.shop, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pl.Fulfillments) != 1 || pl.Fulfillments[0].OrderID != id {
+		t.Errorf("pick list e order nai: %+v", pl.Fulfillments)
+	}
+}
