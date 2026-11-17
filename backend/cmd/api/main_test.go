@@ -440,6 +440,7 @@ var adminRoutes = map[string]routeRoles{
 	"GET /api/admin/orders/{id}":                   {roles: allRoles},
 	"POST /api/admin/orders/{id}/transition":       {roles: shopRoles},
 	"POST /api/admin/orders/{id}/notes":            {roles: shopRoles},
+	"PATCH /api/admin/orders/{id}/items":           {roles: shopRoles}, // 11.7 item 7: vendor role na; staff er shima service e
 	"GET /api/admin/fulfillments":                  {roles: allRoles},
 	"POST /api/admin/fulfillments/{id}/transition": {roles: allRoles},
 	"POST /api/admin/fulfillments/{id}/pack":       {roles: allRoles}, // 11.2: packing shob role, vendor nijer
