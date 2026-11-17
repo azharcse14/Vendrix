@@ -273,9 +273,14 @@ func TestAdminCustomerIntegration(t *testing.T) {
 		if strings.Contains(before+after, "171100000") || strings.Contains(before+after, "1911000009") {
 			t.Errorf("audit e phone: %s %s", before, after)
 		}
-		got = append(got, action+":"+strconv.FormatBool(eid == f.rahim))
+		// security review M1: guest phone er unblock o chena jay (masked, 12.2)
+		var m struct {
+			Masked string `json:"phone_masked"`
+		}
+		json.Unmarshal([]byte(before+after), &m)
+		got = append(got, action+":"+strconv.FormatBool(eid == f.rahim)+":"+m.Masked)
 	}
-	if s := strings.Join(got, ","); s != "customer.block:true,customer.block:false,customer.unblock:true" {
+	if s := strings.Join(got, ","); s != "customer.block:true:***001,customer.block:false:***009,customer.unblock:true:***001" {
 		t.Errorf("audit: %s", s)
 	}
 }
