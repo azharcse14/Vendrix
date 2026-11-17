@@ -171,7 +171,7 @@ type newOrder struct {
 }
 
 // insertOrder: ON CONFLICT e 0 row (found false); lock er por eta hoy na, tobu chupchap duplicate na.
-// placed_at DB er ghori (auto-cancel er RunAt).
+// placed_at DB er ghori (auto-cancel er RunAt). Shoja confirmed hole confirmed_at o (8.8; pick list eta dhore).
 func insertOrder(ctx context.Context, tx *sql.Tx, o newOrder) (int64, time.Time, bool, error) {
 	var placedAt time.Time
 	flags, err := json.Marshal(append([]string{}, o.Flags...)) // nil → [] (null na)
@@ -193,10 +193,10 @@ func insertOrder(ctx context.Context, tx *sql.Tx, o newOrder) (int64, time.Time,
 		user_id, customer_name, customer_phone, customer_email, recipient_name, recipient_phone, ship_district, ship_area,
 		ship_address, delivery_zone_id, note, locale, subtotal, discount, delivery_charge, total, coupon_id, coupon_code,
 		coupon_kind, coupon_value, coupon_max_discount, coupon_vendor_id, coupon_funded_by, payment_method, payment_status,
-		status, display_status, risk_flags, otp_verified, ip, delivery_deadline, confirm_token_hash)
+		status, display_status, risk_flags, otp_verified, ip, delivery_deadline, confirm_token_hash, confirmed_at)
 		VALUES ($1, $2, $3, $4, $5, NULLIF($6, 0), $7, $8, NULLIF($9, ''), $10, $11, $12, $13, $14, $15, NULLIF($16, ''), $17,
 		  $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, NULLIF($35, ''),
-		  now() + make_interval(days => $36), $37)
+		  now() + make_interval(days => $36), $37, CASE WHEN $31::text = 'confirmed' THEN now() END)
 		ON CONFLICT (shop_id, idempotency_key) DO NOTHING RETURNING id, placed_at`,
 		o.ShopID, o.Number, o.Token, o.Key, o.Hash, o.UserID, in.Customer.Name, in.Customer.Phone, in.Customer.Email,
 		in.Recipient.Name, in.Recipient.Phone, in.District, in.Area, in.Line, o.ZoneID, in.Note, in.Locale,

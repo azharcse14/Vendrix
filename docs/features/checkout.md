@@ -108,6 +108,7 @@ Ei kram e poro:
 | Coupon pore bodlaleo `LineFromItem` + `orders.coupon_*` diye `Reprice` ager result (14.2 test 33) | `insertOrder` (snapshot) | `TestCouponSnapshotIntegration` |
 | Honeypot, consent, field limit, client dam field `400`; `area_not_served`, `phone_blocked` (customer/recipient), `price_changed` details, `below_min_order`, bondho product `out_of_stock`, `cart_empty`; bhul e kichu save na (8.6 step 3–7, 12; 8.19 item 10) | `placeInput`, `PlaceOrder` | `TestCheckoutValidationIntegration` |
 | Snapshot (naam, label, sku, dam, kena dam, ojon, thikana, coupon), number `SA-100001`, `public_token`, deadline 5/10 din (`shipping.DeadlineDays`), `pending`/`confirmed`, history, movement, redemption, cart khali, login e `user_id` + `otp_verified`, `locale` (8.6 step 13–17, Rule 8) | `PlaceOrder`, `insertOrder`, `insertItem`, `insertPlaced` | `TestCheckoutSnapshotIntegration` |
+| Shoja `confirmed` order e `confirmed_at` (8.8), pick list e ashe (11.7 item 4) | `insertOrder` | `TestCheckoutAutoConfirmedAtIntegration` |
 | `otp_code` na thakle Turnstile (hostname shoho) `400 turnstile_failed`; `otp_code` thakle Turnstile dake na kintu shob shomoy verify (OTP na lagleo), bhul `400 otp_invalid`; retry ekoi key notun token ager order (8.6 step 2, 3; 14.2 test 23) | `PlaceOrder`, `auth.VerifyCheckoutOTP` | `TestCheckoutTurnstileIntegration` |
 | OTP thik kintu `price_changed`/`out_of_stock` → ROLLBACK e OTP thake, ekoi code e order; order er por ekoi code onno key `400 otp_invalid`; risky e OTP proman hole `confirmed` (8.6 step 9; 14.2 test 40) | `PlaceOrder`, `auth.ConsumeOTP` | `TestCheckoutOTPRetryIntegration` |
 | Flag `orders.risk_flags` e; login e OTP na (`otp_verified` true); guest risky `409 otp_required` + `phone_masked` + checkout OTP; send limit login er sathe ar `sms_daily_cap` `429`; phone 5/IP 10 ghontay hoya order, `price_changed` gone na, idempotent retry `200` (8.7; 8.19 item 3, 4, 9; 7.8) | `PlaceOrder`, `orderLimit`, `auth.SendCheckoutOTP` | `TestCheckoutRiskIntegration` |
@@ -139,6 +140,7 @@ Ei kram e poro:
 - Quote e `pricing` `ErrInvalidInput` (code er bug): `500`, log.
 - Order e kono step fail: puro ROLLBACK (stock, `used_count`, counter, cart ager moto); deadlock/serialization e ekbar abar, tarpor `500`.
 - Order SMS job e primary domain nai, `confirm_token_hash` `CONFIRM_SECRET` er sathe mile na, ba provider nai: job error, retry, shesh e `failed_at` ar admin alert; order thake (SMS chhara confirm staff er phone e, 8.10 item 3).
+- Checkout e shoja `confirmed` (risk chhara COD, `cod_confirmation` risky/`none`) order e `insertOrder` nijei `confirmed_at = now()` dey (8.8); age dito na, tai egulo pick list e ashto na (M7a step 15 e dhora, `TestCheckoutAutoConfirmedAtIntegration`). `confirmed_at` diye kichu khujle `TransitionOrder` ar `insertOrder` duita path-i mone rakho.
 - Lock er porer dam quote theke alada: `409 price_changed` notun total shoho; customer abar submit kore (notun key lage na, body bodlay bole form notun key dey).
 
 ## Bodlanor age mone rakho

@@ -58,7 +58,7 @@ func shopToday(ctx context.Context, d *sql.DB, shopID int64) (string, error) {
 }
 
 // LoadPickList (8.11 item 1): date (shop timezone, khali = aj) er shesh porjonto confirmed order er shob open fulfillment,
-// ager diner baki o. vendor 0 = shob, -1 = kichu na. confirmed_at NULL bad (TransitionOrder shob shomoy dey; v1.44).
+// ager diner baki o. vendor 0 = shob, -1 = kichu na. confirmed_at NULL bad (checkout ar TransitionOrder dey; v1.44).
 func LoadPickList(ctx context.Context, d *sql.DB, shopID int64, date string, vendor int64) (PickList, error) {
 	p := PickList{Date: date, Variants: []PickVariant{}, Areas: []PickArea{}, Fulfillments: []PickFulfillment{}}
 	if p.Date == "" {
