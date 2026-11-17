@@ -22,10 +22,13 @@ import (
 
 	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/cart"
+	"vendrix/backend/internal/coupon"
+	"vendrix/backend/internal/customer"
 	"vendrix/backend/internal/dbtest"
 	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/order"
 	"vendrix/backend/internal/pricing"
+	"vendrix/backend/internal/shipping"
 	"vendrix/backend/internal/shop"
 )
 
@@ -133,6 +136,11 @@ func newCheckout(t *testing.T) *checkoutFx {
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(login(h)) })
 	// admin (M7a): staff context test e request e (httpx.WithStaff); RequireRole handler e
 	oh.AdminRoutes(mux, func(h http.Handler) http.Handler { return h })
+	// zone, coupon, customer admin (TestAdminShopIsolationIntegration)
+	noMW := func(h http.Handler) http.Handler { return h }
+	shipping.NewHandlers(f.d, log).AdminRoutes(mux, noMW)
+	coupon.NewHandlers(f.d, log).AdminRoutes(mux, noMW)
+	customer.NewHandlers(f.d, log).AdminRoutes(mux, noMW)
 	// login (14.2 test 11: guest order → OTP login → /api/me/orders)
 	ah := auth.NewHandlers(f.d, log, otpSecret, ts, func(ctx context.Context, tx *sql.Tx, shopID, userID int64, key, locale string) (any, error) {
 		return cart.Merge(ctx, tx, shopID, userID, key, locale)

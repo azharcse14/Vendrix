@@ -426,6 +426,25 @@ func TestAdminShopIsolationIntegration(t *testing.T) {
 	if s := f.orderStatus(oid) + "|" + f.fStatuses(oid); s != "pending/pending|open" {
 		t.Errorf("b er request er por %s", s)
 	}
+	// zone, coupon, customer (step 11): a er row b er owner er kache 404, list e nai, block muchte pare na
+	zone := s(f.id(`SELECT id FROM delivery_zones WHERE shop_id = $1 LIMIT 1`, f.shop))
+	cp := s(f.id(`INSERT INTO coupons (shop_id, code, kind, value) VALUES ($1, 'ISO', 'fixed', 100) RETURNING id`, f.shop))
+	f.exec(`INSERT INTO blocked_phones (shop_id, phone) VALUES ($1, $2)`, f.shop, userPhone)
+	wantErr(t, "zone", f.adm(ob, "PATCH", "/api/admin/delivery-zones/"+zone, map[string]any{"charge": 1}), http.StatusNotFound, "not_found")
+	wantErr(t, "coupon", f.adm(ob, "PATCH", "/api/admin/coupons/"+cp, map[string]any{"is_active": false}), http.StatusNotFound, "not_found")
+	wantErr(t, "customer", f.adm(ob, "GET", "/api/admin/customers/"+s(f.user), nil), http.StatusNotFound, "not_found")
+	for _, p := range []string{"/api/admin/delivery-zones", "/api/admin/coupons", "/api/admin/customers", "/api/admin/blocked-phones"} {
+		if l := f.admJSON(ob, "GET", p, nil, http.StatusOK); l["total"].(json.Number).String() != "0" {
+			t.Errorf("b er %s: %v", p, l)
+		}
+	}
+	if rec := f.adm(ob, "DELETE", "/api/admin/blocked-phones", map[string]string{"phone": userPhone}); rec.Code != http.StatusNoContent ||
+		f.count(`SELECT count(*) FROM blocked_phones`) != 1 {
+		t.Errorf("b unblock: %d", rec.Code)
+	}
+	if n := f.count(`SELECT count(*) FROM delivery_zones WHERE charge = 1`) + f.count(`SELECT count(*) FROM coupons WHERE NOT is_active`); n != 0 {
+		t.Errorf("b bodleche %d", n)
+	}
 	if n := f.count(`SELECT count(*) FROM order_notes`) + f.count(`SELECT count(*) FROM audit_logs`); n != 0 {
 		t.Errorf("note/audit %d", n)
 	}

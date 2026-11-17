@@ -461,6 +461,19 @@ var adminRoutes = map[string]routeRoles{
 	"POST /api/admin/batches":              {roles: allRoles},
 	"POST /api/admin/inventory/adjust":     {roles: allRoles},
 	"GET /api/admin/inventory/movements":   {roles: allRoles},
+
+	// zone, coupon, customer + block (11.2, 11.7 item 12, 13 v, vi): shudhu owner/admin
+	"GET /api/admin/delivery-zones":        {roles: shopAdmin},
+	"POST /api/admin/delivery-zones":       {roles: shopAdmin},
+	"PATCH /api/admin/delivery-zones/{id}": {roles: shopAdmin},
+	"GET /api/admin/coupons":               {roles: shopAdmin},
+	"POST /api/admin/coupons":              {roles: shopAdmin},
+	"PATCH /api/admin/coupons/{id}":        {roles: shopAdmin},
+	"GET /api/admin/customers":             {roles: shopAdmin},
+	"GET /api/admin/customers/{id}":        {roles: shopAdmin},
+	"GET /api/admin/blocked-phones":        {roles: shopAdmin},
+	"POST /api/admin/blocked-phones":       {roles: shopAdmin},
+	"DELETE /api/admin/blocked-phones":     {roles: shopAdmin},
 }
 
 // registeredAdminRoutes: backend er (test chhara) Go source e "METHOD /api/admin/..." pattern gulo. ServeMux
