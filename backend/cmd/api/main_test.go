@@ -550,7 +550,7 @@ func TestAdminRouteRoles(t *testing.T) {
 	}
 	do := func(route, cookie string) (int, string) {
 		method, path, _ := strings.Cut(route, " ")
-		path = strings.ReplaceAll(path, "{id}", "1")
+		path = strings.ReplaceAll(path, "{id}", "2") // fake staff ID 1: nijer reset 403 (v1.46), tai onno id
 		r := httptest.NewRequest(method, path, strings.NewReader(`{}`))
 		r.RemoteAddr = "192.0.2.1:1"
 		if cookie != "" {

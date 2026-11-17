@@ -140,7 +140,7 @@ type audit struct {
 	shopID, staffID int64 // staffID 0 = ochena (NULL)
 	entity          int64 // entity_id; 0 = staffID (nijer kaj)
 	action, ip      string
-	after           map[string]any
+	before, after   map[string]any // before nil = NULL
 }
 
 // insertAudit (8.3 step 4): audit_logs e ekta row (entity staff).
@@ -149,13 +149,19 @@ func insertAudit(ctx context.Context, e jobs.Execer, a audit) error {
 	if err != nil {
 		return err
 	}
+	var before []byte // nil = NULL
+	if a.before != nil {
+		if before, err = json.Marshal(a.before); err != nil {
+			return err
+		}
+	}
 	staff := sql.NullInt64{Int64: a.staffID, Valid: a.staffID != 0}
 	entity := staff
 	if a.entity != 0 {
 		entity = sql.NullInt64{Int64: a.entity, Valid: true}
 	}
-	_, err = e.ExecContext(ctx, `INSERT INTO audit_logs (shop_id, staff_id, action, entity_type, entity_id, after, ip)
-		VALUES ($1, $2, $3, 'staff', $6, $4, NULLIF($5, ''))`, a.shopID, staff, a.action, after, a.ip, entity)
+	_, err = e.ExecContext(ctx, `INSERT INTO audit_logs (shop_id, staff_id, action, entity_type, entity_id, before, after, ip)
+		VALUES ($1, $2, $3, 'staff', $6, $7, $4, NULLIF($5, ''))`, a.shopID, staff, a.action, after, a.ip, entity, before)
 	return err
 }
 

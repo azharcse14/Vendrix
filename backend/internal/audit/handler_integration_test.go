@@ -181,21 +181,12 @@ func TestAuditListIntegration(t *testing.T) {
 	}
 }
 
-func itoa(n int64) string {
-	return json.Number(strings.TrimSpace(string(must(json.Marshal(n))))).String()
-}
-
-func must(b []byte, err error) []byte {
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
+func itoa(n int64) string { return strconv.FormatInt(n, 10) }
 
 func shopDate(f *auditFx, days int) string {
 	f.t.Helper()
 	var s string
-	if err := f.d.QueryRow(`SELECT to_char((now() AT TIME ZONE 'Pacific/Kiritimati')::date + $1, 'YYYY-MM-DD')`, days).Scan(&s); err != nil {
+	if err := f.d.QueryRow(`SELECT to_char((now() AT TIME ZONE 'Pacific/Kiritimati')::date + $1::int, 'YYYY-MM-DD')`, days).Scan(&s); err != nil {
 		f.t.Fatal(err)
 	}
 	return s

@@ -1,10 +1,10 @@
 # Audit log
 
-Design: 12 (Operation 3), 6.1, 6.7 · Milestone: M1 · Code: `backend/internal/audit`
+Design: 12 (Operation 3), 6.1, 6.7, 7.7, 11.7 item 11 · Milestone: M1, M7a · Code: `backend/internal/audit`
 
 ## Ki kore
 
-Protiti admin kaj (category, product, variant bodol; order transition, note, fulfillment transition ([order-status.md](order-status.md)); batch, stock adjust ([inventory.md](inventory.md)); zone, coupon ([delivery-zone.md](delivery-zone.md), [coupon.md](coupon.md)); customer block ([admin-api.md](admin-api.md), phone chhara); pore settings) `audit_logs` e ek row rakhe: ke, kon shop e, ki, ager ar porer obostha, IP. Owner pore dekhte pare ke ki bodleche.
+Protiti admin kaj (category, product, variant bodol; order transition, note, fulfillment transition ([order-status.md](order-status.md)); batch, stock adjust ([inventory.md](inventory.md)); zone, coupon ([delivery-zone.md](delivery-zone.md), [coupon.md](coupon.md)); customer block ([admin-api.md](admin-api.md), phone chhara); pore settings) `audit_logs` e ek row rakhe: ke, kon shop e, ki, ager ar porer obostha, IP. Owner/admin `GET /api/admin/audit-logs` e dekhe ke ki bodleche.
 
 ## Kivabe kaj kore
 
@@ -12,6 +12,7 @@ Protiti admin kaj (category, product, variant bodol; order transition, note, ful
 2. Ek-i transaction e `audit.Log(ctx, tx, audit.Entry{...})`; IP `httpx.IP(ctx)`.
 3. Log fail korle (jemon onno shop er staff) kaj o rollback.
 4. Login er audit (`staff.login`, `staff.login_failed`, `staff.login_mfa*`, `staff.password_changed`, `staff.totp_*`, `staff.reset_2fa`) `audit.Log` na, `auth` er `insertAudit` e ([auth.md](auth.md)): bhul login er row transaction chhara-o (`*sql.DB`), ochena staff e `staff_id` NULL.
+5. List (`handler.go` → `List`, owner/admin, v1.46): paged, notun age (`created_at DESC, id DESC`, `audit_shop_idx`); filter `action` hubohu (max 64), `staff_id` (> 0; onno shop er hole khali), `from`/`to` `YYYY-MM-DD` shop er timezone e (`to` shoho); row `{id, staff_id, staff_name (LEFT JOIN, CLI row e null), action, entity_type, entity_id, before, after, ip, created_at}`; `no-store`.
 
 ## Code er map
 
@@ -20,12 +21,14 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/internal/audit/audit.go` → `Log`, `Entry` | `audit_logs` e INSERT |
+| `backend/internal/audit/handler.go` → `NewHandlers`, `AdminRoutes`, `List` | `GET /api/admin/audit-logs` |
 
 ## Niyom ar tar test
 
 | Niyom (design section) | Code e kothay | Test |
 |---|---|---|
 | Admin kaj er ek transaction e row; staff ar shop mile (composite FK) (12 Operation 3, Rule 3) | `Log` | `TestAuditIntegration` |
+| List owner/admin, filter, paged, onno shop er row na, row e puro phone na (7.7, 11.2, 11.7 item 11, v1.46) | `List` | `TestAuditListIntegration`, `TestAdminRouteRoles` |
 
 ## Data
 
@@ -34,6 +37,7 @@ Ei kram e poro:
 ## Bhul hole ki hoy
 
 - Onno shop er staff: foreign key error, puro kaj rollback (`500`).
+- List e bhul `from`/`to`/`staff_id`/`action` `400 fields.<naam>: invalid`; `staff`/vendor role `403`.
 
 ## Bodlanor age mone rakho
 

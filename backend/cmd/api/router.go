@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"vendrix/backend/internal/audit"
 	"vendrix/backend/internal/auth"
 	"vendrix/backend/internal/cart"
 	"vendrix/backend/internal/catalog"
@@ -80,6 +81,8 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("POST /api/admin/auth/totp/enable", staff(http.HandlerFunc(adm.TOTPEnable)))
 	mux.Handle("POST /api/admin/auth/logout", staff(http.HandlerFunc(adm.Logout)))
 	mux.Handle("GET /api/admin/me", staff(httpx.RequireStaff(http.HandlerFunc(adm.Me))))
+	auth.NewStaffAdmin(d, log).AdminRoutes(mux, staff)
+	audit.NewHandlers(d, log).AdminRoutes(mux, staff)
 
 	catalog.NewHandlers(d, log, newStore(cfg)).Routes(mux, public, staff)
 	zh := shipping.NewHandlers(d, log)

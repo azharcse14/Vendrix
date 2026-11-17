@@ -37,6 +37,7 @@ var messages = map[string][2]string{
 	"coupon_limit_reached":     {"কুপনটির ব্যবহারের সীমা শেষ", "This coupon has reached its limit"},
 	"coupon_exists":            {"এই কোডের কুপন আগেই আছে", "A coupon with this code already exists"},
 	"zone_exists":              {"এই এলাকা আগেই আছে", "This delivery area already exists"},
+	"staff_exists":             {"এই ইমেইলের স্টাফ আগেই আছে", "A staff member with this email already exists"},
 	"cart_empty":               {"কার্ট খালি", "Your cart is empty"},
 	"missing_idempotency_key":  {"অনুরোধে ভুল আছে, পাতাটি আবার খুলুন", "Invalid request, please reload the page"},
 	"idempotency_key_reused":   {"অর্ডারের তথ্য বদলেছে, আবার জমা দিন", "Order details changed, please submit again"},

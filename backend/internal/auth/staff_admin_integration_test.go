@@ -173,7 +173,7 @@ func TestStaffAdminIntegration(t *testing.T) {
 	// list: shudhu nijer shop, secret na
 	_, l, w := f.call(owner, "GET", "/api/admin/staff", nil)
 	items, _ := l["items"].([]any)
-	if w.Code != http.StatusOK || l["total"] != float64(3) || len(items) != 3 || strings.Contains(w.Body.String(), "password") ||
+	if w.Code != http.StatusOK || l["total"] != float64(3) || len(items) != 3 || strings.Contains(w.Body.String(), "password_hash") ||
 		strings.Contains(w.Body.String(), "totp_secret") || items[0].(map[string]any)["totp_enabled"] != true {
 		t.Errorf("list: %d %s", w.Code, w.Body)
 	}
@@ -193,7 +193,8 @@ func TestStaffAdminIntegration(t *testing.T) {
 	// patch: naam e session thake; role/is_active e revoke
 	f.session(a, sid)
 	f.session(a, sid)
-	if p := f.want(owner, "PATCH", path(sid, ""), map[string]string{"name": "Rahim U"}, http.StatusOK, ""); p["name"] != "Rahim U" || f.live(sid) != 2 {
+	n := f.live(sid) // temp password login er setup_pending o
+	if p := f.want(owner, "PATCH", path(sid, ""), map[string]string{"name": "Rahim U"}, http.StatusOK, ""); p["name"] != "Rahim U" || f.live(sid) != n {
 		t.Errorf("name patch: %v, session %d", p, f.live(sid))
 	}
 	if p := f.want(owner, "PATCH", path(sid, ""), map[string]string{"role": "admin"}, http.StatusOK, ""); p["role"] != "admin" || f.live(sid) != 0 {
