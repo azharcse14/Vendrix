@@ -35,6 +35,8 @@ func (h *Handlers) AdminRoutes(mux *http.ServeMux, staff httpx.Middleware) {
 	mux.Handle("POST /api/admin/fulfillments/{id}/pack", admin(h.AdminPack, all))
 	mux.Handle("POST /api/admin/fulfillments/{id}/shipments", admin(h.AdminShip, all))
 	mux.Handle("PATCH /api/admin/shipments/{id}", admin(h.AdminShipment, all))
+	mux.Handle("GET /api/admin/packing/pick-list", admin(h.AdminPickList, all))
+	mux.Handle("POST /api/admin/print-links", admin(h.AdminPrintLink, all))
 }
 
 // scope (Rule 13, 11.7 item 13 i): shop staff 0 (shob vendor); vendor role e nijer vendor, vendor_id chhara -1

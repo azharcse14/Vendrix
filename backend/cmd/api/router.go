@@ -86,7 +86,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	ch.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	ch.WishlistRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 	// checkout (7.5): cart er moto owner
-	oh := order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret, OTPIP: otpIP})
+	oh := order.NewHandlers(d, log, order.Guard{Turnstile: ts, OTPSecret: cfg.OTPSecret, ConfirmSecret: cfg.ConfirmSecret, PrintSecret: cfg.PrintSecret, OTPIP: otpIP})
 	oh.Routes(mux, func(h http.Handler) http.Handler { return public(optCustomer(h)) })
 	oh.MeRoutes(mux, func(h http.Handler) http.Handler { return public(customer(h)) })
 	oh.AdminRoutes(mux, staff)

@@ -35,6 +35,7 @@ type Guard struct {
 	Turnstile     auth.Turnstile
 	OTPSecret     string
 	ConfirmSecret string       // COD confirm token er HMAC (8.10)
+	PrintSecret   string       // print link token er HMAC (11.7 item 8)
 	OTPIP         *httpx.Limit // login er OTP send er ekoi client IP limit (7.8); nil = OTP pathano na (fail closed)
 }
 
@@ -53,6 +54,8 @@ func (h *Handlers) Routes(mux *http.ServeMux, wrap func(http.Handler) http.Handl
 	mux.Handle("POST /api/orders/track", wrap(httpx.RateLimit(10, time.Minute)(http.HandlerFunc(h.Track))))
 	mux.Handle("GET /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.ConfirmView)))
 	mux.Handle("POST /api/confirm/{confirm_token}", wrap(http.HandlerFunc(h.Confirm)))
+	// print (11.7 item 8): website SSR er data; token e shop, host er shop er sathe mile
+	mux.Handle("GET /api/print", wrap(http.HandlerFunc(h.Print)))
 }
 
 // MeRoutes (7.3): wrap = public + RequireCustomer (Rule 16).

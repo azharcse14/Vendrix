@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"vendrix/backend/internal/httpx"
 )
@@ -21,15 +22,15 @@ type pickList struct {
 		Variants []pickV `json:"variants"`
 	} `json:"areas"`
 	Fulfillments []struct {
-		ID            int64           `json:"id"`
-		OrderID       int64           `json:"order_id"`
-		OrderNumber   string          `json:"order_number"`
-		Seq           int             `json:"seq"`
-		VendorID      int64           `json:"vendor_id"`
-		RecipientName string          `json:"recipient_name"`
-		District      string          `json:"district"`
-		Area          string          `json:"area"`
-		ConfirmedAt   json.RawMessage `json:"confirmed_at"`
+		ID            int64     `json:"id"`
+		OrderID       int64     `json:"order_id"`
+		OrderNumber   string    `json:"order_number"`
+		Seq           int       `json:"seq"`
+		VendorID      int64     `json:"vendor_id"`
+		RecipientName string    `json:"recipient_name"`
+		District      string    `json:"district"`
+		Area          string    `json:"area"`
+		ConfirmedAt   time.Time `json:"confirmed_at"`
 	} `json:"fulfillments"`
 }
 
@@ -158,10 +159,10 @@ func TestPickListIntegration(t *testing.T) {
 		t.Errorf("fulfillment: %v, chai %v", got, want)
 	}
 	if fl := l.Fulfillments[1]; fl.OrderID != p.o1 || fl.OrderNumber != f.number(p.o1) || fl.Seq != 1 || fl.VendorID != f.vnd ||
-		fl.RecipientName != "R" || fl.District != "Dhaka" || fl.Area != "Dhanmondi" || string(fl.ConfirmedAt) != `"2026-01-10T17:30:00Z"` {
+		fl.RecipientName != "R" || fl.District != "Dhaka" || fl.Area != "Dhanmondi" || !fl.ConfirmedAt.Equal(time.Date(2026, 1, 10, 17, 30, 0, 0, time.UTC)) {
 		t.Errorf("fulfillment row: %+v", fl)
 	}
-	if v := l.Variants[0]; string(v.ProductName) != `{"bn": "প"}` || v.SKU != "s" || v.VariableWeight || v.OrderedWeightG != nil {
+	if v := l.Variants[0]; string(v.ProductName) != `{"bn":"প"}` || v.SKU != "s" || v.VariableWeight || v.OrderedWeightG != nil {
 		t.Errorf("rice row: %+v %s", v, v.ProductName)
 	}
 	if v := l.Variants[1]; !v.VariableWeight || v.OrderedWeightG == nil {

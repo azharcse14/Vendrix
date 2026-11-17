@@ -30,6 +30,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Cart ar wishlist | [cart.md](cart.md) | 8.4, 7.4 | M5, M6 | cholche (key, quantity, cart API, merge, wishlist, `cart.cleanup`, checkout er line ar khali; website `/cart`, heart) |
 | Delivery zone | [delivery-zone.md](delivery-zone.md) | 7.2, 8.6, 8.19 | M6 | cholche (lookup, `GET /api/delivery-zones`, dev seed; admin M7 e) |
 | Inventory: variant khoja, batch, adjust, movement | [inventory.md](inventory.md) | 6.4, 8.12, 11.7 | M7a | cholche (variant khoja, batch, adjust, movement; expire job, pack FIFO M7a er porer step) |
+| Pick list ar print link (packing slip, invoice, pick list) | [print.md](print.md) | 8.11, 11.6, 11.7 | M7a | cholche (backend: pick list, link, `/api/print`; website print page M7a step 14) |
 | Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19 | M6 | cholche (use, peek, release; quote, checkout ar cancel e; admin M7 e) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
@@ -54,7 +55,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/internal/shipping` | Delivery zone: lookup (area → district-wide), `GET /api/delivery-zones` | [delivery-zone.md](delivery-zone.md) |
 | `backend/internal/coupon` | Coupon: atomic use, phone limit, karon, read-only peek, cancel e ferot | [coupon.md](coupon.md) |
 | `backend/internal/inventory` | Admin stock: variant khoja, batch, adjust (wastage), movement, FIFO `Allocate` | [inventory.md](inventory.md) |
-| `backend/internal/order` | Status er state machine (pure) ar DB transition/cancel, checkout quote ar order create, risk flag/OTP, COD confirm, order view/track/me, order job | [order-status.md](order-status.md), [checkout.md](checkout.md) |
+| `backend/internal/order` | Status er state machine (pure) ar DB transition/cancel, checkout quote ar order create, risk flag/OTP, COD confirm, order view/track/me, order job | [order-status.md](order-status.md), [checkout.md](checkout.md), [print.md](print.md) |
 | `backend/internal/phone` | Phone normalize | [phone.md](phone.md) |
 | `backend/internal/docsync` | Doc er test | [doc-sync.md](doc-sync.md) |
 

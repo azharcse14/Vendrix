@@ -152,7 +152,7 @@ func TestRun(t *testing.T) {
 	}
 	env := map[string]string{"APP_ENV": "local", "DATABASE_URL": "postgres://x@127.0.0.1:1/db?connect_timeout=1",
 		"JASPR_INTERNAL_SECRET": strings.Repeat("s", 32), "OTP_SECRET": strings.Repeat("o", 32), "RECOVERY_SECRET": strings.Repeat("r", 32),
-		"CONFIRM_SECRET":   strings.Repeat("c", 32),
+		"CONFIRM_SECRET": strings.Repeat("c", 32), "PRINT_SECRET": strings.Repeat("p", 32),
 		"TURNSTILE_SECRET": "1x0000000000000000000000000000000AA", "TOTP_KEY": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="}
 	lookup := func(k string) (string, bool) { v, ok := env[k]; return v, ok }
 	// config thik, tai error database theke (config er error e na)
