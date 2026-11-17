@@ -31,6 +31,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Delivery zone | [delivery-zone.md](delivery-zone.md) | 7.2, 8.6, 8.19 | M6 | cholche (lookup, `GET /api/delivery-zones`, dev seed; admin M7 e) |
 | Inventory: variant khoja, batch, adjust, movement | [inventory.md](inventory.md) | 6.4, 8.12, 11.7 | M7a | cholche (variant khoja, batch, adjust, movement; expire job, pack FIFO M7a er porer step) |
 | Pick list ar print link (packing slip, invoice, pick list) | [print.md](print.md) | 8.11, 11.6, 11.7 | M7a | cholche (backend: pick list, link, `/api/print`; website print page M7a step 14) |
+| Chobi upload ar storage (local, R2 SigV4) | [media.md](media.md) | 2.2, 7.7, 11.7, 12.2 | M7a | cholche (product chobi upload/order/delete; `POST /uploads` M8 e) |
 | Coupon | [coupon.md](coupon.md) | 8.13, 6.4, 8.19 | M6 | cholche (use, peek, release; quote, checkout ar cancel e; admin M7 e) |
 | Doc er pahara (docsync) | [doc-sync.md](doc-sync.md) | 4.7, 14.2 test 28 | M0 | chalu |
 
@@ -45,7 +46,8 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `backend/migrations` | SQL migration (embed), constraint test | [migration.md](migration.md) |
 | `backend/internal/dbtest` | Asol Postgres e test er database | [migration.md](migration.md) |
 | `backend/internal/shop` | Shop er data: resolve, credential encrypt ar save | [shop.md](shop.md), [credentials.md](credentials.md) |
-| `backend/internal/catalog` | Category, product, variant: public read, search, admin CRUD | [catalog.md](catalog.md) |
+| `backend/internal/catalog` | Category, product, variant: public read, search, admin CRUD, product chobi | [catalog.md](catalog.md), [media.md](media.md) |
+| `backend/internal/storage` | Object store: local dir, Cloudflare R2 (SigV4) | [media.md](media.md) |
 | `backend/internal/audit` | Admin kaj er log, kaj er transaction e | [audit.md](audit.md) |
 | `backend/internal/auth` | Staff password hash, OTP/TOTP primitive, OTP send/verify, checkout OTP (send/verify/consume), customer session, staff login (`/api/admin/auth/login`, `/totp`, `/recovery`), setup (`/password`, `/totp/setup`, `/totp/enable`), admin session, `/api/admin/me`, `staff reset-2fa` | [auth.md](auth.md) |
 | `backend/internal/jobs` | Job queue, worker, sweep, cleanup | [jobs.md](jobs.md) |

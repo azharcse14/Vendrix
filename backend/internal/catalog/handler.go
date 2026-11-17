@@ -11,15 +11,20 @@ import (
 	"unicode/utf8"
 
 	"vendrix/backend/internal/httpx"
+	"vendrix/backend/internal/storage"
 )
 
 // Handlers: catalog er public (7.2) ar admin (7.7) route. Public route ShopFromHost er pore boshe.
 type Handlers struct {
-	db  *sql.DB
-	log *slog.Logger
+	db    *sql.DB
+	log   *slog.Logger
+	store storage.Store
+	sem   chan struct{} // chobi decode/re-encode ekshathe max 2 (memory, 11.7 item 9)
 }
 
-func NewHandlers(d *sql.DB, log *slog.Logger) *Handlers { return &Handlers{db: d, log: log} }
+func NewHandlers(d *sql.DB, log *slog.Logger, store storage.Store) *Handlers {
+	return &Handlers{db: d, log: log, store: store, sem: make(chan struct{}, 2)}
+}
 
 func (h *Handlers) fail(w http.ResponseWriter, r *http.Request, err error) {
 	h.log.ErrorContext(r.Context(), "catalog handler", "request_id", httpx.RequestIDFrom(r.Context()), "err", err)

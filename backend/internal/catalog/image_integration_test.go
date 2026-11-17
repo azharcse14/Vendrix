@@ -104,7 +104,7 @@ func TestImageUploadIntegration(t *testing.T) {
 
 	img := f.upload(t, a, p, jpegWithExif(t), 201, "alt_bn", "লাল চাল", "alt_en", "Red rice")
 	key, _ := img["storage_key"].(string)
-	if !regexp.MustCompile(`^shops/` + s64(a.ShopID) + `/products/` + p + `/[A-Z2-7]{26}\.jpg$`).MatchString(key) ||
+	if !regexp.MustCompile(`^shops/`+s64(a.ShopID)+`/products/`+p+`/[A-Z2-7]{26}\.jpg$`).MatchString(key) ||
 		img["width"] != float64(20) || img["height"] != float64(10) || img["sort_order"] != float64(0) ||
 		img["alt"].(map[string]any)["bn"] != "লাল চাল" || img["shop_id"] != nil {
 		t.Errorf("jpeg: %v", img)

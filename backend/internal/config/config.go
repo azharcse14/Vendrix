@@ -44,6 +44,12 @@ type Config struct {
 	RecoverySecret      string   // RECOVERY_SECRET: recovery code er HMAC (8.3)
 	ConfirmSecret       string   // CONFIRM_SECRET: COD confirm token er HMAC (8.10)
 	PrintSecret         string   // PRINT_SECRET: print link token er HMAC (11.7 item 8)
+	Storage             string   // STORAGE: r2 (default) ba local (shudhu APP_ENV=local; 11.7 item 9)
+	UploadDir           string   // UPLOAD_DIR: STORAGE=local er dir; default .data/uploads (process backend/ e chole)
+	R2AccountID         string   // R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY: STORAGE=r2 e lagbe
+	R2Bucket            string
+	R2AccessKeyID       string
+	R2SecretAccessKey   string
 }
 
 // turnstileTestSecrets: Cloudflare er dummy secret (pass, fail, spent); shudhu local e (v1.20).
@@ -120,6 +126,30 @@ func Load(lookup func(string) (string, bool), cmd Command) (Config, error) {
 		c.TOTPKey = base64Key(get("TOTP_KEY"))
 		if c.TOTPKey == nil {
 			bad("TOTP_KEY base64 e 32 byte dao (openssl rand -base64 32)")
+		}
+		c.Storage = get("STORAGE")
+		switch c.Storage {
+		case "", "r2":
+			c.Storage = "r2"
+			c.R2AccountID, c.R2Bucket = get("R2_ACCOUNT_ID"), get("R2_BUCKET")
+			c.R2AccessKeyID, c.R2SecretAccessKey = get("R2_ACCESS_KEY_ID"), get("R2_SECRET_ACCESS_KEY")
+			for _, k := range [][2]string{{"R2_ACCOUNT_ID", c.R2AccountID}, {"R2_BUCKET", c.R2Bucket},
+				{"R2_ACCESS_KEY_ID", c.R2AccessKeyID}, {"R2_SECRET_ACCESS_KEY", c.R2SecretAccessKey}} {
+				if k[1] == "" {
+					bad("%s nai (STORAGE=r2; local e STORAGE=local)", k[0])
+				}
+			}
+		case "local":
+			// production e disk e chobi gele backup/CDN er baire thakto
+			if c.Env != "local" {
+				bad("STORAGE=local shudhu APP_ENV=local e (onno env e r2)")
+			}
+			c.UploadDir = get("UPLOAD_DIR")
+			if c.UploadDir == "" {
+				c.UploadDir = ".data/uploads"
+			}
+		default:
+			bad("STORAGE %q ochena (r2 ba local)", c.Storage)
 		}
 	case Migrate:
 		c.MigrateDatabaseURL = get("MIGRATE_DATABASE_URL")

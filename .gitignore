@@ -21,3 +21,5 @@ coverage/
 .idea/
 *.iml
 .DS_Store
+# Local chobi upload (STORAGE=local)
+backend/.data/

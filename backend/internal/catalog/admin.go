@@ -40,6 +40,9 @@ func (h *Handlers) Routes(mux *http.ServeMux, public, staff httpx.Middleware) {
 	mux.Handle("PATCH /api/admin/products/{id}", admin(h.UpdateProduct, prod...))
 	mux.Handle("POST /api/admin/products/{id}/variants", admin(h.CreateVariant, prod...))
 	mux.Handle("PATCH /api/admin/variants/{id}", admin(h.UpdateVariant, prod...))
+	mux.Handle("POST /api/admin/products/{id}/images", admin(h.UploadImage, prod...))
+	mux.Handle("PATCH /api/admin/products/{id}/images/order", admin(h.OrderImages, prod...))
+	mux.Handle("DELETE /api/admin/images/{id}", admin(h.DeleteImage, prod...))
 }
 
 // apiErr: handler er jana error (status ar 7.1 body).
@@ -81,7 +84,7 @@ func (h *Handlers) writeErr(w http.ResponseWriter, r *http.Request, err error) {
 // catalogConstraint: shudhu catalog table er constraint client er bhul; baki (jemon audit_logs er staff FK =
 // session er bug) 500 ar log e.
 func catalogConstraint(c string) bool {
-	for _, t := range []string{"categories_", "products_", "product_variants_"} {
+	for _, t := range []string{"categories_", "products_", "product_variants_", "product_images_"} {
 		if strings.HasPrefix(c, t) {
 			return true
 		}
@@ -104,6 +107,23 @@ func constraintField(c string) string {
 // write: admin kaj ek transaction e, audit shoho (12 Operation 3). fn ferot dey entity id, before, after.
 func (h *Handlers) write(w http.ResponseWriter, r *http.Request, status int, action string,
 	fn func(tx *sql.Tx, st httpx.Staff) (int64, json.RawMessage, json.RawMessage, error)) {
+	after, err := h.audited(r, action, fn)
+	if err != nil {
+		h.writeErr(w, r, err)
+		return
+	}
+	if after == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = w.Write(after)
+}
+
+// audited: write er transaction ar audit, response chhara (chobi route commit er por object muche).
+func (h *Handlers) audited(r *http.Request, action string,
+	fn func(tx *sql.Tx, st httpx.Staff) (int64, json.RawMessage, json.RawMessage, error)) (json.RawMessage, error) {
 	st, _ := httpx.StaffFrom(r.Context())
 	var after json.RawMessage
 	err := db.InTx(r.Context(), h.db, func(tx *sql.Tx) error {
@@ -116,17 +136,7 @@ func (h *Handlers) write(w http.ResponseWriter, r *http.Request, status int, act
 		return audit.Log(r.Context(), tx, audit.Entry{ShopID: st.ShopID, StaffID: st.ID, Action: action,
 			EntityType: entity, EntityID: id, Before: before, After: a, IP: httpx.IP(r.Context())})
 	})
-	if err != nil {
-		h.writeErr(w, r, err)
-		return
-	}
-	if after == nil {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_, _ = w.Write(after)
+	return after, err
 }
 
 // decode: body (DisallowUnknownFields); bhul hole 400 (boro hole 413).

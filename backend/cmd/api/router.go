@@ -17,6 +17,7 @@ import (
 	"vendrix/backend/internal/order"
 	"vendrix/backend/internal/shipping"
 	"vendrix/backend/internal/shop"
+	"vendrix/backend/internal/storage"
 )
 
 // siteverifyURL: Turnstile (test e fake server).
@@ -78,7 +79,7 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 	mux.Handle("POST /api/admin/auth/logout", staff(http.HandlerFunc(adm.Logout)))
 	mux.Handle("GET /api/admin/me", staff(httpx.RequireStaff(http.HandlerFunc(adm.Me))))
 
-	catalog.NewHandlers(d, log).Routes(mux, public, staff)
+	catalog.NewHandlers(d, log, newStore(cfg)).Routes(mux, public, staff)
 	shipping.NewHandlers(d, log).Routes(mux, public)
 	// cart (7.4, 8.4 item 2): Bearer thakle account cart (bhul/expire 401), na hole X-Cart-Key er guest cart
 	optCustomer := httpx.OptionalCustomer(log, auth.LookupSession(d))
@@ -106,6 +107,14 @@ func newHandler(cfg config.Config, log *slog.Logger, d *sql.DB, health pinger) (
 		httpx.CORS(cfg.AdminOrigins),
 		cop.Handler,
 	), nil
+}
+
+// newStore: chobi er store (11.7 item 9); config.Load STORAGE=local shudhu local e dey.
+func newStore(cfg config.Config) storage.Store {
+	if cfg.Storage == "local" {
+		return storage.Local{Dir: cfg.UploadDir}
+	}
+	return storage.NewR2(cfg.R2AccountID, cfg.R2Bucket, cfg.R2AccessKeyID, cfg.R2SecretAccessKey)
 }
 
 // healthz: API ar database (13.8 er uptime monitor, protiti minute). Database 2 second e na pele 503.

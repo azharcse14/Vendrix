@@ -23,7 +23,7 @@ type fixture struct {
 	d     *sql.DB
 	srv   http.Handler
 	h     *Handlers
-	store *testStore // chobi: t.TempDir() e local store
+	store *testStore       // chobi: t.TempDir() e local store
 	ids   map[string]int64 // "a", "b" (shop), "a.vendor", "b.vendor", ar insert kora jinish er naam
 }
 
