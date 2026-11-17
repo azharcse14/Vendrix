@@ -43,7 +43,7 @@ var orderAllowed = map[Status]map[Status][]Actor{
 
 var fulfillmentAllowed = map[FStatus]map[FStatus][]Actor{
 	Open:      {Packed: {Staff, Vendor}, FCancelled: {Staff, Vendor}},
-	Packed:    {Shipped: {Staff, Vendor}, FCancelled: {Staff}},
+	Packed:    {Open: {Staff, Vendor}, Shipped: {Staff, Vendor}, FCancelled: {Staff}}, // Open: pack undo, shudhu COD (v1.37)
 	Shipped:   {Delivered: {Staff, System}, Returned: {Staff, System}},
 	Delivered: {Returned: {Staff}},
 }

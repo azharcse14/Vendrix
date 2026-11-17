@@ -34,11 +34,11 @@ func ByStaff(st httpx.Staff) By {
 }
 
 var (
-	ErrNotFound          = errors.New("order: nai")                                    // 404 not_found
-	ErrInvalidTransition = errors.New("order: ei bodol hoy na")                        // 409 invalid_transition
-	ErrPaymentRequired   = errors.New("order: online order, taka ase ni")              // 409 payment_required
-	ErrNotImplemented    = errors.New("order: shipped/delivered/returned/undo M7a te") // 8.19 item 8
-	errRefundOverPaid    = errors.New("order: refund paid er beshi")                   // bug, ROLLBACK
+	ErrNotFound          = errors.New("order: nai")                               // 404 not_found
+	ErrInvalidTransition = errors.New("order: ei bodol hoy na")                   // 409 invalid_transition
+	ErrPaymentRequired   = errors.New("order: online order, taka ase ni")         // 409 payment_required
+	ErrNotImplemented    = errors.New("order: shipped/delivered/returned M7a te") // 8.19 item 8
+	errRefundOverPaid    = errors.New("order: refund paid er beshi")              // bug, ROLLBACK
 )
 
 type fRow struct {
@@ -138,8 +138,9 @@ func transitionOrder(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, t
 	return nil
 }
 
-// TransitionFulfillment (8.8): → cancelled ar → packed (ojon chhara: shudhu fixed item er fulfillment; ojon shoho
-// Pack) er side effect; baki allowed bodol ErrNotImplemented (M7a er porer step). Shob fulfillment cancelled hole
+// TransitionFulfillment (8.8): → cancelled, → packed (ojon chhara: shudhu fixed item er fulfillment; ojon shoho
+// Pack) ar packed → open (undo: COD, active shipment chhara, note lagbe) er side effect; baki allowed bodol
+// ErrNotImplemented (M7a er porer step). Shob fulfillment cancelled hole
 // order o cancelled (System), na hole display_status abar.
 func TransitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string) error {
 	return transitionFulfillment(ctx, tx, shopID, fulfillmentID, to, by, note, nil)
@@ -193,6 +194,32 @@ func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentI
 			return err
 		}
 		o.fs[i].status = Packed
+	case Open: // pack undo (8.8 v1.37)
+		if note == "" {
+			return FieldError("note")
+		}
+		if o.method != "cod" {
+			return ErrInvalidTransition // prepaid M10 e abar dekha
+		}
+		var shipped bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM shipments WHERE shop_id = $1 AND fulfillment_id = $2
+			AND status NOT IN ('cancelled', 'returned'))`, shopID, fulfillmentID).Scan(&shipped); err != nil {
+			return err
+		}
+		if shipped {
+			return ErrInvalidTransition
+		}
+		if err := unpack(ctx, tx, shopID, o, fulfillmentID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE order_fulfillments SET status = 'open', packed_at = NULL
+			WHERE shop_id = $1 AND id = $2`, shopID, fulfillmentID); err != nil {
+			return err
+		}
+		if err := history(ctx, tx, shopID, o.id, fulfillmentID, string(Packed), string(Open), by, note); err != nil {
+			return err
+		}
+		o.fs[i].status = Open
 	default:
 		return ErrNotImplemented
 	}

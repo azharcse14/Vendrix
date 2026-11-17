@@ -275,7 +275,10 @@ func (h *Handlers) AdminFulfillments(w http.ResponseWriter, r *http.Request) {
 
 // adminError: ErrForbidden 403; ErrNotImplemented (M7a er porer step) 409 invalid_transition; baki transitionError.
 func (h *Handlers) adminError(w http.ResponseWriter, r *http.Request, err error) {
+	var fe FieldError
 	switch {
+	case errors.As(err, &fe):
+		invalid(w, r, string(fe), "invalid")
 	case errors.Is(err, ErrForbidden):
 		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "forbidden"})
 	case errors.Is(err, ErrNotImplemented):
