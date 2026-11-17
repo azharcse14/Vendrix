@@ -21,7 +21,8 @@ const totpKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 
 // authEnv: serve er M4 secret (13.5).
 var authEnv = []string{"OTP_SECRET", secret, "TURNSTILE_SECRET", "0x4AAAAAAAreal-turnstile-secret", "TOTP_KEY", totpKey,
-	"RECOVERY_SECRET", secret, "CONFIRM_SECRET", secret, "PRINT_SECRET", secret}
+	"RECOVERY_SECRET", secret, "CONFIRM_SECRET", secret, "PRINT_SECRET", secret,
+	"R2_ACCOUNT_ID", "acc", "R2_BUCKET", "shop-media", "R2_ACCESS_KEY_ID", "KEYID", "R2_SECRET_ACCESS_KEY", "r2-secret"}
 
 func TestLoadServe(t *testing.T) {
 	c, err := Load(env(append([]string{"APP_ENV", "production", "DATABASE_URL", "postgres://shop_app:x@127.0.0.1:5432/shop",
@@ -101,6 +102,53 @@ func TestLoadRejects(t *testing.T) {
 	}
 }
 
+// TestLoadStorage (13.5, 11.7 item 9): STORAGE default r2 (R2_* lagbe); local shudhu APP_ENV=local e,
+// UPLOAD_DIR default .data/uploads (process backend/ e chole); ochena STORAGE error; error e R2 secret na.
+func TestLoadStorage(t *testing.T) {
+	base := []string{"DATABASE_URL", "postgres://a@localhost/db", "JASPR_INTERNAL_SECRET", secret, "ADMIN_ORIGINS", "https://admin.x.com"}
+	load := func(kv ...string) (Config, error) {
+		return Load(env(append(append(append([]string{}, base...), authEnv...), kv...)...), Serve)
+	}
+	c, err := load("APP_ENV", "production")
+	if err != nil || c.Storage != "r2" || c.R2AccountID != "acc" || c.R2Bucket != "shop-media" || c.R2AccessKeyID != "KEYID" || c.R2SecretAccessKey != "r2-secret" {
+		t.Errorf("r2 default: %+v %v", c, err)
+	}
+	c, err = load("APP_ENV", "local", "STORAGE", "local")
+	if err != nil || c.Storage != "local" || c.UploadDir != ".data/uploads" {
+		t.Errorf("local: %q %q %v", c.Storage, c.UploadDir, err)
+	}
+	if c, err := load("APP_ENV", "local", "STORAGE", "local", "UPLOAD_DIR", "/tmp/up"); err != nil || c.UploadDir != "/tmp/up" {
+		t.Errorf("UPLOAD_DIR: %q %v", c.UploadDir, err)
+	}
+	// local e R2_* lage na
+	noR2 := func(k string) (string, bool) {
+		if strings.HasPrefix(k, "R2_") {
+			return "", false
+		}
+		return env(append(append(append([]string{}, base...), authEnv...), "APP_ENV", "local", "STORAGE", "local")...)(k)
+	}
+	if _, err := Load(noR2, Serve); err != nil {
+		t.Errorf("local R2 chhara: %v", err)
+	}
+	for _, c := range []struct {
+		kv   []string
+		want string
+	}{
+		{[]string{"APP_ENV", "staging", "STORAGE", "local"}, "STORAGE=local"},
+		{[]string{"APP_ENV", "production", "STORAGE", "local"}, "STORAGE=local"},
+		{[]string{"APP_ENV", "local", "STORAGE", "s3"}, "STORAGE"},
+		{[]string{"APP_ENV", "production", "R2_ACCOUNT_ID", ""}, "R2_ACCOUNT_ID"},
+		{[]string{"APP_ENV", "production", "R2_BUCKET", ""}, "R2_BUCKET"},
+		{[]string{"APP_ENV", "production", "R2_ACCESS_KEY_ID", ""}, "R2_ACCESS_KEY_ID"},
+		{[]string{"APP_ENV", "production", "R2_SECRET_ACCESS_KEY", ""}, "R2_SECRET_ACCESS_KEY"},
+	} {
+		_, err := load(c.kv...)
+		if err == nil || !strings.Contains(err.Error(), c.want) || strings.Contains(err.Error(), "r2-secret") {
+			t.Errorf("%v: %v", c.kv, err)
+		}
+	}
+}
+
 func TestLoadMigrate(t *testing.T) {
 	c, err := Load(env("APP_ENV", "staging", "MIGRATE_DATABASE_URL", "postgresql://owner:x@db:5432/shop"), Migrate)
 	if err != nil || c.MigrateDatabaseURL == "" {
@@ -160,7 +208,7 @@ func TestRejectExampleSecrets(t *testing.T) {
 		return example(k)
 	}
 	_, err := Load(staging, Serve)
-	for _, k := range []string{"JASPR_INTERNAL_SECRET", "OTP_SECRET", "TOTP_KEY", "RECOVERY_SECRET", "CONFIRM_SECRET", "PRINT_SECRET", "TURNSTILE_SECRET"} {
+	for _, k := range []string{"JASPR_INTERNAL_SECRET", "OTP_SECRET", "TOTP_KEY", "RECOVERY_SECRET", "CONFIRM_SECRET", "PRINT_SECRET", "TURNSTILE_SECRET", "STORAGE"} {
 		if err == nil || !strings.Contains(err.Error(), k) {
 			t.Errorf("staging e env.example er %s: %v", k, err)
 		}

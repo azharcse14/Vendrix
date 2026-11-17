@@ -15,13 +15,29 @@ import (
 	"vendrix/backend/internal/dbtest"
 	"vendrix/backend/internal/httpx"
 	"vendrix/backend/internal/shop"
+	"vendrix/backend/internal/storage"
 )
 
 // fixture: duita shop (a.com, b.com), protitir house vendor; id gulo map e.
 type fixture struct {
-	d   *sql.DB
-	srv http.Handler
-	ids map[string]int64 // "a", "b" (shop), "a.vendor", "b.vendor", ar insert kora jinish er naam
+	d     *sql.DB
+	srv   http.Handler
+	h     *Handlers
+	store *testStore // chobi: t.TempDir() e local store
+	ids   map[string]int64 // "a", "b" (shop), "a.vendor", "b.vendor", ar insert kora jinish er naam
+}
+
+// testStore: local store; failDelete hole Delete error dey (row age muche kina dekhte).
+type testStore struct {
+	storage.Local
+	failDelete bool
+}
+
+func (s *testStore) Delete(ctx context.Context, key string) error {
+	if s.failDelete {
+		return errors.New("store down")
+	}
+	return s.Local.Delete(ctx, key)
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -38,7 +54,9 @@ func newFixture(t *testing.T) *fixture {
 		f.ids[s] = id
 		f.ids[s+".vendor"] = f.id(t, `SELECT id FROM vendors WHERE shop_id = $1 AND is_house`, id)
 	}
-	h := NewHandlers(d, slog.New(slog.DiscardHandler))
+	f.store = &testStore{Local: storage.Local{Dir: t.TempDir()}}
+	h := NewHandlers(d, slog.New(slog.DiscardHandler), f.store)
+	f.h = h
 	mux := http.NewServeMux()
 	// admin test staff context nijei boshay (WithStaff), tai session middleware na
 	h.Routes(mux, httpx.ShopFromHost(slog.New(slog.DiscardHandler), shop.NewResolver(d).Resolve),

@@ -153,6 +153,7 @@ func TestRun(t *testing.T) {
 	env := map[string]string{"APP_ENV": "local", "DATABASE_URL": "postgres://x@127.0.0.1:1/db?connect_timeout=1",
 		"JASPR_INTERNAL_SECRET": strings.Repeat("s", 32), "OTP_SECRET": strings.Repeat("o", 32), "RECOVERY_SECRET": strings.Repeat("r", 32),
 		"CONFIRM_SECRET": strings.Repeat("c", 32), "PRINT_SECRET": strings.Repeat("p", 32),
+		"STORAGE": "local", "UPLOAD_DIR": t.TempDir(),
 		"TURNSTILE_SECRET": "1x0000000000000000000000000000000AA", "TOTP_KEY": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="}
 	lookup := func(k string) (string, bool) { v, ok := env[k]; return v, ok }
 	// config thik, tai error database theke (config er error e na)
@@ -434,6 +435,10 @@ var adminRoutes = map[string]routeRoles{
 	"PATCH /api/admin/products/{id}":         {roles: vendorProd},
 	"POST /api/admin/products/{id}/variants": {roles: vendorProd},
 	"PATCH /api/admin/variants/{id}":         {roles: vendorProd},
+	// chobi (11.7 item 9): product er moto, vendor_owner nijer product
+	"POST /api/admin/products/{id}/images":        {roles: vendorProd},
+	"PATCH /api/admin/products/{id}/images/order": {roles: vendorProd},
+	"DELETE /api/admin/images/{id}":               {roles: vendorProd},
 
 	// order (7.7, 11.2, 11.7 item 13 vii): dekha shob role (vendor nijer); order confirm/cancel/note shop er role
 	// (cancel e staff 403 service e); fulfillment transition er role niyom service e (cancel staff/vendor_staff 403)
