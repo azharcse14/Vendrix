@@ -10,6 +10,7 @@ import '../../../core/widgets/error_retry.dart';
 import '../../../core/widgets/note_dialog.dart';
 import '../bloc/order_detail_cubit.dart';
 import '../order_actions.dart';
+import '../widgets/edit_dialogs.dart';
 import '../widgets/status_chip.dart';
 
 /// `/orders/:id` (11.4): item (snapshot), taka er bhag, allowed button, history, note, print.
@@ -75,7 +76,9 @@ class _Detail extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              context.errorText(s.error!),
+              s.errorKey != null
+                  ? context.t(s.errorKey!)
+                  : context.errorText(s.error!),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -109,6 +112,17 @@ class _Detail extends StatelessWidget {
                         }
                       },
                 child: Text(context.t('admin.order.cancel')),
+              ),
+            if (canEdit(o, role))
+              OutlinedButton(
+                key: const Key('order.edit'),
+                onPressed: s.busy
+                    ? null
+                    : () async {
+                        final r = await showEditDialog(context, o);
+                        if (r != null) await c.editItems(r.$1, r.$2);
+                      },
+                child: Text(context.t('admin.order.edit')),
               ),
             OutlinedButton(
               key: const Key('order.print.packing_slip'),
@@ -316,6 +330,27 @@ class _FulfillmentCard extends StatelessWidget {
                             required: true,
                           ),
                     child: Text(context.t('admin.fulfillment.undo')),
+                  ),
+                if (canReturn(o, f, role))
+                  OutlinedButton(
+                    key: Key('fulfillment.${f.id}.return'),
+                    onPressed: busy
+                        ? null
+                        : () async {
+                            // taka newa: prepaid paid ba COD delivered (refund server hishab kore)
+                            final r = await showReturnDialog(
+                              context,
+                              f,
+                              refund:
+                                  f.status == 'delivered' ||
+                                  o.paymentStatus == 'paid' ||
+                                  o.paymentStatus == 'partially_refunded',
+                            );
+                            if (r != null) {
+                              await c.returnFulfillment(f.id, r.$1, r.$2);
+                            }
+                          },
+                    child: Text(context.t('admin.fulfillment.return')),
                   ),
                 if (actions.contains(FulfillmentAction.cancel))
                   OutlinedButton(

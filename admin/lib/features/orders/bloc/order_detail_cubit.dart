@@ -7,12 +7,14 @@ sealed class OrderDetailState {}
 /// Prothom load.
 final class OrderDetailLoading extends OrderDetailState {}
 
-/// Order; [busy] kaj cholche, [error] shesh kaj er bhul.
+/// Order; [busy] kaj cholche, [error] shesh kaj er bhul, [errorKey] thakle error er bodole oi lekha (staff er
+/// `403` er karon).
 final class OrderDetailLoaded extends OrderDetailState {
   final OrderDetail order;
   final bool busy;
   final ApiError? error;
-  OrderDetailLoaded(this.order, {this.busy = false, this.error});
+  final String? errorKey;
+  OrderDetailLoaded(this.order, {this.busy = false, this.error, this.errorKey});
 }
 
 /// Load er bhul.
@@ -39,7 +41,10 @@ class OrderDetailCubit extends Cubit<OrderDetailState> {
     }
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  Future<void> _run(
+    Future<void> Function() action, {
+    String? forbiddenKey,
+  }) async {
     final s = state;
     if (s is! OrderDetailLoaded || s.busy) return;
     emit(OrderDetailLoaded(s.order, busy: true));
@@ -47,9 +52,36 @@ class OrderDetailCubit extends Cubit<OrderDetailState> {
       await action();
       emit(OrderDetailLoaded(await repo.order(id)));
     } on ApiError catch (e) {
-      emit(OrderDetailLoaded(s.order, error: e));
+      emit(
+        OrderDetailLoaded(
+          s.order,
+          error: e,
+          errorKey: e.code == 'forbidden' ? forbiddenKey : null,
+        ),
+      );
     }
   }
+
+  /// Order edit (11.7 item 7): item id → notun qty (shudhu kom, `0` = bad), note lagbe.
+  Future<void> editItems(Map<int, int> quantities, String note) => _run(
+    () => repo.editItems(id, quantities, note),
+    forbiddenKey: 'admin.edit.forbidden',
+  );
+
+  /// Return (11.7 item 6): [restockItemIds] stock e ferot; taka newa hole refund (staff e `403`).
+  Future<void> returnFulfillment(
+    int fid,
+    List<int> restockItemIds,
+    String note,
+  ) => _run(
+    () => repo.transitionFulfillment(
+      fid,
+      'returned',
+      note: note,
+      restockItemIds: restockItemIds,
+    ),
+    forbiddenKey: 'admin.return.forbidden',
+  );
 
   /// Order `confirmed` ba `cancelled` ([note] cancel er karon).
   Future<void> transition(String to, {String? note}) =>

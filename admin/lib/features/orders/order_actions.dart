@@ -52,3 +52,21 @@ Set<FulfillmentAction> fulfillmentActions(
   },
   _ => {},
 };
+
+/// Order edit (11.7 item 7): shop role, order `pending`/`confirmed`, online hole paid, ar `open` fulfillment e
+/// active item. Staff er limit (vendor er shob item bad, refund) backend e `403`.
+bool canEdit(OrderDetail o, String role) =>
+    _shopRoles.contains(role) &&
+    (o.status == 'pending' || o.status == 'confirmed') &&
+    (o.paymentMethod == 'cod' ||
+        o.paymentStatus == 'paid' ||
+        o.paymentStatus == 'partially_refunded') &&
+    o.fulfillments.any(
+      (f) => f.status == 'open' && f.items.any((i) => i.status == 'active'),
+    );
+
+/// Return (11.7 item 6): shipped/delivered, shop role (vendor na). Active shipment thakle `409`, refund e
+/// `staff` `403`: backend dekhe.
+bool canReturn(OrderDetail o, Fulfillment f, String role) =>
+    _shopRoles.contains(role) &&
+    (f.status == 'shipped' || f.status == 'delivered');

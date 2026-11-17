@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared/shared.dart';
 
 import '../../../core/l10n/locale_cubit.dart';
+import '../../../core/widgets/common.dart';
 
 /// Batch form er uttor (khali field null).
 typedef BatchInput = ({
@@ -16,15 +17,6 @@ typedef BatchInput = ({
 typedef ReduceInput = ({int quantity, String reason, String note});
 
 const _maxQty = 1000000; // inventory handler er maxQty
-
-final _dateRe = RegExp(r'^\d{4}-\d{2}-\d{2}$');
-
-/// `YYYY-MM-DD` ar asol din (2026-13-40 na).
-bool validDate(String s) {
-  if (!_dateRe.hasMatch(s)) return false;
-  final d = DateTime.tryParse(s);
-  return d != null && d.toIso8601String().startsWith(s);
-}
 
 String? _orNull(String s) => s.trim().isEmpty ? null : s.trim();
 

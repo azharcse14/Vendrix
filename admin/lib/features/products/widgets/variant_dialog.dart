@@ -2,16 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared/shared.dart';
 
 import '../../../core/l10n/locale_cubit.dart';
+import '../../../core/widgets/common.dart';
 
 /// Notun variant e option er key (label ekta, bn/en; key user lekhe na).
 const defaultOptionKey = 'size';
-
-/// Taka (poisha) → form er lekha (`120.5` na, `120.50`; purno hole `120`).
-String takaInput(int? p) => p == null
-    ? ''
-    : p % 100 == 0
-    ? '${p ~/ 100}'
-    : '${p ~/ 100}.${'${p % 100}'.padLeft(2, '0')}';
 
 /// Variant form (7.7): body ba bondho korle null. Taka form e taka, body te poisha ([parseTaka]); stock na (8.12).
 Future<Map<String, Object?>?> showVariantDialog(

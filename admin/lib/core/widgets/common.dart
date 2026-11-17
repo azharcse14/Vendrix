@@ -2,6 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../l10n/locale_cubit.dart';
 
+/// Taka (poisha) → form er lekha (`120.5` na, `120.50`; purno hole `120`).
+String takaInput(int? p) => p == null
+    ? ''
+    : p % 100 == 0
+    ? '${p ~/ 100}'
+    : '${p ~/ 100}.${'${p % 100}'.padLeft(2, '0')}';
+
+final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
+/// `YYYY-MM-DD` ar asol din (2026-13-40 na).
+bool validDate(String s) {
+  if (!_date.hasMatch(s)) return false;
+  final d = DateTime.tryParse(s);
+  return d != null && d.toIso8601String().startsWith(s);
+}
+
 /// Haa/na dialog (delete, reset); [title] translation key. Haa hole true.
 Future<bool> confirmDialog(BuildContext context, String title) async =>
     await showDialog<bool>(

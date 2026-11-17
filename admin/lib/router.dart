@@ -11,7 +11,15 @@ import 'core/l10n/locale_cubit.dart';
 import 'core/locator.dart';
 import 'core/permissions.dart';
 import 'core/widgets/app_shell.dart';
+import 'features/audit/bloc/audit_cubit.dart';
+import 'features/audit/pages/audit_page.dart';
 import 'features/auth/pages/login_page.dart';
+import 'features/coupons/bloc/coupons_cubit.dart';
+import 'features/coupons/pages/coupons_page.dart';
+import 'features/customers/bloc/customer_detail_cubit.dart';
+import 'features/customers/bloc/customers_cubit.dart';
+import 'features/customers/pages/customer_detail_page.dart';
+import 'features/customers/pages/customers_page.dart';
 import 'features/categories/bloc/categories_cubit.dart';
 import 'features/categories/pages/categories_page.dart';
 import 'features/inventory/bloc/inventory_list_cubit.dart';
@@ -38,6 +46,8 @@ import 'features/shipments/bloc/shipments_cubit.dart';
 import 'features/shipments/pages/shipments_page.dart';
 import 'features/staff/bloc/staff_cubit.dart';
 import 'features/staff/pages/staff_page.dart';
+import 'features/zones/bloc/zones_cubit.dart';
+import 'features/zones/pages/zones_page.dart';
 
 /// Stream e notun value ele router abar redirect dekhe (11.3).
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -66,8 +76,8 @@ String? authRedirect(AuthState s, String loc) {
 int _id(GoRouterState s, String name) =>
     int.tryParse(s.pathParameters[name]!) ?? 0; // 0 → API 404
 
-/// 11.1 er route (ekhon login, dashboard, order, packing, shipment, product, category, inventory, staff; baki M7b
-/// er porer step e). Screen er bloc
+/// 11.1 er route (ekhon login, dashboard, order, packing, shipment, product, category, inventory, coupon, zone,
+/// customer, staff, audit; settings M8 e, review M9 e, money M11 e). Screen er bloc
 /// route e `BlocProvider(create:)` (getIt shudhu ekhane ar di.dart e, 11.3).
 GoRouter buildRouter(AuthBloc auth) => GoRouter(
   refreshListenable: GoRouterRefreshStream(auth.stream),
@@ -192,6 +202,42 @@ GoRouter buildRouter(AuthBloc auth) => GoRouter(
           builder: (_, _) => BlocProvider(
             create: (_) => StaffCubit(getIt())..load(),
             child: const StaffPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/coupons',
+          builder: (_, _) => BlocProvider(
+            create: (_) => CouponsCubit(getIt())..load(),
+            child: const CouponsPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/zones',
+          builder: (_, _) => BlocProvider(
+            create: (_) => ZonesCubit(getIt())..load(),
+            child: const ZonesPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/customers',
+          builder: (_, _) => BlocProvider(
+            create: (_) => CustomersCubit(getIt())..load(),
+            child: const CustomersPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/customers/:id',
+          builder: (_, state) => BlocProvider(
+            create: (_) =>
+                CustomerDetailCubit(getIt(), _id(state, 'id'))..load(),
+            child: const CustomerDetailPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/audit',
+          builder: (_, _) => BlocProvider(
+            create: (_) => AuditCubit(getIt())..load(),
+            child: const AuditPage(),
           ),
         ),
       ],

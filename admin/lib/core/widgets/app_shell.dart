@@ -15,7 +15,11 @@ const menuRoutes = [
   '/products',
   '/categories',
   '/inventory',
+  '/coupons',
+  '/zones',
+  '/customers',
   '/staff',
+  '/audit',
 ];
 
 const _icons = {
@@ -26,7 +30,11 @@ const _icons = {
   '/products': Icons.shopping_basket_outlined,
   '/categories': Icons.account_tree_outlined,
   '/inventory': Icons.warehouse_outlined,
+  '/coupons': Icons.local_offer_outlined,
+  '/zones': Icons.map_outlined,
+  '/customers': Icons.people_outline,
   '/staff': Icons.badge_outlined,
+  '/audit': Icons.history,
 };
 
 String _label(BuildContext context, String r) =>
@@ -91,17 +99,27 @@ class AppShell extends StatelessWidget {
       body: wide
           ? Row(
               children: [
-                NavigationRail(
-                  selectedIndex: current < 0 ? null : current,
-                  labelType: NavigationRailLabelType.all,
-                  onDestinationSelected: (i) => context.go(routes[i]),
-                  destinations: [
-                    for (final r in routes)
-                      NavigationRailDestination(
-                        icon: Icon(_icons[r], key: Key('nav.$r')),
-                        label: Text(_label(context, r)),
+                // owner er menu lomba: choto uchchotay rail scroll
+                LayoutBuilder(
+                  builder: (context, box) => SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: box.maxHeight),
+                      child: IntrinsicHeight(
+                        child: NavigationRail(
+                          selectedIndex: current < 0 ? null : current,
+                          labelType: NavigationRailLabelType.all,
+                          onDestinationSelected: (i) => context.go(routes[i]),
+                          destinations: [
+                            for (final r in routes)
+                              NavigationRailDestination(
+                                icon: Icon(_icons[r], key: Key('nav.$r')),
+                                label: Text(_label(context, r)),
+                              ),
+                          ],
+                        ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(child: child),

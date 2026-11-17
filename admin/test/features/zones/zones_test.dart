@@ -94,7 +94,7 @@ void main() {
       'charge': 6000,
       'min_order': 0,
       'free_delivery_over': 100000,
-      'same_city': true,
+      'same_city': false, // notun zone e default shohor er baire (8.15)
       'is_active': true,
     });
     expect(api.calls.last, 'GET /api/admin/delivery-zones'); // abar load

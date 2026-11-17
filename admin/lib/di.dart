@@ -29,7 +29,11 @@ void registerServices(ApiClient api, Browser browser) => getIt
   ..registerSingleton(DashboardRepository(api))
   ..registerSingleton(AdminCatalogRepository(api))
   ..registerSingleton(InventoryRepository(api))
-  ..registerSingleton(StaffRepository(api));
+  ..registerSingleton(StaffRepository(api))
+  ..registerSingleton(AdminZoneRepository(api))
+  ..registerSingleton(AdminCouponRepository(api))
+  ..registerSingleton(AdminCustomerRepository(api))
+  ..registerSingleton(AuditRepository(api));
 
 final _browser = Browser(
   openTab: (url) {

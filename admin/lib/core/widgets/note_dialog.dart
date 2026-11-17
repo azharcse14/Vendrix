@@ -10,16 +10,28 @@ Future<String?> showNoteDialog(
   required String title,
   String? hint,
   bool required = true,
+  int maxLength = 500,
 }) => showDialog<String>(
   context: context,
-  builder: (_) => _NoteDialog(title: title, hint: hint, required: required),
+  builder: (_) => _NoteDialog(
+    title: title,
+    hint: hint,
+    required: required,
+    maxLength: maxLength,
+  ),
 );
 
 class _NoteDialog extends StatefulWidget {
   final String title;
   final String? hint;
   final bool required;
-  const _NoteDialog({required this.title, this.hint, required this.required});
+  final int maxLength;
+  const _NoteDialog({
+    required this.title,
+    this.hint,
+    required this.required,
+    required this.maxLength,
+  });
 
   @override
   State<_NoteDialog> createState() => _NoteDialogState();
@@ -57,7 +69,7 @@ class _NoteDialogState extends State<_NoteDialog> {
               key: const Key('note.field'),
               controller: _note,
               autofocus: true,
-              maxLength: 500,
+              maxLength: widget.maxLength,
               decoration: InputDecoration(labelText: context.t('admin.note')),
               validator: (v) =>
                   widget.required && (v ?? '').trim().isEmpty ? req : null,
