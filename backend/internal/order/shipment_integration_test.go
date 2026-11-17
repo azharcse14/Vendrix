@@ -262,8 +262,10 @@ func TestReturnIntegration(t *testing.T) {
 	f.batchExpiry(true)
 	rice, dal := f.variant("rice", 10000, 10), f.variant("dal", 10000, 10)
 	b1 := f.batchAt(rice, 3, nil, 0)
-	oid, fs := f.seedOrder("cod", "paid", "confirmed", seedF{vendor: f.vnd, status: "delivered", items: [][2]int64{{rice, 2}, {dal, 1}}})
+	f.exec(`UPDATE inventory_batches SET quantity_received = 5 WHERE id = $1`, b1) // 2 ta ei order e geche
+	oid, fs := f.seedOrder("cod", "unpaid", "confirmed", seedF{vendor: f.vnd, status: "delivered", items: [][2]int64{{rice, 2}, {dal, 1}}})
 	fid := fs[0]
+	f.exec(`UPDATE orders SET payment_status = 'paid' WHERE id = $1`, oid) // COD e payment row nai (seedOrder paid e row banay)
 	f.seedShipment(oid, fid, f.vnd, "delivered", 30000)
 	it := func(o, v int64) int64 {
 		return f.id(`SELECT id FROM order_items WHERE order_id = $1 AND variant_id = $2`, o, v)

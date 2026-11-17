@@ -182,7 +182,7 @@ func Edit(ctx context.Context, d *sql.DB, st httpx.Staff, orderID int64, qty map
 			return err
 		}
 		for _, fid := range gone {
-			if err := transitionFulfillment(ctx, tx, st.ShopID, fid, FCancelled, by, note, nil); err != nil {
+			if err := transitionFulfillment(ctx, tx, st.ShopID, fid, FCancelled, by, note, nil, nil); err != nil {
 				return err
 			}
 		}

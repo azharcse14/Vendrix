@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 
 	"vendrix/backend/internal/jobs"
 	"vendrix/backend/internal/phone"
@@ -119,6 +120,10 @@ var orderDefault = map[string]map[string]string{
 		"bn": "{shop}: অর্ডার {number} বাতিল হয়েছে।",
 		"en": "{shop}: Order {number} has been cancelled.",
 	},
+	"sms.shipped": {
+		"bn": "{shop}: {number} পাঠানো হয়েছে{tracking}। {link}",
+		"en": "{shop}: Order {number} has shipped{tracking}. Track: {link}",
+	},
 	"sms.total_changed": {
 		"bn": "{shop}: ওজন অনুযায়ী অর্ডার {number} এর মোট দাম {total}।",
 		"en": "{shop}: Order {number} final total after weighing: {total}.",
@@ -133,6 +138,28 @@ func OrderText(key, locale string, override map[string]string, shop, number, lin
 // TotalText (8.16 v1.42): sms.total_changed; {number} ar {total} chhara lekha bad.
 func TotalText(locale string, override map[string]string, shop, number string, total int64) string {
 	return orderText("sms.total_changed", locale, override, "{shop}", shop, "{number}", number, "{total}", taka(total, locale))
+}
+
+// ShippedText (8.16, 11.7 item 5): sms.shipped; tracking thakle " (code)". Tracking diye bn 134 ba en 160 unit er
+// beshi hole tracking chhara (SMS 2 part er beshi na; link e order page).
+func ShippedText(locale string, override map[string]string, shop, number, link, tracking string) string {
+	if tracking != "" {
+		t := orderText("sms.shipped", locale, override, "{shop}", shop, "{number}", number, "{link}", link, "{tracking}", " ("+tracking+")")
+		if n := len(utf16.Encode([]rune(t))); n <= 134 || (n <= 160 && gsm(t)) {
+			return t
+		}
+	}
+	return orderText("sms.shipped", locale, override, "{shop}", shop, "{number}", number, "{link}", link, "{tracking}", "")
+}
+
+// gsm: shudhu printable ASCII (GSM-7 e ek SMS 160).
+func gsm(t string) bool {
+	for _, r := range t {
+		if r < 0x20 || r > 0x7e {
+			return false
+		}
+	}
+	return true
 }
 
 // orderText: kv = placeholder, value jora ({shop} prothom); {shop} chhara khali na emon protiti placeholder lekha te lagbe.

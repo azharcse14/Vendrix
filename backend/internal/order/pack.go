@@ -107,7 +107,7 @@ func (h *Handlers) AdminPack(w http.ResponseWriter, r *http.Request) {
 func Pack(ctx context.Context, d *sql.DB, st httpx.Staff, fid int64, weights map[int64]int, note string) (string, error) {
 	var display string
 	err := db.InTx(ctx, d, func(tx *sql.Tx) error {
-		if err := transitionFulfillment(ctx, tx, st.ShopID, fid, Packed, ByStaff(st), note, weights); err != nil {
+		if err := transitionFulfillment(ctx, tx, st.ShopID, fid, Packed, ByStaff(st), note, weights, nil); err != nil {
 			return err
 		}
 		if err := tx.QueryRowContext(ctx, `SELECT o.display_status FROM orders o JOIN order_fulfillments f

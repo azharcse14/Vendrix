@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"vendrix/backend/internal/coupon"
 	"vendrix/backend/internal/db"
@@ -34,11 +35,10 @@ func ByStaff(st httpx.Staff) By {
 }
 
 var (
-	ErrNotFound          = errors.New("order: nai")                               // 404 not_found
-	ErrInvalidTransition = errors.New("order: ei bodol hoy na")                   // 409 invalid_transition
-	ErrPaymentRequired   = errors.New("order: online order, taka ase ni")         // 409 payment_required
-	ErrNotImplemented    = errors.New("order: shipped/delivered/returned M7a te") // 8.19 item 8
-	errRefundOverPaid    = errors.New("order: refund paid er beshi")              // bug, ROLLBACK
+	ErrNotFound          = errors.New("order: nai")                       // 404 not_found
+	ErrInvalidTransition = errors.New("order: ei bodol hoy na")           // 409 invalid_transition
+	ErrPaymentRequired   = errors.New("order: online order, taka ase ni") // 409 payment_required
+	errRefundOverPaid    = errors.New("order: refund paid er beshi")      // bug, ROLLBACK
 )
 
 type fRow struct {
@@ -138,16 +138,18 @@ func transitionOrder(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, t
 	return nil
 }
 
-// TransitionFulfillment (8.8): → cancelled, → packed (ojon chhara: shudhu fixed item er fulfillment; ojon shoho
-// Pack) ar packed → open (undo: COD, active shipment chhara, note lagbe) er side effect; baki allowed bodol
-// ErrNotImplemented (M7a er porer step). Shob fulfillment cancelled hole
-// order o cancelled (System), na hole display_status abar.
+// TransitionFulfillment (8.8): shob bodol er side effect: → cancelled, → packed (ojon chhara: shudhu fixed item er
+// fulfillment; ojon shoho Pack), packed → open (undo), → shipped (shipment age Ship e), → delivered (active shipment
+// delivered, COD paid), → returned (restock chhara; item ferot ReturnFulfillment er restock diye). Shob fulfillment
+// cancelled hole order o cancelled (System), na hole display_status abar.
 func TransitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string) error {
-	return transitionFulfillment(ctx, tx, shopID, fulfillmentID, to, by, note, nil)
+	return transitionFulfillment(ctx, tx, shopID, fulfillmentID, to, by, note, nil, nil)
 }
 
-// transitionFulfillment: weights = pack er ojon-variable item → packed_weight_g; pack e note = customer_ok_note.
-func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string, weights map[int64]int) error {
+// transitionFulfillment: weights = pack er ojon-variable item → packed_weight_g; pack e note = customer_ok_note;
+// restock = return e stock e ferot item (oi fulfillment er active item).
+func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentID int64, to FStatus, by By, note string,
+	weights map[int64]int, restockIDs []int64) error {
 	var orderID, vendorID int64
 	err := tx.QueryRowContext(ctx, `SELECT order_id, vendor_id FROM order_fulfillments WHERE shop_id = $1 AND id = $2`,
 		shopID, fulfillmentID).Scan(&orderID, &vendorID)
@@ -220,8 +222,43 @@ func transitionFulfillment(ctx context.Context, tx *sql.Tx, shopID, fulfillmentI
 			return err
 		}
 		o.fs[i].status = Open
-	default:
-		return ErrNotImplemented
+	case Shipped: // shipment Ship e age (11.7 item 5); /transition e shipment chhara 409
+		var n int64
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM shipments WHERE shop_id = $1 AND fulfillment_id = $2 AND status IN ('booked', 'picked', 'in_transit')`,
+			shopID, fulfillmentID).Scan(&n); err != nil {
+			return err
+		}
+		if n == 0 {
+			return ErrInvalidTransition
+		}
+		if err := setFStatus(ctx, tx, shopID, o, i, Shipped, by, note); err != nil {
+			return err
+		}
+	case Delivered:
+		res, err := tx.ExecContext(ctx, `UPDATE shipments SET status = 'delivered', delivered_at = now()
+			WHERE shop_id = $1 AND fulfillment_id = $2 AND status IN ('booked', 'picked', 'in_transit')`, shopID, fulfillmentID)
+		if err != nil {
+			return err
+		}
+		if n, err := res.RowsAffected(); err != nil || n == 0 {
+			if err == nil {
+				err = ErrInvalidTransition // parcel ferot/bad: abar ship ba return
+			}
+			return err
+		}
+		if err := setFStatus(ctx, tx, shopID, o, i, Delivered, by, note); err != nil {
+			return err
+		}
+	case Returned:
+		if err := returnFulfillment(ctx, tx, shopID, o, i, restockIDs, note); err != nil {
+			return err
+		}
+		if err := setFStatus(ctx, tx, shopID, o, i, Returned, by, note); err != nil {
+			return err
+		}
+	}
+	if err := codPaid(ctx, tx, shopID, o); err != nil {
+		return err
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE orders SET display_status = $3 WHERE shop_id = $1 AND id = $2`,
 		shopID, o.id, Summary(o.status, o.statuses()))
@@ -238,7 +275,25 @@ func cancelFulfillments(ctx context.Context, tx *sql.Tx, shopID int64, o *locked
 	for k, i := range idx {
 		ids[k] = o.fs[i].id
 	}
-	if err := restock(ctx, tx, shopID, ids); err != nil {
+	var items []int64
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM order_items WHERE shop_id = $1 AND fulfillment_id = ANY($2) AND status = 'active'`,
+		shopID, ids)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		items = append(items, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := restock(ctx, tx, shopID, items, "cancel"); err != nil {
 		return err
 	}
 	prepaid := o.method != "cod" && (o.payStatus == "paid" || o.payStatus == "partially_refunded")
@@ -265,63 +320,68 @@ func cancelFulfillments(ctx context.Context, tx *sql.Tx, shopID int64, o *locked
 	return nil
 }
 
-// restock (8.12): active item er qty variant e ferot (removed item er stock edit e ferot hoye geche), batch e
-// order_item_batches theke; movement cancel (batch er ongsho batch_id shoho). Batch already expire (shop er aj er
+// restock (8.12): item (active; removed item er stock edit e ferot hoye geche) er qty variant e ferot, batch e
+// order_item_batches theke; movement reason (cancel ba return; batch er ongsho batch_id shoho). Batch already expire (shop er aj er
 // age) hole oi ongsho batch e na ar variant theke abar bad, movement expired (11.7 item 3; inventory.expire er moto).
 // Variant, tarpor batch id er kram e lock (8.8; UPDATE ... FROM er nijer kram e deadlock hote parto).
-func restock(ctx context.Context, tx *sql.Tx, shopID int64, fids []int64) error {
+func restock(ctx context.Context, tx *sql.Tx, shopID int64, items []int64, reason string) error {
 	for _, q := range []string{
 		`SELECT 1 FROM product_variants WHERE shop_id = $1 AND id IN (SELECT variant_id FROM order_items
-			WHERE shop_id = $1 AND fulfillment_id = ANY($2) AND status = 'active') ORDER BY id FOR UPDATE`,
+			WHERE shop_id = $1 AND id = ANY($2) AND status = 'active') ORDER BY id FOR UPDATE`,
 		`UPDATE product_variants v SET stock = v.stock + x.q
 			FROM (SELECT variant_id, sum(quantity) q FROM order_items
-				WHERE shop_id = $1 AND fulfillment_id = ANY($2) AND status = 'active' GROUP BY variant_id) x
+				WHERE shop_id = $1 AND id = ANY($2) AND status = 'active' GROUP BY variant_id) x
 			WHERE v.shop_id = $1 AND v.id = x.variant_id`,
 		`SELECT 1 FROM inventory_batches WHERE shop_id = $1 AND id IN (SELECT ob.batch_id FROM order_items i
 			JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
-			WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active') ORDER BY id FOR UPDATE`,
+			WHERE i.shop_id = $1 AND i.id = ANY($2) AND i.status = 'active') ORDER BY id FOR UPDATE`,
 		`UPDATE inventory_batches b SET quantity_remaining = b.quantity_remaining + x.q
 			FROM (SELECT ob.batch_id, sum(ob.quantity) q FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
-				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active' GROUP BY ob.batch_id) x
+				WHERE i.shop_id = $1 AND i.id = ANY($2) AND i.status = 'active' GROUP BY ob.batch_id) x
 			WHERE b.shop_id = $1 AND b.id = x.batch_id AND NOT COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)`,
 		`UPDATE product_variants v SET stock = v.stock - x.q
 			FROM (SELECT ob.variant_id, sum(ob.quantity) q FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
 				JOIN inventory_batches b ON b.shop_id = ob.shop_id AND b.id = ob.batch_id
-				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active' AND COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)
+				WHERE i.shop_id = $1 AND i.id = ANY($2) AND i.status = 'active' AND COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)
 				GROUP BY ob.variant_id) x
 			WHERE v.shop_id = $1 AND v.id = x.variant_id`,
 		`INSERT INTO inventory_movements (shop_id, variant_id, batch_id, change, reason, order_id)
-			SELECT $1, i.variant_id, ob.batch_id, ob.quantity, 'cancel', i.order_id FROM order_items i
+			SELECT $1, i.variant_id, ob.batch_id, ob.quantity, $3, i.order_id FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
-				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active'
+				WHERE i.shop_id = $1 AND i.id = ANY($2) AND i.status = 'active'
 			UNION ALL
 			SELECT $1, i.variant_id, ob.batch_id, -ob.quantity, 'expired', i.order_id FROM order_items i
 				JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
 				JOIN inventory_batches b ON b.shop_id = ob.shop_id AND b.id = ob.batch_id
-				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active' AND COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)
+				WHERE i.shop_id = $1 AND i.id = ANY($2) AND i.status = 'active' AND COALESCE(b.expiry_date < (SELECT (now() AT TIME ZONE timezone)::date FROM shops WHERE id = $1), false)
 			UNION ALL
-			SELECT $1, i.variant_id, NULL, i.quantity - COALESCE(sum(ob.quantity), 0), 'cancel', i.order_id FROM order_items i
+			SELECT $1, i.variant_id, NULL, i.quantity - COALESCE(sum(ob.quantity), 0), $3, i.order_id FROM order_items i
 				LEFT JOIN order_item_batches ob ON ob.shop_id = i.shop_id AND ob.order_item_id = i.id
-				WHERE i.shop_id = $1 AND i.fulfillment_id = ANY($2) AND i.status = 'active'
+				WHERE i.shop_id = $1 AND i.id = ANY($2) AND i.status = 'active'
 				GROUP BY i.id HAVING i.quantity - COALESCE(sum(ob.quantity), 0) > 0`,
 	} {
-		if _, err := tx.ExecContext(ctx, q, shopID, fids); err != nil {
+		args := []any{shopID, items}
+		if strings.Contains(q, "$3") { // shudhu movement er INSERT e reason
+			args = append(args, reason)
+		}
+		if _, err := tx.ExecContext(ctx, q, args...); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// insertRefund (8.8, 8.11): fid 0 = NULL (edit, puro order). cancel e refunds_cancel_once e ekbar-i; mot refund (failed bad) paid er beshi na. Status
-// pending: gateway er refund M10 e.
+// insertRefund (8.8, 8.11): fid 0 = NULL (edit, puro order). cancel e refunds_cancel_once e ekbar-i; mot refund (failed
+// bad) paid er beshi na; paid = succeeded payment + delivered shipment er cod_amount (COD e payment row nai; v1.43; returnFulfillment e ekoi hishab). Method payment er (COD e cash, v1.43). Status pending: gateway er refund M10 e.
 func insertRefund(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid, amount int64, kind, reason string) error {
 	res, err := tx.ExecContext(ctx, `INSERT INTO refunds (shop_id, order_id, fulfillment_id, payment_id, amount, method, kind, reason)
 		SELECT $1, $2, NULLIF($3::bigint, 0), (SELECT max(id) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded'),
-			$4::bigint, $5, $7, $6
+			$4::bigint, CASE WHEN $5 = 'cod' THEN 'cash' ELSE $5 END, $7, $6
 		WHERE (SELECT COALESCE(sum(amount), 0) FROM refunds WHERE shop_id = $1 AND order_id = $2 AND status <> 'failed') + $4::bigint
-			<= (SELECT COALESCE(sum(amount), 0) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded')`,
+			<= (SELECT COALESCE(sum(amount), 0) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded')
+	+ (SELECT COALESCE(sum(cod_amount), 0) FROM shipments WHERE shop_id = $1 AND order_id = $2 AND status = 'delivered')`,
 		shopID, o.id, fid, amount, o.method, reason, kind)
 	if err != nil {
 		return err
@@ -331,6 +391,93 @@ func insertRefund(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, fid,
 		err = errRefundOverPaid
 	}
 	return err
+}
+
+// setFStatus: shipped/delivered/returned: status, tar shomoy column, history.
+func setFStatus(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, i int, to FStatus, by By, note string) error {
+	f := &o.fs[i]
+	if _, err := tx.ExecContext(ctx, `UPDATE order_fulfillments SET status = $3::text,
+		shipped_at = CASE WHEN $3::text = 'shipped' THEN now() ELSE shipped_at END,
+		delivered_at = CASE WHEN $3::text = 'delivered' THEN now() ELSE delivered_at END,
+		returned_at = CASE WHEN $3::text = 'returned' THEN now() ELSE returned_at END
+		WHERE shop_id = $1 AND id = $2`, shopID, f.id, string(to)); err != nil {
+		return err
+	}
+	if err := history(ctx, tx, shopID, o.id, f.id, string(f.status), string(to), by, note); err != nil {
+		return err
+	}
+	f.status = to
+	return nil
+}
+
+// returnFulfillment (8.8 "→ returned", 11.7 item 6 v1.43): note lagbe; rasta e shipment thakle 409 (age shipment
+// returned); restockIDs oi fulfillment er active item (na hole FieldError), stock/batch e ferot (movement return,
+// expire batch er niyom restock er). Taka newa hoye thakle (prepaid paid, ba COD e delivered theke) refund return
+// min(total, paid − ager refund), 0 hole na.
+func returnFulfillment(ctx context.Context, tx *sql.Tx, shopID int64, o *locked, i int, restockIDs []int64, note string) error {
+	f := o.fs[i]
+	if note == "" {
+		return FieldError("note")
+	}
+	var n int64
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM order_items WHERE shop_id = $1 AND fulfillment_id = $2 AND status = 'active'
+		AND id = ANY($3)`, shopID, f.id, restockIDs).Scan(&n); err != nil {
+		return err
+	}
+	if n != int64(len(restockIDs)) {
+		return FieldError("restock_item_ids")
+	}
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM shipments WHERE shop_id = $1 AND fulfillment_id = $2 AND status IN ('booked', 'picked', 'in_transit')`,
+		shopID, f.id).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return ErrInvalidTransition
+	}
+	if len(restockIDs) > 0 {
+		if err := restock(ctx, tx, shopID, restockIDs, "return"); err != nil {
+			return err
+		}
+	}
+	paid := o.payStatus == "paid" || o.payStatus == "partially_refunded"
+	if o.method == "cod" {
+		paid = f.status == Delivered // shipped theke ferot: customer taka dey ni
+	}
+	if !paid || f.total == 0 {
+		return nil
+	}
+	var left int64
+	if err := tx.QueryRowContext(ctx, `SELECT (SELECT COALESCE(sum(amount), 0) FROM payments WHERE shop_id = $1 AND order_id = $2 AND status = 'succeeded')
+	+ (SELECT COALESCE(sum(cod_amount), 0) FROM shipments WHERE shop_id = $1 AND order_id = $2 AND status = 'delivered') - (SELECT COALESCE(sum(amount), 0) FROM refunds
+		WHERE shop_id = $1 AND order_id = $2 AND status <> 'failed')`, shopID, o.id).Scan(&left); err != nil {
+		return err
+	}
+	if amount := min(f.total, left); amount > 0 {
+		return insertRefund(ctx, tx, shopID, o, f.id, amount, "return", note)
+	}
+	return nil
+}
+
+// codPaid (8.8 v1.43): COD e kono fulfillment open/packed/shipped nai ar kom-poksha ekta shipment delivered hole
+// payment_status paid (taka rider/courier er hate, M11 settlement).
+func codPaid(ctx context.Context, tx *sql.Tx, shopID int64, o *locked) error {
+	if o.method != "cod" || o.payStatus != "unpaid" {
+		return nil
+	}
+	for _, f := range o.fs {
+		if f.status == Open || f.status == Packed || f.status == Shipped {
+			return nil
+		}
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE orders SET payment_status = 'paid' WHERE shop_id = $1 AND id = $2
+		AND EXISTS (SELECT 1 FROM shipments WHERE shop_id = $1 AND order_id = $2 AND status = 'delivered')`, shopID, o.id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		o.payStatus = "paid"
+	}
+	return nil
 }
 
 // linkActor (8.19 item 13 d): link (token) diye customer er kaj e actor_id shudhu order er nijer user hole; onno

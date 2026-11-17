@@ -14,7 +14,7 @@ Request er baire je kaj (SMS, alert, auto-cancel, reconcile) `jobs` table e queu
 4. `RunOnce`: 6.4 er claim query (`FOR UPDATE SKIP LOCKED`, `attempts + 1`, `locked_at`). Protiti kaj er age lock notun kore (onno worker niye thakle bad), `call` (1 minute timeout; panic o error), tarpor `finish`.
 5. `finish`: shofol hole `done_at` (`sms.send` hole payload `{}`, PII); fail hole `last_error`, `run_at = now + backoff` (1, 5, 15, 60 minute); `attempts = max_attempts` hole `failed_at` ar `alert`. `locked_at` claim er sathe na mille (5 minute por onno worker niyeche) kichu lekhe na.
 6. `jobs.sweep`: shesh attempt e crash kora job (`attempts >= max_attempts`, lock 5 minute er purono) `failed_at` ar alert. `jobs.cleanup` (protidin): `done_at` 30 din ar `failed_at` 90 din er purono row muche (`dedupe_key` shoho). `cart.cleanup` (protidin): 30 din er purono guest cart muche ([cart](cart.md)). `inventory.expire` (protidin, `batch_expiry` on shop): expire batch ([inventory](inventory.md)).
-7. `notify.NewSMS`: `APP_ENV=local` e log (`phone.Mask`, shesh 3 digit); onno env e `ErrNoProvider` (provider M12 er age, 16.1), tai production e kokhono log mode na. OTP er lekha `OTPText`: kram shop override[locale] → default[locale] → override[bn] → default[bn] (9.8), `{code}` chhara lekha bad; default bn/en Go te (`otpDefault`). Order SMS er lekha `OrderText` (`sms.order_placed`, `sms.order_confirm`, `sms.cancelled`; `{shop}`, `{number}`, `{link}`), ekoi kram; `{number}` ba (link thakle) `{link}` chhara override bad; default `orderDefault`. `sms.total_changed` er lekha `TotalText` (`{shop}`, `{number}`, `{total}`; `{number}` ba `{total}` chhara override bad); `{total}` `taka`: bn `৳1,23,456.50`, en `Tk 1,23,456.50` (GSM-7 e ৳ nai), lakh-style comma, English digit, poisha 0 hole doshomik na (8.16 v1.42).
+7. `notify.NewSMS`: `APP_ENV=local` e log (`phone.Mask`, shesh 3 digit); onno env e `ErrNoProvider` (provider M12 er age, 16.1), tai production e kokhono log mode na. OTP er lekha `OTPText`: kram shop override[locale] → default[locale] → override[bn] → default[bn] (9.8), `{code}` chhara lekha bad; default bn/en Go te (`otpDefault`). Order SMS er lekha `OrderText` (`sms.order_placed`, `sms.order_confirm`, `sms.cancelled`; `{shop}`, `{number}`, `{link}`), ekoi kram; `{number}` ba (link thakle) `{link}` chhara override bad; default `orderDefault`. `sms.total_changed` er lekha `TotalText` (`{shop}`, `{number}`, `{total}`; `{number}` ba `{total}` chhara override bad); `{total}` `taka`: bn `৳1,23,456.50`, en `Tk 1,23,456.50` (GSM-7 e ৳ nai), lakh-style comma, English digit, poisha 0 hole doshomik na (8.16 v1.42). `sms.shipped` er lekha `ShippedText` (`{shop}`, `{number}`, `{link}`, `{tracking}` = `" (code)"` ba khali); tracking shoho bn 134 / en 160 unit er beshi hole tracking chhara (11.7 item 5).
 
 ## Code er map
 
@@ -23,7 +23,7 @@ Ei kram e poro:
 | File → function | Ki kore |
 |---|---|
 | `backend/internal/jobs/jobs.go` → `Enqueue`, `NewWorker`, `Run`, `RunOnce`, `release`, `finish`, `sweep`, `cleanup`, `backoff` | Queue ar worker |
-| `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `OTP`, `OTPSource`, `OTPText`, `otpDefault`, `OrderText`, `TotalText`, `taka`, `orderDefault`, `SecurityAlertJob` | SMS sender, `sms.send` handler (OTP payload shoho), `alert.security` |
+| `backend/internal/notify/notify.go` → `NewSMS`, `SendSMSJob`, `OTP`, `OTPSource`, `OTPText`, `otpDefault`, `OrderText`, `TotalText`, `ShippedText`, `gsm`, `taka`, `orderDefault`, `SecurityAlertJob` | SMS sender, `sms.send` handler (OTP payload shoho), `alert.security` |
 | `backend/cmd/api/main.go` → `runServe` | Worker chalu (handler register) ar shutdown |
 | `backend/internal/order/jobs.go` → `JobHandlers` | Order er job ([checkout](checkout.md)) |
 | `backend/internal/inventory/jobs.go` → `ScheduleExpire`, `ExpireJob` | `inventory.expire` ([inventory](inventory.md)) |
@@ -50,6 +50,7 @@ Ei kram e poro:
 | Order job: SMS retry e ekoi link, auto-cancel idempotent ([checkout](checkout.md); 8.17) | `order.JobHandlers` | `TestOrderPlacedSMSIntegration`, `TestAutoCancelUnconfirmedIntegration` |
 | SMS shudhu local e log, production e log mode na (8.2 step 4); log e phone mask (12.2) | `NewSMS` | `TestNewSMS` |
 | `sms.total_changed` bn ≤ 134 unit, en ≤ 160 GSM-7, `{total}` format, override er kram (8.16 v1.42) | `TotalText`, `taka` | `TestTotalChangedSMSLength` |
+| `sms.shipped` bn ≤ 134 unit, en ≤ 160 GSM-7, tracking `" (code)"`, lomba tracking hole bad, `{number}`/`{link}` chhara override bad (8.16, 11.7 item 5) | `ShippedText` | `TestShippedSMSLength` |
 | `sms.send` payload e phone ar text lage; OTP payload (`{otp_id, nonce, ct}`) e `OTPSource` theke phone ar code (8.2 step 4) | `SendSMSJob` | `TestSendSMSJob` |
 | OTP `sms.send`: `max_attempts` 2 (1 minute por ekbar), done hole payload `{}` (8.17 v1.19) | `auth.sendOTP`, `finish` | `TestOTPJobPayload` |
 

@@ -33,6 +33,8 @@ func (h *Handlers) AdminRoutes(mux *http.ServeMux, staff httpx.Middleware) {
 	mux.Handle("GET /api/admin/fulfillments", admin(h.AdminFulfillments, all))
 	mux.Handle("POST /api/admin/fulfillments/{id}/transition", admin(h.AdminTransitionFulfillment, all))
 	mux.Handle("POST /api/admin/fulfillments/{id}/pack", admin(h.AdminPack, all))
+	mux.Handle("POST /api/admin/fulfillments/{id}/shipments", admin(h.AdminShip, all))
+	mux.Handle("PATCH /api/admin/shipments/{id}", admin(h.AdminShipment, all))
 }
 
 // scope (Rule 13, 11.7 item 13 i): shop staff 0 (shob vendor); vendor role e nijer vendor, vendor_id chhara -1
@@ -139,8 +141,9 @@ func (h *Handlers) AdminOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 type transitionIn struct {
-	To   string `json:"to"`
-	Note string `json:"note"`
+	To      string  `json:"to"`
+	Note    string  `json:"note"`
+	Restock []int64 `json:"restock_item_ids"` // shudhu returned (11.7 item 6)
 }
 
 // decodeTransition: body {to, note}; note max 500.
@@ -157,8 +160,17 @@ func decodeTransition(w http.ResponseWriter, r *http.Request, allowed []string) 
 	var ok bool
 	if in.Note, ok = text(in.Note, 0, 500); !ok {
 		invalid(w, r, "note", "invalid")
+		return in, false
 	}
-	return in, ok
+	seen := map[int64]bool{}
+	for _, id := range in.Restock {
+		if seen[id] || in.To != string(Returned) {
+			invalid(w, r, "restock_item_ids", "invalid")
+			return in, false
+		}
+		seen[id] = true
+	}
+	return in, true
 }
 
 // AdminTransitionOrder: POST /api/admin/orders/{id}/transition {to: confirmed|cancelled, note}.
@@ -181,7 +193,8 @@ func (h *Handlers) AdminTransitionOrder(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": in.To, "display_status": display})
 }
 
-// AdminTransitionFulfillment: POST /api/admin/fulfillments/{id}/transition {to, note} (packed er path /pack).
+// AdminTransitionFulfillment: POST /api/admin/fulfillments/{id}/transition {to, note, restock_item_ids?} (packed er
+// path /pack, shipped /shipments, delivered PATCH /shipments/{id}: egulo ekhane 409).
 func (h *Handlers) AdminTransitionFulfillment(w http.ResponseWriter, r *http.Request) {
 	in, ok := decodeTransition(w, r, []string{string(Open), string(Shipped), string(Delivered), string(Returned), string(FCancelled)})
 	if !ok {
@@ -193,7 +206,7 @@ func (h *Handlers) AdminTransitionFulfillment(w http.ResponseWriter, r *http.Req
 		return
 	}
 	st, _ := httpx.StaffFrom(r.Context())
-	if err := StaffTransitionFulfillment(r.Context(), h.db, st, id, FStatus(in.To), in.Note); err != nil {
+	if err := StaffTransitionFulfillment(r.Context(), h.db, st, id, FStatus(in.To), in.Note, in.Restock); err != nil {
 		h.adminError(w, r, err)
 		return
 	}
@@ -274,7 +287,7 @@ func (h *Handlers) AdminFulfillments(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaged(items, page, limit, total))
 }
 
-// adminError: ErrForbidden 403; ErrNotImplemented (M7a er porer step) 409 invalid_transition; baki transitionError.
+// adminError: FieldError 400, ErrForbidden 403; baki transitionError.
 func (h *Handlers) adminError(w http.ResponseWriter, r *http.Request, err error) {
 	var fe FieldError
 	switch {
@@ -282,8 +295,6 @@ func (h *Handlers) adminError(w http.ResponseWriter, r *http.Request, err error)
 		invalid(w, r, string(fe), "invalid")
 	case errors.Is(err, ErrForbidden):
 		httpx.WriteError(w, r, http.StatusForbidden, httpx.ErrorBody{Code: "forbidden"})
-	case errors.Is(err, ErrNotImplemented):
-		httpx.WriteError(w, r, http.StatusConflict, httpx.ErrorBody{Code: "invalid_transition"})
 	default:
 		h.transitionError(w, r, err)
 	}
@@ -330,22 +341,41 @@ func StaffTransitionOrder(ctx context.Context, d *sql.DB, st httpx.Staff, orderI
 	return display, err
 }
 
-// StaffTransitionFulfillment (11.2 v1.7; 14.2 test 35): cancel staff ar vendor_staff na; vendor scope
-// TransitionFulfillment e (onno vendor 404). Audit before = history er from_status.
-func StaffTransitionFulfillment(ctx context.Context, d *sql.DB, st httpx.Staff, fid int64, to FStatus, note string) error {
+// StaffTransitionFulfillment (11.2 v1.7; 14.2 test 35): cancel staff ar vendor_staff na; refund hoya return
+// shudhu owner/admin (staff e refund row hole 403, rollback); shipped/delivered shudhu shipment route e (v1.43).
+// Vendor scope TransitionFulfillment e (onno vendor 404). Audit before = history er from_status.
+func StaffTransitionFulfillment(ctx context.Context, d *sql.DB, st httpx.Staff, fid int64, to FStatus, note string, restockIDs []int64) error {
 	if to == FCancelled && (st.Role == "staff" || st.Role == "vendor_staff") {
 		return ErrForbidden
 	}
+	if to == Shipped || to == Delivered {
+		return ErrInvalidTransition
+	}
 	return db.InTx(ctx, d, func(tx *sql.Tx) error {
-		if err := TransitionFulfillment(ctx, tx, st.ShopID, fid, to, ByStaff(st), note); err != nil {
+		if err := transitionFulfillment(ctx, tx, st.ShopID, fid, to, ByStaff(st), note, nil, restockIDs); err != nil {
 			return err
+		}
+		after := statusJSON(string(to))
+		if to == Returned {
+			var refund bool
+			if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM refunds WHERE shop_id = $1 AND fulfillment_id = $2
+				AND kind = 'return')`, st.ShopID, fid).Scan(&refund); err != nil {
+				return err
+			}
+			if refund && st.Role == "staff" {
+				return ErrForbidden // refund shudhu owner/admin (11.2 v1.7)
+			}
+			if restockIDs == nil {
+				restockIDs = []int64{}
+			}
+			after, _ = json.Marshal(map[string]any{"status": to, "restock_item_ids": restockIDs})
 		}
 		var from string
 		if err := tx.QueryRowContext(ctx, `SELECT from_status FROM order_status_history WHERE shop_id = $1 AND fulfillment_id = $2
 			ORDER BY id DESC LIMIT 1`, st.ShopID, fid).Scan(&from); err != nil {
 			return err
 		}
-		return logAudit(ctx, tx, st, "fulfillment.transition", "fulfillment", fid, statusJSON(from), statusJSON(string(to)))
+		return logAudit(ctx, tx, st, "fulfillment.transition", "fulfillment", fid, statusJSON(from), after)
 	})
 }
 

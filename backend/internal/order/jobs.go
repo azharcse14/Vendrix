@@ -19,6 +19,12 @@ type jobPayload struct {
 	OrderID int64 `json:"order_id"`
 }
 
+// shippedPayload: sms.shipped (11.7 item 5): kon shipment er tracking; token/phone na.
+type shippedPayload struct {
+	OrderID    int64 `json:"order_id"`
+	ShipmentID int64 `json:"shipment_id"`
+}
+
 // enqueuePlaced (8.6 step 18): order er tx e, tai commit holei job. Pending COD (confirm lage) e auto-cancel
 // RunAt = placed_at + order er shomoyer setting (8.19 item 12 viii).
 func enqueuePlaced(ctx context.Context, tx *sql.Tx, shopID, orderID int64, autoCancel time.Time) error {
@@ -83,6 +89,24 @@ func JobHandlers(d *sql.DB, sms notify.SMS, log *slog.Logger, confirmSecret stri
 				return err
 			}
 			return sms.Send(ctx, j.ShopID, o.phone, notify.TotalText(o.locale, o.override["sms.total_changed"], o.shop, o.number, total))
+		},
+		// 8.16, 11.7 item 5: protiti shipment e (abar pathale notun tracking); cancelled order e na
+		"sms.shipped": func(ctx context.Context, j jobs.Job) error {
+			o, err := loadSMSOrder(ctx, d, j, "sms.shipped")
+			if err != nil || o.status == string(Cancelled) {
+				return err
+			}
+			var p shippedPayload
+			if err := json.Unmarshal(j.Payload, &p); err != nil {
+				return err
+			}
+			var tracking sql.NullString
+			if err := d.QueryRowContext(ctx, `SELECT tracking_code FROM shipments WHERE shop_id = $1 AND id = $2 AND order_id = $3`,
+				j.ShopID, p.ShipmentID, o.id).Scan(&tracking); err != nil {
+				return err
+			}
+			return sms.Send(ctx, j.ShopID, o.phone, notify.ShippedText(o.locale, o.override["sms.shipped"], o.shop, o.number,
+				"https://"+o.domain+"/order/"+o.token, tracking.String))
 		},
 		// ekhon shudhu log; email/SMS M12 e (ALERT_EMAIL)
 		"alert.new_order": func(ctx context.Context, j jobs.Job) error {

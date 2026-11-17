@@ -271,7 +271,7 @@ func TestShippedSMSLength(t *testing.T) {
 		tracking string
 		want     string
 	}{
-		{map[string]string{"en": "#{number}{tracking} {link}"}, "T1", "#N-1 T1 L"},
+		{map[string]string{"en": "#{number}{tracking} {link}"}, "T1", "#N-1 (T1) L"},
 		{map[string]string{"en": "#{number} {link}"}, "T1", def},    // tracking ache, lekha te nai
 		{map[string]string{"en": "#{number}{tracking}"}, "T1", def}, // link nai
 	} {
