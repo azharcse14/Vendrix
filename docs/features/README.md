@@ -16,7 +16,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | Audit log | [audit.md](audit.md) | 12 | M1, M7a | cholche (category, product, variant, order admin, inventory, zone, coupon, customer block, staff; list `GET /audit-logs`) |
 | Bhasha, taka ar tarikh (shared Dart) | [l10n.md](l10n.md) | 9.8 | M2 | cholche (taka, tarikh, translator, website ar checkout/order er lekha) |
 | Theme token ar contrast (shared Dart) | [theme.md](theme.md) | 9.3, 9.4 | M2 | cholche |
-| API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4, 7.5 | M2, M4, M5, M6 | cholche (catalog, settings, account, cart, wishlist, checkout, order) |
+| API client ar model (shared Dart) | [api-client.md](api-client.md) | 7.1, 7.2, 7.3, 7.4, 7.5, 7.7 | M2, M4, M5, M6, M7a | cholche (catalog, settings, account, cart, wishlist, checkout, order, admin) |
 | Website (Jaspr): route, bhasha, API, layout | [website.md](website.md) | 10, 3.2, 13.5 | M3, M4, M5, M6 | cholche (layout, home, category, product, search, policy, login, account, BFF auth, cart, wishlist, checkout, order, confirm, track, `/account/orders`) |
 | Website er page: home, product, cart, checkout, order, track ... (UI, l10n key) | [website-pages.md](website-pages.md) | 10.1, 10.5–10.7, 10.11–10.13 | M3, M4, M5, M6, MU | cholche |
 | SEO: meta, OG, JSON-LD, sitemap, robots | [seo.md](seo.md) | 10.4 | M3 | cholche |
@@ -72,7 +72,7 @@ Notun feature: [_template.md](_template.md) copy, tarpor ei index ar niche-r cod
 | `packages/shared/lib/validation` | Phone (Go er sathe ekoi) | [phone.md](phone.md) |
 | `packages/shared/lib/theme` | Token derive, contrast | [theme.md](theme.md) |
 | `packages/shared/lib/api` | `ApiClient`, `ApiError`, repository | [api-client.md](api-client.md) |
-| `packages/shared/lib/models` | API er model (catalog, settings, `User`, `Cart`, order/checkout; `LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
+| `packages/shared/lib/models` | API er model (catalog, settings, `User`, `Cart`, order/checkout, admin; `LocalizedText` [l10n.md](l10n.md) e) | [api-client.md](api-client.md) |
 
 ## Code map (website)
 

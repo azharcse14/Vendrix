@@ -1,9 +1,6 @@
 import 'json.dart';
 import 'localized_text.dart';
 
-DateTime _time(Map<String, dynamic> j, String key) =>
-    DateTime.parse(field<String>(j, key));
-
 /// Delivery zone er district (`GET /api/delivery-zones`, 7.2, 8.19 item 2).
 class DeliveryZone {
   /// District.
@@ -152,7 +149,7 @@ class ConfirmSummary {
   ConfirmSummary.fromJson(Map<String, dynamic> j)
     : orderNumber = field(j, 'order_number'),
       displayStatus = field(j, 'display_status'),
-      placedAt = _time(j, 'placed_at'),
+      placedAt = time(j, 'placed_at'),
       customerName = field(j, 'customer_name'),
       phoneMasked = field(j, 'phone_masked'),
       district = field(j, 'district'),
@@ -183,9 +180,7 @@ class Order extends ConfirmSummary {
       subtotal = field(j, 'subtotal'),
       discount = field(j, 'discount'),
       deliveryCharge = field(j, 'delivery_charge'),
-      deliveryDeadline = j['delivery_deadline'] == null
-          ? null
-          : _time(j, 'delivery_deadline'),
+      deliveryDeadline = timeOrNull(j, 'delivery_deadline'),
       canCancel = field(j, 'can_cancel'),
       super.fromJson();
 }
@@ -213,7 +208,7 @@ class TrackedOrder {
   factory TrackedOrder.fromJson(Map<String, dynamic> j) => TrackedOrder(
     field(j, 'order_number'),
     field(j, 'display_status'),
-    _time(j, 'placed_at'),
+    time(j, 'placed_at'),
     objects(j, 'history', OrderEvent.fromJson),
   );
 }
@@ -231,7 +226,7 @@ class OrderEvent {
 
   /// JSON theke.
   factory OrderEvent.fromJson(Map<String, dynamic> j) =>
-      OrderEvent(field(j, 'status'), _time(j, 'at'));
+      OrderEvent(field(j, 'status'), time(j, 'at'));
 }
 
 /// `GET /api/me/orders` er card (7.3, 8.19 item 12 x).
@@ -260,7 +255,7 @@ class OrderSummary {
     field(j, 'public_token'),
     field(j, 'display_status'),
     field(j, 'total'),
-    _time(j, 'placed_at'),
+    time(j, 'placed_at'),
   );
 }
 

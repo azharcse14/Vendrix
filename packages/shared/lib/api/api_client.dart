@@ -85,24 +85,44 @@ class ApiClient {
     Object? body,
     Map<String, String>? query,
     Map<String, String> headers = const {},
-  }) async {
-    final req =
-        http.Request(
-            method,
-            baseUrl.resolve(path).replace(queryParameters: query),
-          )
-          ..headers.addAll({
-            ...this.headers,
-            ...headers,
-            if (token != null) 'Authorization': 'Bearer $token',
-            'X-Cart-Key': ?cartKey,
-            'Accept-Language': locale,
-            'Accept': 'application/json',
-          });
+  }) {
+    final req = http.Request(
+      method,
+      baseUrl.resolve(path).replace(queryParameters: query),
+    );
     if (body != null) {
       req.headers['Content-Type'] = 'application/json; charset=utf-8';
       req.body = jsonEncode(body);
     }
+    return _send(req, headers, timeout);
+  }
+
+  /// `POST` multipart (chobi upload, 11.7 item 9); [timeout] default 2 minute, server er upload deadline er moto.
+  Future<Object?> multipart(
+    String path, {
+    Map<String, String> fields = const {},
+    required List<http.MultipartFile> files,
+    Duration timeout = const Duration(minutes: 2),
+  }) {
+    final req = http.MultipartRequest('POST', baseUrl.resolve(path))
+      ..fields.addAll(fields)
+      ..files.addAll(files);
+    return _send(req, const {}, timeout);
+  }
+
+  Future<Object?> _send(
+    http.BaseRequest req,
+    Map<String, String> headers,
+    Duration timeout,
+  ) async {
+    req.headers.addAll({
+      ...this.headers,
+      ...headers,
+      if (token != null) 'Authorization': 'Bearer $token',
+      'X-Cart-Key': ?cartKey,
+      'Accept-Language': locale,
+      'Accept': 'application/json',
+    });
     final http.Response res;
     try {
       res = await client
