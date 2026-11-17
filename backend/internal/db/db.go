@@ -11,6 +11,10 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 // DriverName: pgx/v5/stdlib er database/sql driver (driver.go e register).
@@ -19,15 +23,22 @@ const DriverName = "pgx"
 // ErrNoDriver: pgx driver register hoyni.
 var ErrNoDriver = errors.New(`database driver "pgx" register hoyni: docs/milestones/M0.md er "pgx driver" step koro`)
 
-// Open: pool banay, tarpor 5 second er moddhe ping.
+// Open: pool banay, tarpor 5 second er moddhe ping. Session TimeZone UTC ar timestamptz Go te UTC e scan
+// (7.1): to_jsonb/time.Time er JSON server ba database er timezone e na; shop er din SQL e
+// AT TIME ZONE shops.timezone diye.
 func Open(ctx context.Context, url string) (*sql.DB, error) {
 	if !slices.Contains(sql.Drivers(), DriverName) {
 		return nil, ErrNoDriver
 	}
-	d, err := sql.Open(DriverName, url)
+	cfg, err := connConfig(url)
 	if err != nil {
 		return nil, err
 	}
+	d := stdlib.OpenDB(*cfg, stdlib.OptionAfterConnect(func(_ context.Context, c *pgx.Conn) error {
+		c.TypeMap().RegisterType(&pgtype.Type{Name: "timestamptz", OID: pgtype.TimestamptzOID,
+			Codec: &pgtype.TimestamptzCodec{ScanLocation: time.UTC}})
+		return nil
+	}))
 	d.SetMaxOpenConns(20)
 	d.SetMaxIdleConns(10)
 	d.SetConnMaxIdleTime(5 * time.Minute)
@@ -38,6 +49,15 @@ func Open(ctx context.Context, url string) (*sql.DB, error) {
 		return nil, fmt.Errorf("database e jete parchi na: %w", err)
 	}
 	return d, nil
+}
+
+func connConfig(url string) (*pgx.ConnConfig, error) {
+	cfg, err := pgx.ParseConfig(url)
+	if err != nil {
+		return nil, err
+	}
+	cfg.RuntimeParams["timezone"] = "UTC"
+	return cfg, nil
 }
 
 // InTx: fn ek transaction e (READ COMMITTED, 6.4). fn error dile ba panic korle ROLLBACK. Deadlock

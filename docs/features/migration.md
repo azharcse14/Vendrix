@@ -4,7 +4,7 @@ Design: 6.1, 6.6, 6.7, 13.5, 13.6 · Milestone: M0 · Code: `backend/internal/db
 
 ## Ki kore
 
-`shop-api migrate` binary te embed kora `backend/migrations/*.sql` kram onujayi database e chalay, protiti file ekbar. Deploy er por kono file bodlale ba bhul kram e notun file dile kichu na chaliye fail kore. API `db.Open` diye pool ney ar `db.InTx` diye transaction (deadlock e ekbar retry).
+`shop-api migrate` binary te embed kora `backend/migrations/*.sql` kram onujayi database e chalay, protiti file ekbar. Deploy er por kono file bodlale ba bhul kram e notun file dile kichu na chaliye fail kore. API `db.Open` diye pool ney (session `TimeZone` UTC, timestamptz Go te UTC e scan) ar `db.InTx` diye transaction (deadlock e ekbar retry).
 
 ## Kivabe kaj kore
 
@@ -25,7 +25,7 @@ Ei kram e poro:
 |---|---|
 | `backend/migrations/embed.go` → `FS` | Migration file embed |
 | `backend/internal/db/migrate.go` → `LoadMigrations`, `Pending`, `Migrate` | Runner |
-| `backend/internal/db/db.go` → `Open`, `InTx`, `retryable` | Pool ar transaction |
+| `backend/internal/db/db.go` → `Open`, `connConfig`, `InTx`, `retryable` | Pool ar transaction |
 | `backend/internal/db/driver.go` | pgx driver register |
 | `backend/internal/dbtest/dbtest.go` → `New` | Onno package er DB test: notun database, migration shoho |
 | `backend/migrations/001_init.sql` | Puro schema (6.7) |
@@ -46,6 +46,7 @@ Ei kram e poro:
 | `shop_app` `schema_migrations` e shudhu SELECT (6.1) | `001_init.sql` | `TestMigrateIntegration` |
 | Deadlock ba serialization e ekbar retry (8.6) | `InTx`, `retryable` | `TestRetryable` |
 | pgx chhara spashto error | `Open` | `TestOpenWithoutDriver` |
+| API er shomoy UTC: session `TimeZone` UTC, `to_jsonb` `+00:00`, scan kora `time.Time` UTC (7.1) | `Open`, `connConfig` | `TestConnConfigUTC`, `TestOpenUTCIntegration` |
 | Schema er constraint (6.4) | `001_init.sql` | `tests/001_init_test.sql` (`make db-test`, 85/85) |
 
 ## Data
@@ -64,9 +65,11 @@ Ei kram e poro:
 - Deploy hoya file (`DEPLOYED` e naam) edit na: hook atkay, CI hash dekhe, runner checksum dekhe.
 - Notun table hard-delete-nishiddho ba history hole oi file e `REVOKE` (6.1).
 - Notun CHECK e naam ar `tests/` e `'reject:<naam>'` test (`.claude/rules/migrations.md`).
+- Notun pool ba connection `db.Open` diye-i (na hole timestamp database/server er timezone e ashe, 7.1); shop er din SQL e `AT TIME ZONE shops.timezone` diye, session timezone e bhorsha na.
 - Runner er SQL bodlale `TestMigrateIntegration` asol Postgres e chalao.
 
 ## Proshno-uttor
 
 - **Session lock na keno, `pg_advisory_xact_lock`?** `database/sql` er pool e session lock onno connection e pore jete pare; transaction lock transaction er sathe-i chole jay (6.1).
+- **Admin JSON e `+06:00` ashto keno?** `to_jsonb`/`jsonb_build_object` timestamptz session er `TimeZone` e lekhe, ar pgx `time.Time` `time.Local` e scan kore; Mac/database Asia/Dhaka hole duitai `+06:00`. Ekhon `Open` ek jaygay UTC kore, tai shob query ar handler thik (7.1).
 - **`schema_migrations` `001` e na keno?** Eta runner er nijer table; `001` chalanor age-i lage.
