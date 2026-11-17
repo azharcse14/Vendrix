@@ -194,7 +194,7 @@ func TestPickListIntegration(t *testing.T) {
 			t.Errorf("%s: %s %v", role, pv(l.Variants), l.fids())
 		}
 	}
-	for _, d := range []string{"2026-13-01", "11-01-2026", "2026-01-11T00:00:00Z", "x"} {
+	for _, d := range []string{"2026-13-01", "11-01-2026", "2026-01-11T00:00:00Z", "x", "0000-01-01"} {
 		e := wantErr(t, "date "+d, f.adm(st, "GET", "/api/admin/packing/pick-list?date="+d, nil), http.StatusBadRequest, "validation_failed")
 		if e.Fields["date"] != "invalid" {
 			t.Errorf("date %s: %v", d, e.Fields)

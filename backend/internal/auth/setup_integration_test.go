@@ -150,6 +150,10 @@ func TestStaffSetupIntegration(t *testing.T) {
 		}
 	}
 	active := adminCookie(t, rec, 43200, "enable")
+	// setup shesh = login shesh: last_login_at (step 15 note; TOTP login er moto)
+	if n := f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND last_login_at > now() - interval '1 minute'`, own); n != 1 {
+		t.Error("setup er por last_login_at nai")
+	}
 	if stage, secs := f.session(t, active); active == tok || stage != "active" || !near(secs, 43200) {
 		t.Errorf("enable er por: %s %.0f (token notun %v)", stage, secs, active != tok)
 	}
@@ -269,11 +273,15 @@ func TestTOTPPendingIntegration(t *testing.T) {
 	f.exec(t, `UPDATE staff SET must_change_password = true WHERE id = $1 AND shop_id = $2`, ownB, b)
 	setup := adminCookie(t, f.totp(f.tempToken(t, "b"), f.code(ownB, 0)), 900, "must_change e TOTP")
 	wantErr(t, f.cookieReq("POST", "/api/admin/auth/totp/setup", setup, nil), 403, "password_change_required", "password er age setup")
+	f.exec(t, `UPDATE staff SET last_login_at = NULL WHERE id = $1`, ownB) // TOTP e set hoyeche; password e abar
 	rec = f.cookieReq("POST", "/api/admin/auth/password", setup, map[string]string{"old": staffPW, "new": "notun-password-123"})
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("password: %d %s", rec.Code, rec.Body.String())
 	}
 	active := adminCookie(t, rec, 43200, "TOTP live e password")
+	if n := f.count(t, `SELECT count(*) FROM staff WHERE id = $1 AND last_login_at > now() - interval '1 minute'`, ownB); n != 1 {
+		t.Error("password e active er por last_login_at nai")
+	}
 	if stage, secs := f.session(t, active); active == setup || stage != "active" || !near(secs, 43200) {
 		t.Errorf("password er por: %s %.0f (token notun %v)", stage, secs, active != setup)
 	}

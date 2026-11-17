@@ -222,6 +222,7 @@ func TestPrintLinkIntegration(t *testing.T) {
 		"slip e date":           {map[string]any{"kind": "packing_slip", "order_ids": []int64{1}, "date": "2026-01-11"}, "date"},
 		"pick_list e order_ids": {map[string]any{"kind": "pick_list", "order_ids": []int64{1}}, "order_ids"},
 		"pick_list bhul date":   {map[string]any{"kind": "pick_list", "date": "2026-02-30"}, "date"},
+		"pick_list year 0":      {map[string]any{"kind": "pick_list", "date": "0000-01-01"}, "date"},
 		"ochena kind":           {map[string]any{"kind": "label", "order_ids": []int64{1}}, "kind"},
 		"kind nai":              {map[string]any{"order_ids": []int64{1}}, "kind"},
 		"ochena field":          {map[string]any{"kind": "pick_list", "shop_id": 2}, "body"},

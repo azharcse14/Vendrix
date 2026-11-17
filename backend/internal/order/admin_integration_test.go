@@ -151,7 +151,7 @@ func TestAdminOrderListIntegration(t *testing.T) {
 	if _, total := f.listNumbers(owner, "?limit=2&page=2"); total != "6" {
 		t.Errorf("total %v", total)
 	}
-	for _, q := range []string{"?limit=101", "?status=nai", "?tab=nai", "?from=11-01-2026", "?to=2026-13-01", "?risk=2", "?vendor_id=x"} {
+	for _, q := range []string{"?limit=101", "?status=nai", "?tab=nai", "?from=11-01-2026", "?to=2026-13-01", "?from=0000-01-01", "?risk=2", "?vendor_id=x"} {
 		wantErr(t, q, f.adm(owner, "GET", "/api/admin/orders"+q, nil), http.StatusBadRequest, "validation_failed")
 	}
 

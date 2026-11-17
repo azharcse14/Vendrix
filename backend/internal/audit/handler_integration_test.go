@@ -160,7 +160,7 @@ func TestAuditListIntegration(t *testing.T) {
 	if _, total, _ := f.list(owner, "?limit=2&page=2"); total != 4 {
 		t.Errorf("page total %d", total)
 	}
-	for q, field := range map[string]string{"?from=2026-13-01": "from", "?to=x": "to", "?staff_id=x": "staff_id",
+	for q, field := range map[string]string{"?from=2026-13-01": "from", "?to=x": "to", "?from=0000-01-01": "from", "?staff_id=x": "staff_id",
 		"?staff_id=0": "staff_id", "?action=" + strings.Repeat("a", 65): "action", "?limit=101": "limit"} {
 		code, b := f.call(owner, "GET", "/api/admin/audit-logs"+q, nil)
 		if code != http.StatusBadRequest || !strings.Contains(string(b), `"`+field+`":"invalid"`) {

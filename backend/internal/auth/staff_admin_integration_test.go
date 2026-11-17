@@ -165,6 +165,8 @@ func TestStaffAdminIntegration(t *testing.T) {
 		{map[string]string{"email": "x@a.com", "name": "  ", "role": "staff"}, "name"},
 		{map[string]string{"email": "x@a.com", "name": strings.Repeat("ন", 101), "role": "staff"}, "name"},
 		{map[string]any{"email": "x@a.com", "name": "X", "role": "staff", "vendor_id": 1}, "body"},
+		{map[string]string{"email": "x@a.com", "name": "Ra\u202ehim", "role": "staff"}, "name"}, // bidi (step 12 L2)
+		{map[string]string{"email": "x@a.com", "name": "Ra\nhim", "role": "staff"}, "name"},
 	} {
 		f.field(owner, "POST", "/api/admin/staff", c.body, c.field)
 	}
@@ -218,6 +220,14 @@ func TestStaffAdminIntegration(t *testing.T) {
 	f.want(owner, "PATCH", path(sid, ""), map[string]bool{"is_active": true}, http.StatusOK, "")
 	f.field(owner, "PATCH", path(sid, ""), map[string]string{"role": "vendor_owner"}, "role")
 	f.field(owner, "PATCH", path(sid, ""), map[string]string{"name": ""}, "name")
+	f.field(owner, "PATCH", path(sid, ""), map[string]string{"name": "R\u200fU"}, "name")
+	// vendor role staff (MV er row) er role shop role e: staff_vendor_role_check e 500 na, 400 (step 12 L1)
+	var vsID int64
+	if err := f.d.QueryRow(`INSERT INTO staff (shop_id, vendor_id, email, name, password_hash, role)
+		SELECT $1, id, 'vs@a.com', 'VS', 'x', 'vendor_staff' FROM vendors WHERE shop_id = $1 AND is_house RETURNING id`, a).Scan(&vsID); err != nil {
+		t.Fatal(err)
+	}
+	f.field(owner, "PATCH", path(vsID, ""), map[string]string{"role": "staff"}, "role")
 	f.field(owner, "PATCH", path(sid, ""), map[string]string{"email": "z@a.com"}, "body")
 
 	// nijeke
